@@ -1,0 +1,281 @@
+{
+  "run_id": "ml-run-20260121-095536-15ce541f",
+  "project_id": "streamlit-demo",
+  "model_version": "v1.0.0",
+  "test_suite": "Custom Test Suite - Accuracy, Data_Quality, Bias, Drift",
+  "environment": "testing",
+  "status": "completed",
+  "start_time": "2026-01-21T09:55:36.894898",
+  "end_time": "2026-01-21T09:55:36.932830",
+  "execution_time_seconds": 0.037932,
+  "results": [
+    {
+      "test_id": "ml-run-20260121-095536-15ce541f-model_performance-986",
+      "test_name": "Accuracy Threshold (Critical)",
+      "category": "model_performance",
+      "status": "failed",
+      "severity": "critical",
+      "message": "Target column 'churn' not found",
+      "execution_time_seconds": 8.4e-05,
+      "details": {},
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260121-095536-15ce541f-model_performance-510",
+      "test_name": "Precision Threshold (High Priority)",
+      "category": "model_performance",
+      "status": "failed",
+      "severity": "high",
+      "message": "Target column 'churn' not found",
+      "execution_time_seconds": 1.9e-05,
+      "details": {},
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260121-095536-15ce541f-model_performance-264",
+      "test_name": "Recall Threshold (High Priority)",
+      "category": "model_performance",
+      "status": "failed",
+      "severity": "high",
+      "message": "Target column 'churn' not found",
+      "execution_time_seconds": 1e-05,
+      "details": {},
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260121-095536-15ce541f-model_performance-968",
+      "test_name": "F1 Score Threshold (Balanced Metric)",
+      "category": "model_performance",
+      "status": "failed",
+      "severity": "high",
+      "message": "Target column 'churn' not found",
+      "execution_time_seconds": 1.1e-05,
+      "details": {},
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260121-095536-15ce541f-model_performance-866",
+      "test_name": "ROC-AUC Threshold (Discrimination Ability)",
+      "category": "model_performance",
+      "status": "failed",
+      "severity": "medium",
+      "message": "Test execution failed: 'ModelPerformanceTests' object has no attribute '_test_roc_auc_threshold'",
+      "execution_time_seconds": 1e-05,
+      "details": {
+        "error": "'ModelPerformanceTests' object has no attribute '_test_roc_auc_threshold'",
+        "traceback": "<traceback object at 0x0000026DC31E9380>"
+      },
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260121-095536-15ce541f-data_quality-88",
+      "test_name": "Missing Values Check (Data Integrity)",
+      "category": "data_quality",
+      "status": "passed",
+      "severity": "high",
+      "message": ".2f",
+      "execution_time_seconds": 0.001655,
+      "details": {
+        "total_missing_rate": 0.0,
+        "threshold": 0.05,
+        "missing_cells": 0,
+        "total_cells": 16500,
+        "high_missing_columns": {}
+      },
+      "threshold": 0.05,
+      "actual_value": 0.0,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260121-095536-15ce541f-data_quality-610",
+      "test_name": "Missing Values Check - Training Data",
+      "category": "data_quality",
+      "status": "passed",
+      "severity": "high",
+      "message": ".2f",
+      "execution_time_seconds": 0.003476,
+      "details": {
+        "total_missing_rate": 0.0,
+        "threshold": 0.05,
+        "missing_cells": 0,
+        "total_cells": 55000,
+        "high_missing_columns": {}
+      },
+      "threshold": 0.05,
+      "actual_value": 0.0,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260121-095536-15ce541f-data_quality-59",
+      "test_name": "Duplicate Rows Check (Data Uniqueness)",
+      "category": "data_quality",
+      "status": "passed",
+      "severity": "medium",
+      "message": "Found 0 duplicate rows",
+      "execution_time_seconds": 0.005474,
+      "details": {
+        "duplicate_count": 0,
+        "duplicate_rate": 0.0,
+        "total_rows": 1500,
+        "allow_duplicates": false
+      },
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260121-095536-15ce541f-data_quality-281",
+      "test_name": "Duplicate Rows Check - Training Data",
+      "category": "data_quality",
+      "status": "passed",
+      "severity": "medium",
+      "message": "Found 0 duplicate rows",
+      "execution_time_seconds": 0.005047,
+      "details": {
+        "duplicate_count": 0,
+        "duplicate_rate": 0.0,
+        "total_rows": 5000,
+        "allow_duplicates": false
+      },
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260121-095536-15ce541f-data_quality-444",
+      "test_name": "Class Balance Check (Target Distribution)",
+      "category": "data_quality",
+      "status": "failed",
+      "severity": "medium",
+      "message": "Target column 'churn' not found in dataset",
+      "execution_time_seconds": 1.6e-05,
+      "details": {},
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260121-095536-15ce541f-data_quality-7",
+      "test_name": "Class Balance Check - Validation Data",
+      "category": "data_quality",
+      "status": "failed",
+      "severity": "medium",
+      "message": "Target column 'churn' not found in dataset",
+      "execution_time_seconds": 1.3e-05,
+      "details": {},
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260121-095536-15ce541f-bias_fairness-661",
+      "test_name": "Gender Bias Check (Fairness Audit)",
+      "category": "bias_fairness",
+      "status": "failed",
+      "severity": "medium",
+      "message": "Target column 'churn' not found",
+      "execution_time_seconds": 1.7e-05,
+      "details": {},
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260121-095536-15ce541f-bias_fairness-911",
+      "test_name": "Age Group Bias Check (Demographic Fairness)",
+      "category": "bias_fairness",
+      "status": "failed",
+      "severity": "low",
+      "message": "Protected attribute 'age_group' not found",
+      "execution_time_seconds": 1.2e-05,
+      "details": {},
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260121-095536-15ce541f-bias_fairness-962",
+      "test_name": "Location Bias Check (Geographic Fairness)",
+      "category": "bias_fairness",
+      "status": "failed",
+      "severity": "low",
+      "message": "Protected attribute 'location' not found",
+      "execution_time_seconds": 9e-06,
+      "details": {},
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260121-095536-15ce541f-statistical_stability-475",
+      "test_name": "PSI Drift Check (Population Stability)",
+      "category": "statistical_stability",
+      "status": "passed",
+      "severity": "high",
+      "message": ".3f",
+      "execution_time_seconds": 0.027157,
+      "details": {
+        "psi_scores": {
+          "age": 0.009454355901304869,
+          "years_experience": 0.011053967633660735,
+          "previous_salary": 0.014134626229198777,
+          "skill_score": 0.00800134604512128,
+          "certifications": 0.0022397877528946173,
+          "interview_score": 0.01112308860553506,
+          "hired": 0.0
+        },
+        "drifted_features": [],
+        "max_psi_score": 0.014134626229198777,
+        "threshold": 0.15,
+        "features_analyzed": 7
+      },
+      "threshold": 0.15,
+      "actual_value": 0.014134626229198777,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260121-095536-15ce541f-statistical_stability-94",
+      "test_name": "KS Test Drift Check (Distribution Comparison)",
+      "category": "statistical_stability",
+      "status": "failed",
+      "severity": "medium",
+      "message": "Test execution failed: 'StatisticalStabilityTests' object has no attribute '_test_ks_drift'",
+      "execution_time_seconds": 6e-06,
+      "details": {
+        "error": "'StatisticalStabilityTests' object has no attribute '_test_ks_drift'",
+        "traceback": "<traceback object at 0x0000026DC2C4C600>"
+      },
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260121-095536-15ce541f-statistical_stability-232",
+      "test_name": "Feature Correlation Stability Check",
+      "category": "statistical_stability",
+      "status": "failed",
+      "severity": "medium",
+      "message": "Test execution failed: 'StatisticalStabilityTests' object has no attribute '_test_correlation_stability'",
+      "execution_time_seconds": 6e-06,
+      "details": {
+        "error": "'StatisticalStabilityTests' object has no attribute '_test_correlation_stability'",
+        "traceback": "<traceback object at 0x0000026DC2CFCBC0>"
+      },
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    }
+  ],
+  "error_message": null,
+  "metadata": null
+}
