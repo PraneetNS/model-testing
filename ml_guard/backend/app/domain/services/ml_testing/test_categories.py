@@ -933,12 +933,70 @@ class BiasFairnessTests:
                 "threshold": threshold,
                 "actual_value": disparate_impact
             }
-
         except Exception as e:
+            return {"status": "failed", "message": f"Disparate impact test failed: {str(e)}"}
+
+    def _test_equal_opportunity(self, test_config: Dict[str, Any], model: Any, datasets: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Test for Equal Opportunity Difference bias.
+        Formula: |TPR_group_A - TPR_group_B| <= threshold
+        """
+        threshold = test_config.get("config", {}).get("threshold", 0.1)
+        protected_attribute = test_config.get("config", {}).get("protected_attribute", "gender")
+        dataset_name = test_config.get("config", {}).get("dataset", "validation")
+        target_column = test_config.get("config", {}).get("target_column", "target")
+
+        if dataset_name not in datasets:
+            return {"status": "failed", "message": f"Dataset '{dataset_name}' not found"}
+
+        df = datasets[dataset_name]
+        
+        # Get features and target using alignment helper
+        X, y_true = self._get_X_y(df, target_column)
+        if protected_attribute in X.columns:
+            X = X.drop(columns=[protected_attribute])
+
+        try:
+            # Get predictions
+            predictions = model.predict(X)
+            
+            # Calculate TPR (True Positive Rate) for each group
+            protected_values = df[protected_attribute].unique()
+            tpr_by_group = {}
+            
+            for value in protected_values:
+                group_mask = df[protected_attribute] == value
+                group_y_true = y_true[group_mask]
+                group_preds = predictions[group_mask]
+                
+                # TPR = TP / (TP + FN) = TP / Total Positives
+                positives_mask = group_y_true == 1
+                if positives_mask.sum() == 0:
+                    tpr = 1.0 # Or 0? Usually 1 if no ground truth positives
+                else:
+                    tpr = np.mean(group_preds[positives_mask])
+                tpr_by_group[str(value)] = float(tpr)
+
+            # Max difference between any two groups
+            tprs = list(tpr_by_group.values())
+            max_diff = max(tprs) - min(tprs)
+            
+            status = "passed" if max_diff <= threshold else "failed"
+            message = f"Equal Opportunity Difference: {max_diff:.3f} (Threshold: {threshold})"
+            
             return {
-                "status": "failed",
-                "message": f"Bias test execution failed: {str(e)}"
+                "status": status,
+                "message": message,
+                "details": {
+                    "max_difference": max_diff,
+                    "tpr_by_group": tpr_by_group,
+                    "protected_attribute": protected_attribute
+                },
+                "actual_value": max_diff,
+                "threshold": threshold
             }
+        except Exception as e:
+            return {"status": "failed", "message": f"Fairness test failed: {str(e)}"}
 
     def get_available_tests(self) -> List[str]:
         """Get list of available bias and fairness tests."""

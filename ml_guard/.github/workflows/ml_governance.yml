@@ -1,0 +1,47 @@
+name: ML Model Governance Audit
+
+on:
+  push:
+    paths:
+      - 'models/**'
+  workflow_dispatch:
+
+jobs:
+  ml-governance-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: |
+          pip install -r backend/requirements.txt
+          pip install typer joblib scikit-learn pandas
+
+      - name: Run ML Guard Audit
+        env:
+          PYTHONPATH: ./backend
+        run: |
+          python backend/app/cli.py test \
+            --model models/latest_model.pkl \
+            --train data/training_baseline.csv \
+            --val data/validation_current.csv \
+            --intent "Run full regression suite and check for bias" \
+            --html audit_report.html
+
+      - name: Upload Audit Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: governance-report
+          path: audit_report.html
+
+      - name: Block Pipeline on Critical Failure
+        if: failure()
+        run: |
+          echo "❌ ML Governance Audit Failed! Critical regressions or bias detected."
+          exit 1

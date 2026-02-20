@@ -9,13 +9,16 @@ import structlog
 
 logger = structlog.get_logger(__name__)
 
+from app.domain.services.ml_testing.framework.runner import MLTestRunner
+from app.domain.services.ml_testing.framework.base import TestStatus as FrameworkStatus
+
 class TestOrchestrator:
     """
     Orchestrates the execution of a test suite.
-    Now more feature-rich and aligned with production requirements.
+    Converted to use the Scriptless ML Testing Framework.
     """
     def __init__(self):
-        self.validation_engine = ValidationEngine()
+        self.runner = MLTestRunner()
 
     async def run_test_suite(
         self, 
@@ -26,67 +29,54 @@ class TestOrchestrator:
         datasets: Dict[str, Any] = None,
         test_suite_config: Optional[Dict] = None,
         categories: Optional[List[str]] = None,
-        target_column: str = "target"
+        target_column: str = "target",
+        baseline_model: Any = None,
+        baseline_datasets: Dict[str, Any] = None
     ) -> QualityGateResult:
         
         run_id = f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{str(uuid.uuid4())[:8]}"
-        logger.info("Starting test orchestration", run_id=run_id, categories=categories)
+        logger.info("Starting scriptless test orchestration", run_id=run_id, categories=categories)
         
-        # Build dynamic suite if config is missing but we have intent or categories
         if not test_suite_config:
             if categories:
                 test_suite_config = self._build_suite_from_categories(categories, target_column)
             else:
                 test_suite_config = self._build_default_suite(target_column)
 
+        # Execute suite using the Framework Runner
+        report = await self.runner.run_suite(
+            suite_config=test_suite_config,
+            model=model_artifact,
+            datasets=datasets,
+            baseline_model=baseline_model,
+            baseline_datasets=baseline_datasets
+        )
+
         results = []
-        tests_to_run = test_suite_config.get("tests", [])
+        for r in report.results:
+            results.append(TestResult(
+                test_id=str(uuid.uuid4())[:8],
+                test_name=r.name,
+                category=r.name.lower(), # Framework uses specific classes
+                status=r.status.value,
+                severity=r.severity.value,
+                message=r.explanation,
+                execution_time_seconds=r.execution_time,
+                actual_value=r.metric_value,
+                threshold=r.threshold,
+                details=r.details,
+                description=r.description,
+                remediation=r.remediation,
+                explanation=r.explanation
+            ))
+
+        score = report.summary["quality_index"]
         
-        if not tests_to_run:
-            logger.warning("No tests found in suite configuration")
-
-        for test in tests_to_run:
-            try:
-                result = await self.validation_engine.run_test(test, model_artifact, datasets)
-                results.append(TestResult(
-                    test_id=result.test_id,
-                    test_name=result.test_name,
-                    category=result.category,
-                    status=result.status,
-                    severity=result.severity,
-                    message=result.message,
-                    execution_time_seconds=result.execution_time_seconds,
-                    actual_value=result.actual_value,
-                    threshold=result.threshold,
-                    details=result.details,
-                    description=test.get("description", "No description provided.")
-                ))
-            except Exception as e:
-                logger.error("Test execution failed", test=test.get("name"), error=str(e))
-                results.append(TestResult(
-                    test_id=str(uuid.uuid4()),
-                    test_name=test.get("name", "Unknown"),
-                    category=test.get("category", "error"),
-                    status="failed",
-                    severity=test.get("severity", "medium"),
-                    message=f"Execution error: {str(e)}",
-                    execution_time_seconds=0,
-                    description=test.get("description", "No description provided.")
-                ))
-
-        # Calculate a weighted Quality Index
-        # Weights: Critical=10, High=5, Medium=2, Low=1
-        weights = {"critical": 10, "high": 5, "medium": 2, "low": 1, "error": 5}
-        total_possible_weight = sum(weights.get(r.severity, 1) for r in results)
-        actual_weight = sum(weights.get(r.severity, 1) for r in results if r.status == "passed")
-        
-        score = (actual_weight / total_possible_weight) * 100 if total_possible_weight > 0 else 0
-
-        # Strict Gate: No critical failures AND score must be >= 70
+        # Strict Gate: No critical failures 
         critical_failures = [r for r in results if r.status == "failed" and r.severity == "critical"]
         deployment_allowed = len(critical_failures) == 0 and score >= 70
 
-        logger.info("Orchestration complete", run_id=run_id, score=score, allowed=deployment_allowed)
+        logger.info("Scriptless orchestration complete", run_id=run_id, score=score, allowed=deployment_allowed)
 
         return QualityGateResult(
             run_id=run_id,
@@ -252,6 +242,16 @@ class TestOrchestrator:
                     "severity": "medium",
                     "description": "Checks model behavior when inputs are pushed to extreme values.",
                     "config": {"perturbation_factor": 0.2, "sensitivity_threshold": 0.15, "dataset": "validation"}
+                }
+            ],
+            'regression': [
+                {
+                    "name": "Accuracy Regression Check",
+                    "category": "model_performance",
+                    "type": "regression_check",
+                    "severity": "critical",
+                    "description": "Ensures new model does not regress in accuracy by more than 5% compared to baseline.",
+                    "config": {"max_drop": -0.05, "target_column": target_column}
                 }
             ]
         }

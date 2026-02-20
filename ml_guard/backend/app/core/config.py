@@ -35,13 +35,29 @@ class Settings(BaseSettings):
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_DB: str = "ml_guard"
-    SQLALCHEMY_DATABASE_URI: Optional[str] = "postgresql://postgres:postgres@localhost/ml_guard"
+    SQLALCHEMY_DATABASE_URI: Optional[str] = None
+
+    @validator("SQLALCHEMY_DATABASE_URI", pre=True)
+    def assemble_db_connection(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
+        if isinstance(v, str):
+            return v
+        return f"postgresql://{values.get('POSTGRES_USER')}:{values.get('POSTGRES_PASSWORD')}@{values.get('POSTGRES_SERVER')}/{values.get('POSTGRES_DB')}"
 
     # Redis (Async Jobs)
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
-    CELERY_BROKER_URL: str = "redis://localhost:6379/0"
-    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
+    CELERY_BROKER_URL: Optional[str] = None
+    CELERY_RESULT_BACKEND: Optional[str] = None
+
+    @validator("CELERY_BROKER_URL", pre=True)
+    def assemble_celery_broker(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
+        if isinstance(v, str): return v
+        return f"redis://{values.get('REDIS_HOST')}:{values.get('REDIS_PORT')}/0"
+
+    @validator("CELERY_RESULT_BACKEND", pre=True)
+    def assemble_celery_result(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
+        if isinstance(v, str): return v
+        return f"redis://{values.get('REDIS_HOST')}:{values.get('REDIS_PORT')}/0"
 
     class Config:
         env_file = ".env"

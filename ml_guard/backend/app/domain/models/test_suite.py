@@ -34,9 +34,12 @@ class TestResult(BaseModel):
     message: str
     execution_time_seconds: float = 0.0
     actual_value: Optional[Any] = None
+    threshold: Optional[Any] = None
     details: Dict[str, Any] = {}
     description: Optional[str] = "No description available."
     explanation: Optional[str] = None
+    remediation: Optional[str] = None
+    score: float = 0.0 # Individual test score contribution
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 class TestSuite(BaseModel):

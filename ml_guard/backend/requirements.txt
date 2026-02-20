@@ -23,4 +23,5 @@ celery
 redis
 shap
 prometheus-client
-fastapi-limiter
+fastapi-limiter==0.1.5
+pydantic[email]

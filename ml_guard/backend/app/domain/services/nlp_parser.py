@@ -17,6 +17,7 @@ class NLPParser:
             'stability': ['stability', 'stable', 'correlation', 'robust'],
             'robustness': ['robust', 'edge', 'boundary', 'adversarial', 'reliable', 'safety'],
             'stress_test': ['stress', 'noise', 'perturbation', 'extreme', 'load', 'break'],
+            'regression': ['regression', 'baseline', 'compare', 'previous', 'improvement', 'degradation'],
             'all': ['all', 'comprehensive', 'complete', 'everything', 'full', 'suite', 'standard']
         }
 
