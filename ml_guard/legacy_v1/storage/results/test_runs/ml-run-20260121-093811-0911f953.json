@@ -1,0 +1,83 @@
+{
+  "run_id": "ml-run-20260121-093811-0911f953",
+  "project_id": "streamlit-demo",
+  "model_version": "v1.0.0",
+  "test_suite": "Custom Test Suite - Accuracy",
+  "environment": "testing",
+  "status": "completed",
+  "start_time": "2026-01-21T09:38:11.504047",
+  "end_time": "2026-01-21T09:38:11.511133",
+  "execution_time_seconds": 0.007086,
+  "results": [
+    {
+      "test_id": "ml-run-20260121-093811-0911f953-model_performance-986",
+      "test_name": "Accuracy Threshold (Critical)",
+      "category": "model_performance",
+      "status": "failed",
+      "severity": "critical",
+      "message": "Target column 'churn' not found",
+      "execution_time_seconds": 0.004279,
+      "details": {},
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260121-093811-0911f953-model_performance-510",
+      "test_name": "Precision Threshold (High Priority)",
+      "category": "model_performance",
+      "status": "failed",
+      "severity": "high",
+      "message": "Target column 'churn' not found",
+      "execution_time_seconds": 4.2e-05,
+      "details": {},
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260121-093811-0911f953-model_performance-264",
+      "test_name": "Recall Threshold (High Priority)",
+      "category": "model_performance",
+      "status": "failed",
+      "severity": "high",
+      "message": "Target column 'churn' not found",
+      "execution_time_seconds": 1.6e-05,
+      "details": {},
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260121-093811-0911f953-model_performance-968",
+      "test_name": "F1 Score Threshold (Balanced Metric)",
+      "category": "model_performance",
+      "status": "failed",
+      "severity": "high",
+      "message": "Target column 'churn' not found",
+      "execution_time_seconds": 1.7e-05,
+      "details": {},
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260121-093811-0911f953-model_performance-866",
+      "test_name": "ROC-AUC Threshold (Discrimination Ability)",
+      "category": "model_performance",
+      "status": "failed",
+      "severity": "medium",
+      "message": "Test execution failed: 'ModelPerformanceTests' object has no attribute '_test_roc_auc_threshold'",
+      "execution_time_seconds": 9e-06,
+      "details": {
+        "error": "'ModelPerformanceTests' object has no attribute '_test_roc_auc_threshold'",
+        "traceback": "<traceback object at 0x0000026DC2AAF780>"
+      },
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    }
+  ],
+  "error_message": null,
+  "metadata": null
+}
