@@ -1,18 +1,18 @@
-
-from typing import List, Union
+from typing import List, Union, Optional, Dict, Any
 from pydantic import AnyHttpUrl, EmailStr, validator
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     """
-    Application Settings
+    Application Settings for Enterprise ML Guard
     """
-    PROJECT_NAME: str = "ML Guard"
+    PROJECT_NAME: str = "ML Guard Governance Platform"
     API_V1_STR: str = "/api/v1"
     
     # Security
-    SECRET_KEY: str = "changeme_in_production_please"
+    SECRET_KEY: str = "9e1c2e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2" # Production should use env
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 1 week
+    ALGORITHM: str = "HS256"
     
     # CORS
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = [
@@ -30,14 +30,18 @@ class Settings(BaseSettings):
             return [i.strip() for i in v.split(",")]
         return v
     
-    # Database (Future)
-    # POSTGRES_SERVER: str
-    # POSTGRES_USER: str
-    # POSTGRES_PASSWORD: str
-    # POSTGRES_DB: str
-    
-    # MLflow (Future)
-    # MLFLOW_TRACKING_URI: str = "http://localhost:5000"
+    # Database
+    POSTGRES_SERVER: str = "localhost"
+    POSTGRES_USER: str = "postgres"
+    POSTGRES_PASSWORD: str = "postgres"
+    POSTGRES_DB: str = "ml_guard"
+    SQLALCHEMY_DATABASE_URI: Optional[str] = "postgresql://postgres:postgres@localhost/ml_guard"
+
+    # Redis (Async Jobs)
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    CELERY_BROKER_URL: str = "redis://localhost:6379/0"
+    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
 
     class Config:
         env_file = ".env"

@@ -1,4 +1,3 @@
-
 fastapi
 uvicorn
 pydantic
@@ -15,3 +14,13 @@ scikit-learn
 scipy
 joblib
 jinja2
+sqlalchemy
+psycopg2-binary
+alembic
+python-jose[cryptography]
+passlib[bcrypt]
+celery
+redis
+shap
+prometheus-client
+fastapi-limiter
