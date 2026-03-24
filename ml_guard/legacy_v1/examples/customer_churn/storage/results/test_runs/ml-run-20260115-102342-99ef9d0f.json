@@ -1,0 +1,183 @@
+{
+  "run_id": "ml-run-20260115-102342-99ef9d0f",
+  "project_id": "ecommerce-ml",
+  "model_version": "v2.1.3",
+  "test_suite": "production-readiness",
+  "environment": "production",
+  "status": "completed",
+  "start_time": "2026-01-15T10:23:42.191432",
+  "end_time": "2026-01-15T10:23:42.250334",
+  "execution_time_seconds": 0.058902,
+  "results": [
+    {
+      "test_id": "ml-run-20260115-102342-99ef9d0f-data_quality-732",
+      "test_name": "Missing Values Check",
+      "category": "data_quality",
+      "status": "passed",
+      "severity": "high",
+      "message": ".2f",
+      "execution_time_seconds": 0.006219,
+      "details": {
+        "total_missing_rate": 0.0,
+        "threshold": 0.05,
+        "missing_cells": 0,
+        "total_cells": 48000,
+        "high_missing_columns": {}
+      },
+      "threshold": 0.05,
+      "actual_value": 0.0,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260115-102342-99ef9d0f-data_quality-467",
+      "test_name": "Duplicate Rows Check",
+      "category": "data_quality",
+      "status": "passed",
+      "severity": "medium",
+      "message": "Found 0 duplicate rows",
+      "execution_time_seconds": 0.007803,
+      "details": {
+        "duplicate_count": 0,
+        "duplicate_rate": 0.0,
+        "total_rows": 3000,
+        "allow_duplicates": false
+      },
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260115-102342-99ef9d0f-data_quality-263",
+      "test_name": "Class Balance Check",
+      "category": "data_quality",
+      "status": "passed",
+      "severity": "medium",
+      "message": ".1f",
+      "execution_time_seconds": 0.001449,
+      "details": {
+        "imbalance_ratio": 4.569306930693069,
+        "max_allowed_ratio": 5.0,
+        "class_counts": {
+          "1": 7384,
+          "0": 1616
+        },
+        "majority_class_count": 7384,
+        "minority_class_count": 1616
+      },
+      "threshold": 5.0,
+      "actual_value": 4.569306930693069,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260115-102342-99ef9d0f-statistical_stability-730",
+      "test_name": "PSI Drift Check",
+      "category": "statistical_stability",
+      "status": "passed",
+      "severity": "high",
+      "message": ".3f",
+      "execution_time_seconds": 0.045399,
+      "details": {
+        "psi_scores": {
+          "age": 0.004555317597453607,
+          "gender": 0.0,
+          "location": 0.00010395085219361489,
+          "tenure_months": 0.00483277437471891,
+          "contract_type": 0.00023836825267095152,
+          "monthly_charges": 0.0029359079043086308,
+          "total_charges": 0.0033253808670797164,
+          "data_usage_gb": 0.0016346872476721327,
+          "call_minutes": 0.003583449730183738,
+          "support_tickets": 0.0006240343757359062,
+          "internet_service": 0.00011747310640848416,
+          "streaming_tv": 0.0,
+          "streaming_movies": 0.0,
+          "payment_method": 0.00034515780831825084,
+          "churn": 0.0
+        },
+        "drifted_features": [],
+        "max_psi_score": 0.00483277437471891,
+        "threshold": 0.15,
+        "features_analyzed": 15
+      },
+      "threshold": 0.15,
+      "actual_value": 0.00483277437471891,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260115-102342-99ef9d0f-model_performance-963",
+      "test_name": "Accuracy Threshold",
+      "category": "model_performance",
+      "status": "failed",
+      "severity": "critical",
+      "message": "Model prediction failed: The feature names should match those that were passed during fit.\nFeature names unseen at fit time:\n- customer_id\n",
+      "execution_time_seconds": 0.001959,
+      "details": {},
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260115-102342-99ef9d0f-model_performance-952",
+      "test_name": "Precision Threshold",
+      "category": "model_performance",
+      "status": "failed",
+      "severity": "high",
+      "message": "Test execution failed: 'ModelPerformanceTests' object has no attribute '_test_precision_threshold'",
+      "execution_time_seconds": 1.3e-05,
+      "details": {
+        "error": "'ModelPerformanceTests' object has no attribute '_test_precision_threshold'",
+        "traceback": "<traceback object at 0x00000276B36A4940>"
+      },
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260115-102342-99ef9d0f-model_performance-710",
+      "test_name": "Recall Threshold",
+      "category": "model_performance",
+      "status": "failed",
+      "severity": "high",
+      "message": "Test execution failed: 'ModelPerformanceTests' object has no attribute '_test_recall_threshold'",
+      "execution_time_seconds": 8e-06,
+      "details": {
+        "error": "'ModelPerformanceTests' object has no attribute '_test_recall_threshold'",
+        "traceback": "<traceback object at 0x00000276B36A4B40>"
+      },
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260115-102342-99ef9d0f-model_performance-336",
+      "test_name": "F1 Score Threshold",
+      "category": "model_performance",
+      "status": "failed",
+      "severity": "high",
+      "message": "Test execution failed: 'ModelPerformanceTests' object has no attribute '_test_f1_threshold'",
+      "execution_time_seconds": 7e-06,
+      "details": {
+        "error": "'ModelPerformanceTests' object has no attribute '_test_f1_threshold'",
+        "traceback": "<traceback object at 0x00000276B36A4D40>"
+      },
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260115-102342-99ef9d0f-bias_fairness-814",
+      "test_name": "Gender Bias Check",
+      "category": "bias_fairness",
+      "status": "failed",
+      "severity": "medium",
+      "message": "Bias test execution failed: The feature names should match those that were passed during fit.\nFeature names unseen at fit time:\n- customer_id\nFeature names seen at fit time, yet now missing:\n- gender\n",
+      "execution_time_seconds": 0.000732,
+      "details": {},
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    }
+  ],
+  "error_message": null,
+  "metadata": null
+}

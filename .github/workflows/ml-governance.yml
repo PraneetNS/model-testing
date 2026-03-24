@@ -1,0 +1,25 @@
+name: ML Governance Audit
+on: [pull_request]
+
+jobs:
+  test-and-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      # 1. Train your model or prepare the artifact
+      - name: Prep Model
+        run: python train.py --output model.pkl
+
+      # 2. Run the Governance Gate
+      - name: ML Guard Compliance Check
+        env:
+          MLG_API_KEY: ${{ secrets.MLG_API_KEY }}
+        run: |
+          pip install requests
+          python .github/scripts/ml_guard_ci.py \
+            --api-url "http://your-ml-guard-api.com" \
+            --api-key "$MLG_API_KEY" \
+            --model-name "ProductionClassifier" \
+            --model-path "model.pkl" \
+            --data-path "data/val.csv"

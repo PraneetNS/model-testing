@@ -1,0 +1,63 @@
+name: ML Guard Quality Gate
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  ml_quality_gate:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-python: '3.9'
+
+    - name: Install ML Guard CLI
+      run: |
+        pip install requests
+
+    - name: Run ML Guard Validation
+      env:
+        ML_GUARD_API_KEY: ${{ secrets.ML_GUARD_API_KEY }}
+        ML_GUARD_URL: "https://your-ml-guard-instance.com/api/v1"
+      run: |
+        # This script simulates a CLI call to the ML Guard API
+        # It fails the build if the Quality Index is below 70% or deployment is blocked
+        python -c "
+        import requests, os, sys
+        
+        # Example payload pointing to newly generated artifacts
+        payload = {
+            'project_id': 'gh-actions-auto-scan',
+            'target_column': 'target',
+            'query': 'comprehensive security and drift audit'
+        }
+        files = {
+            'model_file': open('models/latest_model.pkl', 'rb'),
+            'train_file': open('data/train.csv', 'rb'),
+            'val_file': open('data/val.csv', 'rb')
+        }
+        
+        headers = {'Authorization': f'Bearer {os.environ.get(\"ML_GUARD_API_KEY\")}'}
+        
+        response = requests.post(f'{os.environ.get(\"ML_GUARD_URL\")}/quality-gate/evaluate', 
+                                data=payload, files=files, headers=headers)
+        
+        if response.status_code != 200:
+            print(f'API Error: {response.text}')
+            sys.exit(1)
+            
+        result = response.json()
+        print(f'Quality Index: {result[\"score\"]}%')
+        
+        if not result['deployment_allowed']:
+            print('❌ GATE FAIL: Quality Index too low or Critical Failures detected!')
+            sys.exit(1)
+        
+        print('✅ GATE PASSED: Model is safe for deployment.')
+        "

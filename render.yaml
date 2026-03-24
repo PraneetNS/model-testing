@@ -1,0 +1,103 @@
+services:
+  # ─────────────────────────────────────────────────────────
+  # 1. MINIO (Object Storage)
+  # ─────────────────────────────────────────────────────────
+  - type: web
+    name: minio
+    runtime: docker
+    dockerImage: quay.io/minio/minio:latest
+    dockerCommand: minio server /data --console-address :9001
+    plan: free
+    disk:
+      name: minio-data
+      mountPath: /data
+      sizeGB: 10
+    envVars:
+      - key: MINIO_ROOT_USER
+        value: minioadmin
+      - key: MINIO_ROOT_PASSWORD
+        value: minioadmin
+
+  # ─────────────────────────────────────────────────────────
+  # 2. REDIS (Celery Broker)
+  # ─────────────────────────────────────────────────────────
+  - type: redis
+    name: ml-guard-redis
+    plan: free
+    ipAllowList: [] # Only allow internal traffic
+
+  # ─────────────────────────────────────────────────────────
+  # 3. BACKEND (FastAPI API)
+  # ─────────────────────────────────────────────────────────
+  - type: web
+    name: ml-guard-backend
+    runtime: docker
+    dockerContext: .
+    dockerFilePath: ml_guard/backend/Dockerfile
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        sync: false # Set in Render dashboard (Neon URL)
+      - key: REDIS_URL
+        fromService:
+          name: ml-guard-redis
+          type: redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          name: ml-guard-redis
+          type: redis
+          property: connectionString
+      - key: MINIO_ENDPOINT
+        value: http://minio:9000
+      - key: MINIO_ACCESS_KEY
+        value: minioadmin
+      - key: MINIO_SECRET_KEY
+        value: minioadmin
+      - key: MINIO_BUCKET
+        value: mlguard-artifacts
+      - key: SECRET_KEY
+        generateValue: true
+
+  # ─────────────────────────────────────────────────────────
+  # 4. WORKER (Celery)
+  # ─────────────────────────────────────────────────────────
+  - type: worker
+    name: ml-guard-worker
+    runtime: docker
+    dockerContext: .
+    dockerFilePath: ml_guard/backend/Dockerfile
+    dockerCommand: celery -A ml_guard.backend.worker worker --loglevel=info -P solo
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: CELERY_BROKER_URL
+        fromService:
+          name: ml-guard-redis
+          type: redis
+          property: connectionString
+      - key: MINIO_ENDPOINT
+        value: http://minio:9000
+      - key: MINIO_ACCESS_KEY
+        value: minioadmin
+      - key: MINIO_SECRET_KEY
+        value: minioadmin
+      - key: MINIO_BUCKET
+        value: mlguard-artifacts
+
+  # ─────────────────────────────────────────────────────────
+  # 5. FRONTEND (Next.js Dashboard)
+  # ─────────────────────────────────────────────────────────
+  - type: web
+    name: ml-guard-frontend
+    runtime: docker
+    dockerContext: ./ml_guard/frontend
+    dockerFilePath: Dockerfile
+    plan: free
+    envVars:
+      - key: NEXT_PUBLIC_API_BASE
+        fromService:
+          name: ml-guard-backend
+          type: web
+          property: host

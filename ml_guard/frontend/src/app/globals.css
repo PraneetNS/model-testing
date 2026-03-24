@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-outfit), var(--font-geist-sans), ui-sans-serif, system-ui;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  --color-orange-500: #f97316;
+  --color-orange-400: #fb923c;
+  --color-orange-600: #ea580c;
+
+  /* High-end SaaS Dark Palette */
+  --color-brand-bg: #090A0C;
+  --color-brand-panel: #0F1115;
+}
+
+:root {
+  --background: #090A0C;
+  --foreground: #F8FAFC;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #090A0C;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1F2937;
+  border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #f97316;
+}
+
+/* Animations */
+@keyframes pulse-soft {
+
+  0%,
+  100% {
+    opacity: 0.8;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 3s infinite;
+}
+
+.glass-panel {
+  background: rgba(15, 17, 21, 0.7);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}

@@ -1,0 +1,51 @@
+{
+  "run_id": "ml-run-20260118-075552-868d1a0a",
+  "project_id": "streamlit-demo",
+  "model_version": "v1.0.0",
+  "test_suite": "Custom Test Suite - Robustness",
+  "environment": "testing",
+  "status": "completed",
+  "start_time": "2026-01-18T07:55:52.543286",
+  "end_time": "2026-01-18T07:55:52.570006",
+  "execution_time_seconds": 0.02672,
+  "results": [
+    {
+      "test_id": "ml-run-20260118-075552-868d1a0a-robustness-808",
+      "test_name": "Prediction Stability Check (Noise Resistance)",
+      "category": "robustness",
+      "status": "failed",
+      "severity": "medium",
+      "message": ".1%",
+      "execution_time_seconds": 0.025313,
+      "details": {
+        "stability_rate": 0,
+        "threshold": 0.95,
+        "stable_predictions": 0,
+        "total_predictions": 0,
+        "noise_level": 0.01,
+        "sample_size": 100
+      },
+      "threshold": 0.95,
+      "actual_value": 0.0,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260118-075552-868d1a0a-robustness-364",
+      "test_name": "Input Perturbation Sensitivity",
+      "category": "robustness",
+      "status": "failed",
+      "severity": "low",
+      "message": "Test execution failed: 'RobustnessTests' object has no attribute '_test_input_perturbation'",
+      "execution_time_seconds": 1.1e-05,
+      "details": {
+        "error": "'RobustnessTests' object has no attribute '_test_input_perturbation'",
+        "traceback": "<traceback object at 0x00000264023EAC00>"
+      },
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    }
+  ],
+  "error_message": null,
+  "metadata": null
+}

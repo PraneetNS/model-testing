@@ -1,0 +1,24 @@
+ 
+ -------------- celery@Praneet v5.6.2 (recovery)
+--- ***** ----- 
+-- ******* ---- Windows-11-10.0.26200-SP0 2026-03-04 10:52:53
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         ml_guard:0x202e1c0b8c0
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/0
+- *** --- * --- .> concurrency: 16 (solo)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . run_comprehensive_scan
+  . test_task
+
+[2026-03-04 10:52:55,916: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2026-03-04 10:52:57,939: INFO/MainProcess] mingle: searching for neighbors
+[2026-03-04 10:53:05,031: INFO/MainProcess] mingle: all alone
+[2026-03-04 10:53:15,166: INFO/MainProcess] celery@Praneet ready.

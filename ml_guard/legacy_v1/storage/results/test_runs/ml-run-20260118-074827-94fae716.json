@@ -1,0 +1,54 @@
+{
+  "run_id": "ml-run-20260118-074827-94fae716",
+  "project_id": "streamlit-demo",
+  "model_version": "v1.0.0",
+  "test_suite": "Custom Test Suite - Accuracy",
+  "environment": "testing",
+  "status": "completed",
+  "start_time": "2026-01-18T07:48:27.966245",
+  "end_time": "2026-01-18T07:48:27.974089",
+  "execution_time_seconds": 0.007844,
+  "results": [
+    {
+      "test_id": "ml-run-20260118-074827-94fae716-model_performance-730",
+      "test_name": "Accuracy Threshold",
+      "category": "model_performance",
+      "status": "failed",
+      "severity": "critical",
+      "message": "Model prediction failed: The feature names should match those that were passed during fit.\nFeature names unseen at fit time:\n- customer_id\n",
+      "execution_time_seconds": 0.003744,
+      "details": {},
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260118-074827-94fae716-model_performance-277",
+      "test_name": "Precision Threshold",
+      "category": "model_performance",
+      "status": "failed",
+      "severity": "high",
+      "message": "Model prediction failed: The feature names should match those that were passed during fit.\nFeature names unseen at fit time:\n- customer_id\n",
+      "execution_time_seconds": 0.003067,
+      "details": {},
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260118-074827-94fae716-model_performance-48",
+      "test_name": "Recall Threshold",
+      "category": "model_performance",
+      "status": "failed",
+      "severity": "high",
+      "message": "Model prediction failed: The feature names should match those that were passed during fit.\nFeature names unseen at fit time:\n- customer_id\n",
+      "execution_time_seconds": 0.002852,
+      "details": {},
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    }
+  ],
+  "error_message": null,
+  "metadata": null
+}

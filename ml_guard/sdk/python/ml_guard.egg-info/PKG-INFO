@@ -1,0 +1,14 @@
+Metadata-Version: 2.4
+Name: ml-guard
+Version: 0.1.0
+Summary: Python SDK and CLI for ML Guard Quality Governance Platform
+Author: ML Guard Team
+Requires-Python: >=3.8
+Requires-Dist: requests>=2.25.1
+Requires-Dist: pandas>=1.2.0
+Requires-Dist: joblib>=1.0.1
+Requires-Dist: scikit-learn>=0.24.0
+Dynamic: author
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary

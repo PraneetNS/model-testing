@@ -1,0 +1,6 @@
+FROM minio/minio:latest
+
+ENV MINIO_ROOT_USER=minioadmin
+ENV MINIO_ROOT_PASSWORD=minioadmin
+
+CMD ["sh", "-c", "minio server /data --address :$PORT"]

@@ -1,0 +1,41 @@
+{
+  "run_id": "ml-run-20260118-075419-e3df097e",
+  "project_id": "test-project",
+  "model_version": "v1.0.0",
+  "test_suite": "display-test",
+  "environment": "testing",
+  "status": "completed",
+  "start_time": "2026-01-18T07:54:19.613007",
+  "end_time": "2026-01-18T07:54:19.614822",
+  "execution_time_seconds": 0.001815,
+  "results": [
+    {
+      "test_id": "ml-run-20260118-075419-e3df097e-model_performance-433",
+      "test_name": "Missing Dataset Test",
+      "category": "model_performance",
+      "status": "failed",
+      "severity": "critical",
+      "message": "Dataset 'nonexistent_dataset' not found",
+      "execution_time_seconds": 1.4e-05,
+      "details": {},
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260118-075419-e3df097e-data_quality-836",
+      "test_name": "Wrong Target Column Test",
+      "category": "data_quality",
+      "status": "failed",
+      "severity": "high",
+      "message": "Dataset 'training' not found",
+      "execution_time_seconds": 9e-06,
+      "details": {},
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    }
+  ],
+  "error_message": null,
+  "metadata": null
+}

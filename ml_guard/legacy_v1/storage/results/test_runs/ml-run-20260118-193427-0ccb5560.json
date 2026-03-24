@@ -1,0 +1,110 @@
+{
+  "run_id": "ml-run-20260118-193427-0ccb5560",
+  "project_id": "streamlit-demo",
+  "model_version": "v1.0.0",
+  "test_suite": "Custom Test Suite - Drift, Robustness",
+  "environment": "testing",
+  "status": "completed",
+  "start_time": "2026-01-18T19:34:27.509050",
+  "end_time": "2026-01-18T19:34:27.579976",
+  "execution_time_seconds": 0.070926,
+  "results": [
+    {
+      "test_id": "ml-run-20260118-193427-0ccb5560-statistical_stability-689",
+      "test_name": "PSI Drift Check (Population Stability)",
+      "category": "statistical_stability",
+      "status": "passed",
+      "severity": "high",
+      "message": ".3f",
+      "execution_time_seconds": 0.044981,
+      "details": {
+        "psi_scores": {
+          "age": 0.009454355901304869,
+          "years_experience": 0.011053967633660735,
+          "previous_salary": 0.014134626229198777,
+          "skill_score": 0.00800134604512128,
+          "certifications": 0.0022397877528946173,
+          "interview_score": 0.01112308860553506,
+          "hired": 0.0
+        },
+        "drifted_features": [],
+        "max_psi_score": 0.014134626229198777,
+        "threshold": 0.15,
+        "features_analyzed": 7
+      },
+      "threshold": 0.15,
+      "actual_value": 0.014134626229198777,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260118-193427-0ccb5560-statistical_stability-690",
+      "test_name": "KS Test Drift Check (Distribution Comparison)",
+      "category": "statistical_stability",
+      "status": "failed",
+      "severity": "medium",
+      "message": "Test execution failed: 'StatisticalStabilityTests' object has no attribute '_test_ks_drift'",
+      "execution_time_seconds": 1.2e-05,
+      "details": {
+        "error": "'StatisticalStabilityTests' object has no attribute '_test_ks_drift'",
+        "traceback": "<traceback object at 0x0000028DA6DD80C0>"
+      },
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260118-193427-0ccb5560-statistical_stability-167",
+      "test_name": "Feature Correlation Stability Check",
+      "category": "statistical_stability",
+      "status": "failed",
+      "severity": "medium",
+      "message": "Test execution failed: 'StatisticalStabilityTests' object has no attribute '_test_correlation_stability'",
+      "execution_time_seconds": 7e-06,
+      "details": {
+        "error": "'StatisticalStabilityTests' object has no attribute '_test_correlation_stability'",
+        "traceback": "<traceback object at 0x0000028DA56CE480>"
+      },
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260118-193427-0ccb5560-robustness-59",
+      "test_name": "Prediction Stability Check (Noise Resistance)",
+      "category": "robustness",
+      "status": "failed",
+      "severity": "medium",
+      "message": ".1%",
+      "execution_time_seconds": 0.023463,
+      "details": {
+        "stability_rate": 0,
+        "threshold": 0.95,
+        "stable_predictions": 0,
+        "total_predictions": 0,
+        "noise_level": 0.01,
+        "sample_size": 100
+      },
+      "threshold": 0.95,
+      "actual_value": 0.0,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260118-193427-0ccb5560-robustness-20",
+      "test_name": "Input Perturbation Sensitivity",
+      "category": "robustness",
+      "status": "failed",
+      "severity": "low",
+      "message": "Test execution failed: 'RobustnessTests' object has no attribute '_test_input_perturbation'",
+      "execution_time_seconds": 1.5e-05,
+      "details": {
+        "error": "'RobustnessTests' object has no attribute '_test_input_perturbation'",
+        "traceback": "<traceback object at 0x0000028DA6DD80C0>"
+      },
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    }
+  ],
+  "error_message": null,
+  "metadata": null
+}

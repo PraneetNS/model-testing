@@ -1,0 +1,83 @@
+{
+  "run_id": "ml-run-20260118-080045-914c91b1",
+  "project_id": "streamlit-demo",
+  "model_version": "v1.0.0",
+  "test_suite": "Custom Test Suite - Accuracy",
+  "environment": "testing",
+  "status": "completed",
+  "start_time": "2026-01-18T08:00:45.483612",
+  "end_time": "2026-01-18T08:00:45.494991",
+  "execution_time_seconds": 0.011379,
+  "results": [
+    {
+      "test_id": "ml-run-20260118-080045-914c91b1-model_performance-720",
+      "test_name": "Accuracy Threshold (Critical)",
+      "category": "model_performance",
+      "status": "failed",
+      "severity": "critical",
+      "message": "Model prediction failed: The feature names should match those that were passed during fit.\nFeature names unseen at fit time:\n- customer_id\n",
+      "execution_time_seconds": 0.003667,
+      "details": {},
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260118-080045-914c91b1-model_performance-104",
+      "test_name": "Precision Threshold (High Priority)",
+      "category": "model_performance",
+      "status": "failed",
+      "severity": "high",
+      "message": "Model prediction failed: The feature names should match those that were passed during fit.\nFeature names unseen at fit time:\n- customer_id\n",
+      "execution_time_seconds": 0.004817,
+      "details": {},
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260118-080045-914c91b1-model_performance-911",
+      "test_name": "Recall Threshold (High Priority)",
+      "category": "model_performance",
+      "status": "failed",
+      "severity": "high",
+      "message": "Model prediction failed: The feature names should match those that were passed during fit.\nFeature names unseen at fit time:\n- customer_id\n",
+      "execution_time_seconds": 0.004938,
+      "details": {},
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260118-080045-914c91b1-model_performance-548",
+      "test_name": "F1 Score Threshold (Balanced Metric)",
+      "category": "model_performance",
+      "status": "failed",
+      "severity": "high",
+      "message": "Model prediction failed: The feature names should match those that were passed during fit.\nFeature names unseen at fit time:\n- customer_id\n",
+      "execution_time_seconds": 0.004618,
+      "details": {},
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260118-080045-914c91b1-model_performance-245",
+      "test_name": "ROC-AUC Threshold (Discrimination Ability)",
+      "category": "model_performance",
+      "status": "failed",
+      "severity": "medium",
+      "message": "Test execution failed: 'ModelPerformanceTests' object has no attribute '_test_roc_auc_threshold'",
+      "execution_time_seconds": 1.1e-05,
+      "details": {
+        "error": "'ModelPerformanceTests' object has no attribute '_test_roc_auc_threshold'",
+        "traceback": "<traceback object at 0x00000189E21F3540>"
+      },
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    }
+  ],
+  "error_message": null,
+  "metadata": null
+}

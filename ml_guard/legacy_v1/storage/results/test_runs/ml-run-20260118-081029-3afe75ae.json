@@ -1,0 +1,41 @@
+{
+  "run_id": "ml-run-20260118-081029-3afe75ae",
+  "project_id": "visibility-test",
+  "model_version": "v1.0.0",
+  "test_suite": "visibility-test",
+  "environment": "testing",
+  "status": "completed",
+  "start_time": "2026-01-18T08:10:29.601662",
+  "end_time": "2026-01-18T08:10:29.603100",
+  "execution_time_seconds": 0.001438,
+  "results": [
+    {
+      "test_id": "ml-run-20260118-081029-3afe75ae-data_quality-969",
+      "test_name": "Data Quality Check",
+      "category": "data_quality",
+      "status": "failed",
+      "severity": "high",
+      "message": "Dataset 'validation' not found",
+      "execution_time_seconds": 8e-06,
+      "details": {},
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    },
+    {
+      "test_id": "ml-run-20260118-081029-3afe75ae-model_performance-786",
+      "test_name": "Failed Performance Test",
+      "category": "model_performance",
+      "status": "failed",
+      "severity": "critical",
+      "message": "Dataset 'validation' not found",
+      "execution_time_seconds": 9e-06,
+      "details": {},
+      "threshold": null,
+      "actual_value": null,
+      "evidence": null
+    }
+  ],
+  "error_message": null,
+  "metadata": null
+}

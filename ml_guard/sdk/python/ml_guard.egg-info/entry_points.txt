@@ -1,0 +1,2 @@
+[console_scripts]
+mlguard = ml_guard.cli:main

@@ -1,0 +1,47 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user email belongs to a corporate domain
+    function isCorporateDomain() {
+      return request.auth.token.email.matches('.*@hq\.company$') || 
+             request.auth.token.email.matches('.*@fireflink\.com$');
+    }
+
+    // Tenant-based Isolation: 
+    // Users can only read/write data belonging to their own organization (tenant)
+    // Assumes user tokens have a 'tenant_id' custom claim, OR matching by email domain
+    match /tenants/{tenantId} {
+      allow read: if isAuthenticated() && (request.auth.token.tenant_id == tenantId);
+      
+      match /projects/{projectId} {
+        allow read, list: if isAuthenticated() && (request.auth.token.tenant_id == tenantId);
+        
+        // Only Admins or Owners can modify project configurations
+        allow write: if isAuthenticated() && 
+                     (request.auth.token.tenant_id == tenantId) && 
+                     (request.auth.token.role in ['admin', 'owner']);
+      }
+
+      match /audit_logs/{logId} {
+        // Audit logs are read-only for auditors and admins
+        allow read: if isAuthenticated() && 
+                     (request.auth.token.tenant_id == tenantId) && 
+                     (request.auth.token.role in ['admin', 'auditor']);
+        allow create: if isAuthenticated() && (request.auth.token.tenant_id == tenantId);
+        allow update, delete: if false; // Audit logs must be immutable
+      }
+    }
+
+    // User Profile access
+    match /users/{uid} {
+      allow read, write: if isAuthenticated() && request.auth.uid == uid;
+    }
+  }
+}
