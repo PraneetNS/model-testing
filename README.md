@@ -22,6 +22,7 @@ The latest evolution of ML Guard introduces the **Enterprise Governance Suite**,
 - **Scan History & Compare**: Track every governance audit with side-by-side metric comparison and **Trajectory Sparklines** for model health trends.
 - **Model Report Cards**: Professional, exportable, and printable compliance certificates consolidating scores, policy gates, and statistical proof.
 - **Live Notifications**: Real-time alerting bell with severity-based flyout for critical governance events.
+- **Predictive Governance (NEW)**: 30-day risk trajectory forecasting using **Facebook Prophet** and **Scikit-learn** to predict and block future policy breaches before they occur.
 
 ### 🌐 Modern Infrastructure
 - **Serverless Data Tier**: Powered by **Neon PostgreSQL** and **Upstash Redis** for global scalability.
@@ -139,6 +140,29 @@ jobs:
 ```
 
 Exits with `code 1` on failure, ensuring no non-compliant model reaches production.
+
+---
+
+## 📈 Predictive Governance & Forecasting
+
+ML Guard v7.2 includes a predictive layer that analyzes historical audit trends to forecast future risks.
+
+### Forecasting Model Selection
+- **Deep History (≥10 points)**: Utilizes `Facebook Prophet` with daily seasonality to capture complex temporal patterns.
+- **Sparse Data (<10 points)**: Falls back to `Ordinary Least Squares (OLS)` linear regression for stable trend extrapolation.
+
+### Installation (Prophet)
+To enable the forecasting tier, ensure the following dependencies are installed:
+```bash
+# Required for Prophet on Windows/Linux
+pip install pystan==2.19.1.1
+pip install prophet
+```
+
+### Risk Summary Features
+- **Breach Prediction**: Identifies the exact date a metric (e.g. PSI) is expected to cross a policy threshold.
+- **Confidence Intervals**: Shaded uncertainty regions (95% CI) visualized in the dashboard.
+- **Trend Direction**: Real-time classification of metrics as `IMPROVING`, `STABLE`, or `DEGRADING`.
 
 ---
 

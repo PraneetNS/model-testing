@@ -18,7 +18,7 @@ from sqlalchemy import desc
 
 # Routers
 from app.routers import (
-    streaming, advisory, monitoring, jobs, auth, gate
+    streaming, advisory, monitoring, jobs, auth, gate, forecast
 )
 
 # Lifecycle Extension Routers
@@ -160,6 +160,7 @@ app.include_router(history.router,     prefix="/api/v1", tags=["history"])
 app.include_router(alerts.router,      prefix="/api/v1", tags=["alerts"])
 app.include_router(ci.router,          prefix="/api/v1", tags=["ci"])
 app.include_router(gate.router,        prefix="/api/v1/gate", tags=["gate"])
+app.include_router(forecast.router,    prefix="/api/v1/forecast", tags=["forecast"])
 
 # ─── Streaming + AI Advisory + Monitoring ───
 app.include_router(streaming.router,   prefix="/api/v1", tags=["streaming"])
