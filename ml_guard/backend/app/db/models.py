@@ -401,6 +401,26 @@ class LLMScanRecord(Base):
 
 
 # ══════════════════════════════════════════════════════════
+# NEW: REAL-TIME DRIFT SENTINEL (v7.2)
+# ══════════════════════════════════════════════════════════
+
+class SentinelRecord(Base):
+    """Real-time drift persistence for sliding-window Sentinel scans."""
+    __tablename__ = "sentinel_records"
+    id              = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    model_id        = Column(UUID(), ForeignKey("models.id", ondelete="CASCADE"), index=True, nullable=False)
+    avg_psi         = Column(Float, nullable=False)
+    feature_psi     = Column(PortableJSON, nullable=True)  # {feature: psi, ...}
+    window_size     = Column(Integer, nullable=True)
+    threshold       = Column(Float, nullable=True)
+    is_breached     = Column(Boolean, default=False)
+    metadata_json   = Column(PortableJSON, nullable=True)
+    created_at      = Column(DateTime, default=utcnow, index=True)
+
+    model           = relationship("Model", backref="sentinel_scans")
+
+
+# ══════════════════════════════════════════════════════════
 # NEW: STREAMING DRIFT RECORDS (v7.0)
 # ══════════════════════════════════════════════════════════
 
