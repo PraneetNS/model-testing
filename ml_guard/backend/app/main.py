@@ -18,10 +18,7 @@ from sqlalchemy import desc
 
 # Routers
 from app.routers import (
-    preflight, drift, llm_eval, governance, init_scan,
-    performance, fairness, audit, behavior,
-    enterprise, policies, history, alerts, ci,
-    streaming, advisory, monitoring, jobs, auth
+    streaming, advisory, monitoring, jobs, auth, gate
 )
 
 # Lifecycle Extension Routers
@@ -50,8 +47,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="ML Guard Enterprise",
-    description="Enterprise AI Governance Platform v7.0 — Fairness, Streaming, LLM Guard",
-    version="7.0.0",
+    description="Enterprise AI Governance Platform v7.2 — CI/CD Integration, Fairness, LLM Guard",
+    version="7.2.0",
     lifespan=lifespan
 )
 
@@ -162,6 +159,7 @@ app.include_router(auth.router,        prefix="/api/v1", tags=["auth"])
 app.include_router(history.router,     prefix="/api/v1", tags=["history"])
 app.include_router(alerts.router,      prefix="/api/v1", tags=["alerts"])
 app.include_router(ci.router,          prefix="/api/v1", tags=["ci"])
+app.include_router(gate.router,        prefix="/api/v1/gate", tags=["gate"])
 
 # ─── Streaming + AI Advisory + Monitoring ───
 app.include_router(streaming.router,   prefix="/api/v1", tags=["streaming"])

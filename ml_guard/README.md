@@ -21,7 +21,7 @@ through a unified dashboard with deterministic, transparent, and auditable gover
 │              BACKEND (FastAPI + Celery)               │
 │  Routers: audit│fairness│behavior│monitoring│         │
 │           streaming│llm_eval│advisory│enterprise      │
-│           policies│alerts│ci│history                  │
+│           policies│alerts│ci│history│gate             │
 └─────────────────┬────────────────────────────────────┘
                   │
 ┌─────────────────▼────────────────────────────────────┐
@@ -50,9 +50,9 @@ through a unified dashboard with deterministic, transparent, and auditable gover
 | Stream Drift          | Real-time    | ✅ Enhanced|
 | LLM Governance        | LLM Safety   | ✅ Stable |
 | AI Advisory           | Copilot      | ✅ Stable |
-| **Scan History**      | Governance   | ✅ **New (v7.2)** |
-| **Model Report Card** | Compliance   | ✅ **New (v7.2)** |
-| **Live Notifications**| Alerting     | ✅ **New (v7.2)** |
+| **Scan History**      | Governance   | ✅ Stable |
+| **Model Report Card** | Compliance   | ✅ Stable |
+| **CI/CD Sync Gate**   | Automation   | ✅ **New (v7.2)** |
 
 ---
 
@@ -63,32 +63,41 @@ Full offline governance scan: accuracy, F1, PSI/KS/JSD drift, overfitting,
 calibration, leakage detection, data quality. Produces governance score, risk score,
 and enterprise intelligence stream events.
 
-### 2. Scan History & Compare (NEW v7.2)
+### 2. CI/CD Governance Gate (NEW v7.2)
+Synchronous evaluation for pipeline integration:
+- **/api/v1/gate/evaluate**: Accepts `mlguard.yaml` policy & model path.
+- **Sync mode**: Responds with a PASSED/FAILED verdict in under 60s.
+- **Badge Integration**: Returns SVG badge URLs for PR comments.
+
+### 3. Scan History & Compare
 Historical tracking of all governance scans with side-by-side comparison:
 - **Trajectory Sparklines**: Visualizes governance score trends across model versions.
 - **Side-by-Side Diff**: Compare two scans to identify metric regression or drift.
-- **Deep Audit Retrieval**: Instantly load full results from any historical scan.
 
-### 3. Model Report Card (NEW v7.2)
+### 4. Model Report Card
 Generate professional, printable governance certificates:
 - **Compliance Proof**: Consolidated summary of policy gates and statistical scores.
-- **Export Ready**: Optimized for PDF export and digital verification.
 - **Audit Sign-off**: Ready-to-use template for risk management reviews.
 
-### 4. Live Notifications Bell (NEW v7.2)
-Real-time alerting integrated directly into the header:
-- **Live Polling**: Monitors critical system alerts and model failures every 30s.
-- **Severity Coding**: Immediate visual feedback for Critical, Warning, and Info events.
-- **Unread Tracking**: Smart badge indicates new unaddressed governance events.
+---
 
-### 5. Fairness & Bias Detection
-Enterprise-grade bias detection with metrics: Statistical Parity Difference (SPD), Equal Opportunity Difference (EOD), and Disparate Impact Ratio (DIR).
+## 🛡️ CI/CD Pipeline Integration
 
-### 6. LLM Governance
-Deterministic safety checks: Prompt Injection Detection, Toxicity Scoring, Hallucination Risk, and Response Stability.
+### mlguard.yaml (Policy-as-Code)
+```yaml
+version: "1.0"
+model_name: "CustomerChurnPredictor-V2"
+max_psi: 0.15
+min_accuracy: 0.88
+max_hallucination_rate: 0.04
+```
 
-### 7. Streaming Drift Detection (WebSocket)
-Real-time sliding-window drift monitoring with adaptive thresholding and consecutive-window alerting.
+### mlguard CLI
+```bash
+python ml_guard/sdk/python/mlguard_cli.py check \
+  --policy mlguard.yaml \
+  --artifact models/latest_model.pkl
+```
 
 ---
 
@@ -113,17 +122,15 @@ ml_guard/
 │   ├── app/
 │   │   ├── main.py               # FastAPI application
 │   │   ├── routers/              # Modular API controllers
-│   │   └── db/                   # Neon PostgreSQL integration
-├── frontend/
-│   ├── src/app/dashboard/
-│   │   ├── page.tsx               # Unified dashboard shell
-│   │   ├── modules/
-│   │   │   ├── ScanHistoryModule.tsx    # History & Compare (v7.2)
-│   │   │   ├── ModelReportCardModule.tsx# Compliance Certificates (v7.2)
+│   │   │   ├── gate.py           # Sync evaluation gate (v7.2)
 │   │   │   └── ...
-│   │   └── components/
-│   │       ├── NotificationsBell.tsx    # Live alerting flyout (v7.2)
-│   └── ...
+│   │   └── db/                   # Neon PostgreSQL integration
+├── sdk/
+│   └── python/
+│       ├── mlguard_cli.py        # CI/CD CLI Tool (v7.2)
+│       └── ...
+├── frontend/                      # Governance Dashboard
+└── ...
 ```
 
 ---

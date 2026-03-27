@@ -1,0 +1,44 @@
+name: "ML Guard Governance Gate"
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main ]
+
+jobs:
+  governance-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install ML Guard SDK
+        run: |
+          pip install click yaml requests rich
+          # Install CLI directly in CI
+          pip install --editable ./ml_guard/sdk/python/
+
+      - name: Run ML Guard Check
+        id: gate
+        env:
+          ML_GUARD_API: ${{ secrets.ML_GUARD_API_URL }}
+        run: |
+          # Usage: mlguard check --policy mlguard.yaml --artifact model_v2.pkl --api-url $ML_GUARD_API
+          python ml_guard/sdk/python/mlguard_cli.py check \
+            --policy ml_guard/mlguard.yaml \
+            --artifact models/latest_model.pkl \
+            --api-url "https://api.v7.mlguard.ai/v1/gate/evaluate"
+        continue-on-error: false
+
+      - name: Governance Report Summary
+        if: always()
+        run: |
+          echo "### ML Guard Governance Verdict" >> $GITHUB_STEP_SUMMARY
+          echo "Status: ${{ steps.gate.outcome }}" >> $GITHUB_STEP_SUMMARY
+          echo "![Status Badge](https://img.shields.io/badge/MLGuard-${{ steps.gate.outcome }}-orange?style=for-the-badge)" >> $GITHUB_STEP_SUMMARY

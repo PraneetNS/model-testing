@@ -1,0 +1,22 @@
+version: "1.0"
+model_name: "CustomerChurnPredictor-V2"
+
+# Governance Thresholds
+max_psi: 0.15
+max_jsd: 0.08
+min_accuracy: 0.88
+max_overfit_gap: 0.05
+
+# Fairness Thresholds
+bias_parity_threshold: 0.1
+min_disparate_impact: 0.82
+
+# LLM Safety Thresholds
+max_hallucination_rate: 0.04
+max_toxicity_score: 0.08
+max_injection_risk: 0.0
+
+# Enterprise Contacts
+contacts:
+  risk: "risk-assessment@enterprise.ai"
+  dev: "ml-ops@enterprise.ai"
