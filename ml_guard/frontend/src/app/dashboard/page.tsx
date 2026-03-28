@@ -22,6 +22,7 @@ import PerformancePage from "./modules/PerformanceModule";
 import ModelSecurityPage from "./modules/ModelSecurityModule";
 import ScanHistoryPage from "./modules/ScanHistoryModule";
 import ModelReportCardModule from "./modules/ModelReportCardModule";
+import ObservabilityModule from "./modules/ObservabilityModule";
 import NotificationsBell from "./components/NotificationsBell";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "";
@@ -1773,6 +1774,7 @@ const NAV_CATEGORIES = [
         label: "Live Guard",
         icon: MonitorCheck,
         items: [
+            { id: "observe", label: "Observability", sub: "Live drift · perf · feed", icon: Eye },
             { id: "streaming", label: "Stream Drift", sub: "Real-time detection", icon: BarChart3 },
             { id: "performance", label: "Performance", sub: "Drift & stats", icon: MonitorCheck },
             { id: "monitoring", label: "Production Probe", sub: "Active inference testing", icon: Wifi },
@@ -1858,6 +1860,7 @@ export default function DashboardPage() {
     const [securityState, setSecurityState] = useState({});
     const [historyState, setHistoryState] = useState({});
     const [reportCardState, setReportCardState] = useState({});
+    const [observabilityState, setObservabilityState] = useState({ modelId: "" });
 
     const refreshEnterprise = async () => {
         try {
@@ -2023,6 +2026,7 @@ export default function DashboardPage() {
                             {active === "security" && <ModelSecurityPage state={securityState} setState={setSecurityState} onAction={refreshEnterprise} />}
                             {active === "history" && <ScanHistoryPage state={historyState} setState={setHistoryState} onAction={refreshEnterprise} />}
                             {active === "report" && <ModelReportCardModule state={reportCardState} setState={setReportCardState} onAction={refreshEnterprise} />}
+                            {active === "observe" && <ObservabilityModule state={observabilityState} setState={setObservabilityState} onAction={refreshEnterprise} />}
                         </div>
                     </div>
                 </div>

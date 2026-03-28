@@ -671,3 +671,96 @@ class ReportCard(Base):
     def __repr__(self):
         return f"<ReportCard(id={self.id}, model_id={self.model_id}, hash={self.cert_hash})>"
 
+
+# ══════════════════════════════════════════════════════════
+# OBSERVABILITY LAYER — PREDICTION INGESTION (v7.2)
+# ══════════════════════════════════════════════════════════
+
+class PredictionLog(Base):
+    """
+    Stores every prediction ingested from production.
+    Foundation of the observability pipeline — 
+    drift monitoring and performance tracking depend on this.
+    """
+    __tablename__ = "prediction_logs"
+
+    # Prevent duplicate class definition conflict with existing PredictionLog above
+    # (The one above is for model versioning/prediction tracking only)
+    # This new table is for observability ingestion.
+    __table_args__ = (
+        Index("ix_predlog_model_ts", "model_id", "timestamp"),
+        Index("ix_predlog_env", "environment"),
+        {"extend_existing": True},
+    )
+
+    id                = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    model_id          = Column(String(255), nullable=False, index=True)  # FK-lite: accepts name or UUID string
+    timestamp         = Column(DateTime, default=utcnow, nullable=False, index=True)
+    features          = Column(PortableJSON, nullable=True)         # raw input feature dict
+    prediction        = Column(String(255), nullable=True)          # predicted value (str or cast float)
+    prediction_proba  = Column(Float, nullable=True)                # confidence/probability
+    ground_truth      = Column(String(255), nullable=True)          # filled via label endpoint
+    latency_ms        = Column(Float, nullable=True)
+    data_source       = Column(String(50), default="api")           # api | batch | sdk
+    environment       = Column(String(50), default="production")    # production | staging
+    tags              = Column(PortableJSON, nullable=True)          # optional metadata dict
+
+    def __repr__(self):
+        return f"<PredictionLog(id={self.id}, model_id={self.model_id}, ts={self.timestamp})>"
+
+
+class DriftReport(Base):
+    """
+    Per-feature drift analysis result. Generated hourly by Celery beat.
+    Captures KS, PSI, chi2, and Wasserstein metrics per feature.
+    """
+    __tablename__ = "drift_reports"
+
+    __table_args__ = (
+        Index("ix_driftreport_model_ts", "model_id", "created_at"),
+    )
+
+    id                       = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    model_id                 = Column(String(255), nullable=False, index=True)
+    created_at               = Column(DateTime, default=utcnow, nullable=False, index=True)
+    reference_window_start   = Column(DateTime, nullable=True)
+    reference_window_end     = Column(DateTime, nullable=True)
+    current_window_start     = Column(DateTime, nullable=True)
+    current_window_end       = Column(DateTime, nullable=True)
+    feature_results          = Column(PortableJSON, nullable=False)   # list of per-feature result dicts
+    overall_drift_score      = Column(Float, nullable=False, default=0.0)
+    drift_detected           = Column(Boolean, default=False)
+    method                   = Column(String(50), default="ks")       # psi | ks | chi2 | wasserstein
+    sample_count             = Column(Integer, nullable=True)
+    alert_triggered          = Column(Boolean, default=False)
+
+    def __repr__(self):
+        return f"<DriftReport(id={self.id}, model_id={self.model_id}, drift={self.drift_detected})>"
+
+
+class PerformanceSnapshot(Base):
+    """
+    Live model performance metrics computed from labeled PredictionLogs.
+    Captures classification or regression metrics and computes degradation delta.
+    """
+    __tablename__ = "performance_snapshots"
+
+    __table_args__ = (
+        Index("ix_perfsnapshot_model_ts", "model_id", "computed_at"),
+    )
+
+    id                   = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    model_id             = Column(String(255), nullable=False, index=True)
+    computed_at          = Column(DateTime, default=utcnow, nullable=False, index=True)
+    window_start         = Column(DateTime, nullable=True)
+    window_end           = Column(DateTime, nullable=True)
+    task_type            = Column(String(50), default="classification")  # classification | regression | ranking
+    metrics              = Column(PortableJSON, nullable=False)           # computed metrics dict
+    baseline_metrics     = Column(PortableJSON, nullable=True)            # baseline for delta computation
+    degradation_report   = Column(PortableJSON, nullable=True)            # per-metric delta/alert
+    sample_count         = Column(Integer, nullable=True)
+    labeled_count        = Column(Integer, nullable=True)
+    label_coverage_pct   = Column(Float, nullable=True)
+
+    def __repr__(self):
+        return f"<PerformanceSnapshot(id={self.id}, model_id={self.model_id}, computed_at={self.computed_at})>"

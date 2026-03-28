@@ -51,7 +51,10 @@ from app.routers import (
     alerts,
     ci,
     # ── Reports ──
-    reports
+    reports,
+    # ── Observability Layer (v7.2) ──
+    ingest,
+    observe,
 )
 
 # ─── Lifespan Management ───
@@ -193,6 +196,10 @@ app.include_router(explainability.router, prefix="/api/v1", tags=["explainabilit
 app.include_router(data_quality.router,   prefix="/api/v1", tags=["data-quality"])
 app.include_router(deployments.router,    prefix="/api/v1", tags=["deployments"])
 app.include_router(predictions.router,    prefix="/api/v1", tags=["predictions"])
+
+# Observability Layer (v7.2)
+app.include_router(ingest.router,  prefix="/api/v1/ingest",  tags=["ingest"])
+app.include_router(observe.router, prefix="/api/v1/observe", tags=["observe"])
 
 if __name__ == "__main__":
     import uvicorn

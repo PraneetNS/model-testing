@@ -166,6 +166,116 @@ pip install prophet
 
 ---
 
+## 🔭 Production Observability (v7.2 — Governance-First)
+
+ML Guard v7.2 now includes a full **production monitoring layer** that goes beyond what Evidently AI and Arize AI offer — by directly linking live monitoring signals to the governance engine.
+
+### Architecture
+
+```
+Production Inference → SDK / API
+         ↓
+POST /api/v1/ingest/predict         ← Single prediction (async, non-blocking)
+POST /api/v1/ingest/batch           ← Up to 10,000 rows via Celery
+POST /api/v1/ingest/label           ← Stitch ground truth after the fact
+
+         ↓
+
+Celery Beat (Hourly)                ← run_hourly_drift_scan
+Celery Beat (Every 6h)              ← run_performance_snapshot
+
+         ↓
+
+GET /api/v1/observe/feed            ← Global command center (all models)
+GET /api/v1/observe/{model_id}/overview
+GET /api/v1/observe/drift/{model_id}/report
+GET /api/v1/observe/performance/{model_id}/live
+```
+
+### Module 1 — Prediction Ingestion Pipeline
+
+Log every prediction from production with zero-latency:
+
+```python
+# Python SDK snippet
+from mlguard import MLGuardClient
+client = MLGuardClient(host="http://localhost:8000", api_key="your-key")
+
+client.log(
+    model_id="churn-v2",
+    features={"age": 34, "income": 75000},
+    prediction=1,
+    proba=0.87
+)
+```
+
+Or directly via the API:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/ingest/predict \
+  -H "Content-Type: application/json" \
+  -d '{"model_id":"churn-v2","features":{"age":34},"prediction":1,"prediction_proba":0.87}'
+```
+
+### Module 2 — Feature-Level Drift Monitor
+
+Per-feature statistical drift analysis. Equivalent to Evidently's column-level reports:
+
+| Feature | Type | Method | Metrics |
+| :--- | :--- | :--- | :--- |
+| Numerical | Float/Int | KS Test | p-value, statistic, PSI, Wasserstein, mean shift % |
+| Categorical | String/Bool | Chi-squared | p-value, new category detection, distribution shift |
+
+```
+GET /api/v1/observe/drift/{model_id}/report?window_hours=24&method=ks
+POST /api/v1/observe/drift/{model_id}/set-baseline
+GET /api/v1/observe/drift/{model_id}/features?feature=age
+```
+
+Reference distributions stored as parquet in MinIO: `baselines/{model_id}/reference.parquet`
+
+### Module 3 — Live Performance Degradation Tracker
+
+Computes real-time metrics once ground truth labels arrive:
+
+| Task | Metrics |
+| :--- | :--- |
+| Classification | Accuracy, F1, Precision, Recall, ROC-AUC, Log Loss |
+| Regression | RMSE, MAE, R², MAPE |
+
+**Slice Analysis** — detects if model fails for specific subgroups:
+
+```
+POST /api/v1/observe/performance/{model_id}/slice
+{"slice_feature": "age_bracket", "window_hours": 24}
+```
+
+### Module 4 — Unified Dashboard
+
+`Observability` nav item in the **Live Guard** section of the dashboard provides:
+
+- **Global Feed**: All models ranked by governance health score, drift severity, prediction volume
+- **Model Overview**: Live health cards (predictions, latency, drift badge, governance score)
+- **Drift Analysis**: Per-feature drift table + distribution comparison charts
+- **Performance Timeline**: Multi-metric line chart with baseline reference line
+
+### Module 5 — Governance-Linked Observability (Your Moat)
+
+**Live Governance Score Decay** — unique to ML Guard:
+
+```
+live_score = base_audit_score × (1 - drift_penalty) × (1 - perf_penalty)
+
+drift_penalty = min(0.30, overall_drift_score)
+perf_penalty  = max(0, baseline_accuracy - current_accuracy) × 2
+```
+
+This score **decays in real-time** as production drift is detected and **recovers** only after a re-audit — creating a continuous compliance feedback loop that static audit tools cannot provide.
+
+**Auto-Governance Trigger**: When drift crosses HIGH/CRITICAL threshold, a full governance audit (bias, fairness, LLM safety) is automatically dispatched via Celery.
+
+---
+
 ## 📄 License & Status
 
 - **Status**: Production-Ready (v7.2.0)
