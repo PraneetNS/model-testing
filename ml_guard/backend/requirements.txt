@@ -1,36 +1,47 @@
+# Core API
 fastapi
 uvicorn
 pydantic
 pydantic-settings
 python-multipart
-typer
-rich
-requests
-structlog
-python-dotenv
+jinja2
+httpx
+
+# Database
+sqlalchemy
+psycopg2-binary
+alembic
+
+# ML Engine
 pandas
 numpy
 scikit-learn
 scipy
 joblib
-jinja2
-sqlalchemy
-psycopg2-binary
-alembic
+shap
+fairlearn
+
+# Auth & Security
 python-jose[cryptography]
 passlib[bcrypt]
+cryptography
+
+# Storage
+boto3
+
+# Async Workers
 celery
 redis
-shap
-prometheus-client
+
+# CLI Tools
+typer
+rich
+click
+
+# Monitoring & Logging
+structlog
+python-dotenv
 fastapi-limiter==0.1.5
-pydantic[email]
-firebase-admin
-google-auth
-httpx
-boto3
-onnx
-onnxruntime
-fairlearn
-aif360
-pyarrow
+
+# Reporting
+reportlab

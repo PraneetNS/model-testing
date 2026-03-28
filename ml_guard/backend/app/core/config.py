@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     """
     PROJECT_NAME: str = "ML Guard Governance Platform"
     API_V1_STR: str = "/api/v1"
+    APP_VERSION: str = "7.2.0"
+    DEBUG: bool = False
 
     # ── Security ──────────────────────────────────────────────────────────────
     SECRET_KEY: str = "CHANGE_ME_IN_PRODUCTION_use_openssl_rand_hex_32"

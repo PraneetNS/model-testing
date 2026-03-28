@@ -1,26 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
-from app.db.session import SessionLocal
+from app.db.session import get_db
 from app.db.models import RedTeamSession, RedTeamAttack, Model
-from app.services.red_team.tasks import execute_red_team_campaign
+from app.tasks.red_team import execute_red_team_campaign
+from app.services.red_team.reporting import generate_red_team_pdf
 from app.core.security import decrypt_content
-from io import BytesIO
-import tempfile
-import os
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib import colors
 
 router = APIRouter()
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 @router.post("/start", response_model=dict)
 async def start_red_team_session(model_id: str, max_attacks: int = 10, db: Session = Depends(get_db)):
@@ -76,44 +63,8 @@ async def get_red_team_report(session_id: str, db: Session = Depends(get_db)):
 
 @router.get("/{session_id}/report/pdf")
 async def export_red_team_pdf(session_id: str, db: Session = Depends(get_db)):
-    """Generate and return a professional PDF summary of red-team findings."""
+    """Generate and return a professional PDF summary of red-team findings (via Service)."""
     report_data = await get_red_team_report(session_id, db)
-    
-    tmp_path = os.path.join(tempfile.gettempdir(), f"RedTeamReport_{session_id}.pdf")
-    doc = SimpleDocTemplate(tmp_path, pagesize=letter)
-    styles = getSampleStyleSheet()
-    elements = []
-    
-    # Title
-    elements.append(Paragraph(f"ML Guard Red Team Autopilot Report", styles["Title"]))
-    elements.append(Spacer(1, 12))
-    elements.append(Paragraph(f"Session: {session_id}", styles["Normal"]))
-    elements.append(Paragraph(f"Model ID: {report_data['model_id']}", styles["Normal"]))
-    elements.append(Spacer(1, 24))
-    
-    # Summary Stats
-    elements.append(Paragraph("Executive Summary", styles["Heading2"]))
-    sum_data = [
-        ["Total Attacks", str(report_data['summary']['total_attacks'])],
-        ["Success Rate", f"{report_data['summary']['success_rate']*100:.2f}%"],
-        ["Critical Findings", str(report_data['summary']['critical_vulnerabilities'])]
-    ]
-    t = Table(sum_data, colWidths=[200, 100])
-    t.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), colors.grey), ('GRID', (0,0), (-1,-1), 1, colors.black)]))
-    elements.append(t)
-    elements.append(Spacer(1, 24))
-    
-    # Findings Table
-    elements.append(Paragraph("Top Vulnerabilities", styles["Heading2"]))
-    findings_data = [["Category", "Severity", "Rounds", "Status"]]
-    for f in report_data["findings"][:10]: # Limit for PDF
-         status = "BREACHED" if f["is_successful"] else "REFUSED"
-         findings_data.append([f["category"], f["severity"], str(f["rounds"]), status])
-    
-    ft = Table(findings_data, colWidths=[150, 100, 50, 100])
-    ft.setStyle(TableStyle([('GRID', (0,0), (-1,-1), 1, colors.black), ('BACKGROUND', (0,0), (-1,0), colors.lightgrey)]))
-    elements.append(ft)
-    
-    doc.build(elements)
-    
+    # Move complexity to services/red_team/reporting.py
+    tmp_path = generate_red_team_pdf(report_data, session_id)
     return FileResponse(tmp_path, filename=f"MLGuard_RedTeam_Report.pdf")
