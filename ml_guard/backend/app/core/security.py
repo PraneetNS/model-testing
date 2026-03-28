@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta
+import os
+from cryptography.fernet import Fernet
 from typing import Any, Union
 from jose import jwt
 from passlib.context import CryptContext
@@ -35,3 +37,14 @@ def generate_random_password() -> str:
     alphabet = string.ascii_letters + string.digits
     return "".join(secrets.choice(alphabet) for i in range(20))
 
+# Red Team Encryption (at-rest)
+_REDTEAM_KEY = os.getenv("REDTEAM_ENCRYPTION_KEY", "7S6-vY-Z5p5A-k5p5H-k5p5H-k5p5H-k5p5H-k5p5=")
+cipher = Fernet(_REDTEAM_KEY.encode())
+
+def encrypt_content(content: str) -> bytes:
+    """Encrypt sensitive red team content."""
+    return cipher.encrypt(content.encode())
+
+def decrypt_content(encrypted_content: bytes) -> str:
+    """Decrypt red team content."""
+    return cipher.decrypt(encrypted_content).decode()

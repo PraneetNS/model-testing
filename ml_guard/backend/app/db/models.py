@@ -1,7 +1,7 @@
 import uuid
 import hashlib
 import secrets
-from sqlalchemy import Column, String, Float, DateTime, JSON, ForeignKey, Integer, Boolean, Text, Index, BigInteger
+from sqlalchemy import Column, String, Float, DateTime, JSON, ForeignKey, Integer, Boolean, Text, Index, BigInteger, LargeBinary
 from sqlalchemy.types import TypeDecorator, CHAR
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID, JSONB
 from sqlalchemy.orm import relationship
@@ -418,6 +418,43 @@ class SentinelRecord(Base):
     created_at      = Column(DateTime, default=utcnow, index=True)
 
     model           = relationship("Model", backref="sentinel_scans")
+
+
+# ══════════════════════════════════════════════════════════
+# NEW: LLM RED TEAMING (v7.2)
+# ══════════════════════════════════════════════════════════
+
+class RedTeamSession(Base):
+    """Container for a red-teaming campaign against an LLM."""
+    __tablename__ = "red_team_sessions"
+    id              = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    model_id        = Column(UUID(), ForeignKey("models.id", ondelete="CASCADE"), index=True, nullable=False)
+    status          = Column(String, default="RUNNING") # RUNNING, COMPLETED, FAILED
+    total_attacks   = Column(Integer, default=0)
+    success_count   = Column(Integer, default=0)
+    metadata_json   = Column(PortableJSON, nullable=True)
+    created_at      = Column(DateTime, default=utcnow)
+    completed_at    = Column(DateTime, nullable=True)
+
+    model           = relationship("Model", backref="red_team_sessions")
+    attacks         = relationship("RedTeamAttack", backref="session", cascade="all, delete-orphan")
+
+class RedTeamAttack(Base):
+    """Detailed log of a single adversarial attempt (possibly multi-round)."""
+    __tablename__ = "red_team_attacks"
+    id              = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    session_id      = Column(UUID(), ForeignKey("red_team_sessions.id", ondelete="CASCADE"), index=True)
+    category        = Column(String, nullable=False) # jailbreak, pii, bias, etc.
+    severity        = Column(String, default="MEDIUM") # CRITICAL, HIGH, MEDIUM
+    rounds          = Column(Integer, default=1)
+    is_successful   = Column(Boolean, default=False)
+    
+    # Encrypted fields (Ferrent)
+    encrypted_prompt    = Column(LargeBinary, nullable=False)
+    encrypted_response  = Column(LargeBinary, nullable=True)
+    judge_reasoning     = Column(String, nullable=True)
+    
+    created_at      = Column(DateTime, default=utcnow)
 
 
 # ══════════════════════════════════════════════════════════
