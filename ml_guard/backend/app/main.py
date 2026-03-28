@@ -7,40 +7,73 @@ _repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../"
 if _repo_root not in sys.path:
     sys.path.append(_repo_root)
 
-from fastapi import FastAPI, Request, Depends
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import structlog
 from app.core.config import settings
-from app.db.session import engine, Base, SessionLocal, get_db
-from app.db.models import Job
-from sqlalchemy import desc
-from sqlalchemy.orm import Session
+from app.db.session import engine, Base, SessionLocal
 
-# ─── Router Imports (Fixed & Optimized) ───
+# ─── Grouped Router Imports ───
 from app.routers import (
-    streaming, advisory, monitoring, jobs, auth, gate, forecast, sentinel, red_team, reports,
-    audit, behavior, init_scan, preflight, drift, performance, fairness, llm_eval, governance, 
-    enterprise, policies, history, alerts, ci,
-    model_registry, datasets, experiments, explainability, data_quality, deployments, predictions
+    # ── Group 1: Already imported (working) ──
+    streaming,
+    advisory,
+    monitoring,
+    jobs,
+    auth,
+    gate,
+    forecast,
+    sentinel,
+    red_team,
+    # ── Group 2: Lifecycle extension (working) ──
+    model_registry,
+    datasets,
+    experiments,
+    explainability,
+    data_quality,
+    deployments,
+    predictions,
+    # ── Group 3: Core analysis ──
+    audit,
+    behavior,
+    init_scan,
+    preflight,
+    drift,
+    performance,
+    fairness,
+    llm_eval,
+    governance,
+    # ── Group 4: Enterprise ──
+    enterprise,
+    policies,
+    history,
+    alerts,
+    ci,
+    # ── Reports ──
+    reports
 )
 
 # ─── Lifespan Management ───
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 1. Startup Validation
-    required = ["DATABASE_URL", "SECRET_KEY", "MINIO_ENDPOINT"]
-    missing = [k for k in required if not os.getenv(k)]
-    if missing and not settings.DEBUG:
-        # In DEBUG mode we might fallback to SQLite, so only raise in non-debug or if strictly required
-        from structlog import get_logger
-        get_logger().error("startup_validation_failed", missing_vars=missing)
-        # raise RuntimeError(f"Missing required env vars: {missing}")
+    # FIX 5: Startup env validation
+    required_env = [
+        "DATABASE_URL", 
+        "SECRET_KEY",
+    ]
+    missing = [k for k in required_env if not os.getenv(k)]
+    if missing:
+        raise RuntimeError(
+            f"STARTUP FAILED — missing required "
+            f"environment variables: {missing}\n"
+            f"Check your .env file."
+        )
 
-    # 2. Database Initialization
+    # Database Initialization
     Base.metadata.create_all(bind=engine)
 
-    # 3. Object Storage Initialization
+    # Object Storage Initialization (Optional/Warning only)
     from app.services.storage_service import _get_s3_client, _ensure_bucket_exists
     try:
         client = _get_s3_client()
@@ -58,32 +91,36 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# ─── CORS Configuration ───
+# FIX 4: CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.BACKEND_CORS_ORIGINS if settings.DEBUG else [o for o in settings.BACKEND_CORS_ORIGINS if "localhost" not in o],
+    allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"] if not settings.DEBUG else ["*"],
-    allow_headers=["Content-Type", "Authorization"] if not settings.DEBUG else ["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
 )
 
-# ─── Exception Handling ───
+# FIX 2: Debug Traceback Gating
 @app.exception_handler(Exception)
-async def debug_exception_handler(request: Request, exc: Exception):
+async def global_exception_handler(request: Request, exc: Exception):
     if settings.DEBUG:
         import traceback
         return JSONResponse(
             status_code=500, 
-            content={"detail": str(exc), "traceback": traceback.format_exc()}
+            content={
+                "detail": str(exc), 
+                "traceback": traceback.format_exc()
+            }
         )
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal Server Error. Please contact the administrator."}
+        content={"detail": "Internal server error"}
     )
 
 # ─── Core Health & Info Endpoints ───
 @app.get("/")
 async def root():
+    # FIX 1: Version consistency
     return {
         "status": "running", 
         "service": "ML Guard API", 
@@ -93,34 +130,32 @@ async def root():
 
 @app.get("/health")
 async def health():
+    # FIX 1: Version consistency
     return {"status": "ok", "version": settings.APP_VERSION}
 
+# FIX 3: Real Celery health check
 @app.get("/health/worker")
 async def health_worker():
-    """Verify Celery worker connectivity by inspecting active nodes."""
-    from app.core.celery_app import celery_app
+    """Verify Celery worker connectivity and task processing status."""
     try:
-        inspect = celery_app.control.inspect(timeout=2)
+        from app.core.celery_app import celery_app
+        inspect = celery_app.control.inspect(timeout=2.0)
         active = inspect.active()
-        worker_online = active is not None
-        
-        # Cross-reference with DB for job processing stats
-        db = SessionLocal()
-        try:
-            last_job = db.query(Job).order_by(desc(Job.created_at)).first()
-            return {
-                "status": "healthy" if worker_online else "degraded",
-                "worker_online": worker_online,
-                "last_job_processed_at": last_job.created_at if last_job else None,
-                "total_jobs_tracked": db.query(Job).count()
-            }
-        finally:
-            db.close()
+        online = active is not None
+        worker_count = len(active) if active else 0
     except Exception as e:
-        return {"status": "error", "detail": str(e), "worker_online": False}
+        online = False
+        worker_count = 0
+        
+    return {
+        "status": "healthy" if online else "offline",
+        "workers_online": online,
+        "worker_count": worker_count,
+    }
 
 # ─── API Router Registration ───
-# Governance & Analysis
+
+# Core Analysis
 app.include_router(audit.router,       prefix="/api/v1", tags=["audit"])
 app.include_router(behavior.router,    prefix="/api/v1", tags=["behavior"])
 app.include_router(init_scan.router,   prefix="/api/v1/scan", tags=["init"])
@@ -161,4 +196,4 @@ app.include_router(predictions.router,    prefix="/api/v1", tags=["predictions"]
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app.main:app", host="0.127.0.0.1", port=8000, reload=settings.DEBUG)
+    uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=settings.DEBUG)

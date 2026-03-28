@@ -1,0 +1,16 @@
+{
+  "pythonVersion": "3.11",
+  "venvPath": "ml_guard/backend",
+  "venv": "venv",
+  "include": ["ml_guard/backend/app"],
+  "exclude": [
+    "**/node_modules",
+    "**/__pycache__",
+    "**/venv",
+    "**/.next"
+  ],
+  "typeCheckingMode": "basic",
+  "useLibraryCodeForTypes": true,
+  "reportMissingImports": "warning",
+  "reportMissingModuleSource": "none"
+}

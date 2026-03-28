@@ -5,6 +5,16 @@ from app.db.models import Job, DriftResult
 
 router = APIRouter()
 
+@router.get("/drift/health")
+async def drift_health():
+    """Health check endpoint for statistical stability (PSI Drift) module."""
+    return {"status": "drift router active", "version": "7.2.0"}
+
+@router.post("/drift/evaluate")
+async def evaluate_drift(model_id: str, baseline_id: str, current_id: str, db: Session = Depends(get_db)):
+    """Placeholder for PSI Drift evaluation as described in README."""
+    return {"message": "Drift evaluation triggered (v7.2 placeholder)", "model_id": model_id, "status": "PENDING"}
+
 @router.get("/drift/{job_id}")
 async def get_drift_results(job_id: str, db: Session = Depends(get_db)):
     job = db.get(Job, job_id)

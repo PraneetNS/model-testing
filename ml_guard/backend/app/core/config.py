@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     APP_VERSION: str = "7.2.0"
     DEBUG: bool = False
+    ALLOWED_ORIGINS: List[str] = [
+        "http://localhost:3000",
+        "http://localhost:3001",
+    ]
 
     # ── Security ──────────────────────────────────────────────────────────────
     SECRET_KEY: str = "CHANGE_ME_IN_PRODUCTION_use_openssl_rand_hex_32"
@@ -38,7 +42,7 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000",
     ]
 
-    @validator("BACKEND_CORS_ORIGINS", pre=True)
+    @validator("ALLOWED_ORIGINS", pre=True)
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
         if isinstance(v, str) and not v.startswith("["):
             return [i.strip() for i in v.split(",")]

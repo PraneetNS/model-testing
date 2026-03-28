@@ -5,6 +5,16 @@ from app.db.models import Job, PerformanceResult
 
 router = APIRouter()
 
+@router.get("/performance/health")
+async def performance_health():
+    """Health check for ML Model Performance evaluation module."""
+    return {"status": "performance router active", "version": "7.2.0"}
+
+@router.post("/performance/evaluate")
+async def evaluate_performance(model_id: str, dataset_id: str, db: Session = Depends(get_db)):
+    """Placeholder for Accuracy/F1/ROC audits as described in README."""
+    return {"message": "Performance evaluation triggered (v7.2 placeholder)", "model_id": model_id, "status": "PENDING"}
+
 @router.get("/performance/{job_id}")
 async def get_performance_results(job_id: str, db: Session = Depends(get_db)):
     job = db.get(Job, job_id)

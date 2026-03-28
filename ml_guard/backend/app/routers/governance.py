@@ -5,6 +5,16 @@ from app.db.models import Job, GovernanceResult
 
 router = APIRouter()
 
+@router.get("/governance/health")
+async def governance_health():
+    """Health check for the Enterprise Governance Synthesis module."""
+    return {"status": "governance router active", "version": "7.2.0"}
+
+@router.post("/governance/evaluate")
+async def evaluate_governance(model_id: str, db: Session = Depends(get_db)):
+    """Placeholder for weighted governance scoring as described in README."""
+    return {"message": "Full governance audit synthesis triggered (v7.2 placeholder)", "model_id": model_id, "status": "PENDING"}
+
 @router.get("/governance/{job_id}")
 async def get_governance_results(job_id: str, db: Session = Depends(get_db)):
     job = db.get(Job, job_id)

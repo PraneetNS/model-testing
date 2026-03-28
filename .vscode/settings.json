@@ -1,0 +1,8 @@
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}/ml_guard/backend/venv/Scripts/python.exe",
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/ml_guard/backend"
+  ],
+  "python.languageServer": "Pylance",
+  "pylance.typeCheckingMode": "basic"
+}
