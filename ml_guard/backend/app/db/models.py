@@ -599,25 +599,47 @@ class Experiment(Base):
     model           = relationship("Model", backref="experiments")
 
 
-# ══════════════════════════════════════════════════════════
-# FEATURE 7: PREDICTION LOGGING (monitoring extension)
+# FEATURE 7: PREDICTION LOGGING (observability foundation)
 # ══════════════════════════════════════════════════════════
 
 class PredictionLog(Base):
-    """Log individual predictions for drift and performance monitoring."""
+    """
+    DEFINITIVE merged prediction log.
+    Serves both versioned prediction tracking (Feature 7)
+    and production observability ingestion (v7.2 layer).
+    This is the single source of truth — no duplicates.
+    """
     __tablename__ = "prediction_logs"
-    id              = Column(UUID(), primary_key=True, default=uuid.uuid4)
-    model_version_id = Column(UUID(), ForeignKey("model_versions.id", ondelete="CASCADE"), index=True, nullable=False)
-    features        = Column(PortableJSON, nullable=True)
-    prediction      = Column(PortableJSON, nullable=True)
-    actual          = Column(PortableJSON, nullable=True)  # ground truth, if available
-    confidence      = Column(Float, nullable=True)
-    latency_ms      = Column(Integer, nullable=True)
-    created_at      = Column(DateTime, default=utcnow)
 
     __table_args__ = (
-        Index("ix_prediction_logs_version_created", "model_version_id", "created_at"),
+        Index("ix_predlog_model_ts",   "model_id",    "timestamp"),
+        Index("ix_predlog_env",        "environment"),
+        Index("ix_predlog_version_ts", "model_version_id", "timestamp"),
     )
+
+    id                = Column(UUID(), primary_key=True, default=uuid.uuid4)
+
+    # Observability fields (v7.2) — flexible string model_id for SDK ingestion
+    model_id          = Column(String(255), nullable=False, index=True)
+
+    # Versioned tracking FK (Feature 7) — optional, set when version is known
+    model_version_id  = Column(UUID(), ForeignKey("model_versions.id",
+                          ondelete="SET NULL"), nullable=True, index=True)
+
+    timestamp         = Column(DateTime, default=utcnow, nullable=False, index=True)
+    features          = Column(PortableJSON, nullable=True)       # raw input feature dict
+    prediction        = Column(String(255), nullable=True)        # predicted value (str)
+    prediction_proba  = Column(Float, nullable=True)              # confidence / proba
+    actual            = Column(String(255), nullable=True)        # ground truth (Feature 7 name)
+    ground_truth      = Column(String(255), nullable=True)        # alias filled via label endpoint
+    confidence        = Column(Float, nullable=True)              # additional confidence field
+    latency_ms        = Column(Float, nullable=True)
+    data_source       = Column(String(50), default="api")         # api | batch | sdk
+    environment       = Column(String(50), default="production")  # production | staging
+    tags              = Column(PortableJSON, nullable=True)        # optional metadata dict
+
+    def __repr__(self) -> str:
+        return f"<PredictionLog(id={self.id}, model_id={self.model_id}, ts={self.timestamp})>"
 
 
 # ══════════════════════════════════════════════════════════
@@ -673,41 +695,8 @@ class ReportCard(Base):
 
 
 # ══════════════════════════════════════════════════════════
-# OBSERVABILITY LAYER — PREDICTION INGESTION (v7.2)
+# OBSERVABILITY LAYER — DRIFT + PERFORMANCE MODELS (v7.2)
 # ══════════════════════════════════════════════════════════
-
-class PredictionLog(Base):
-    """
-    Stores every prediction ingested from production.
-    Foundation of the observability pipeline — 
-    drift monitoring and performance tracking depend on this.
-    """
-    __tablename__ = "prediction_logs"
-
-    # Prevent duplicate class definition conflict with existing PredictionLog above
-    # (The one above is for model versioning/prediction tracking only)
-    # This new table is for observability ingestion.
-    __table_args__ = (
-        Index("ix_predlog_model_ts", "model_id", "timestamp"),
-        Index("ix_predlog_env", "environment"),
-        {"extend_existing": True},
-    )
-
-    id                = Column(UUID(), primary_key=True, default=uuid.uuid4)
-    model_id          = Column(String(255), nullable=False, index=True)  # FK-lite: accepts name or UUID string
-    timestamp         = Column(DateTime, default=utcnow, nullable=False, index=True)
-    features          = Column(PortableJSON, nullable=True)         # raw input feature dict
-    prediction        = Column(String(255), nullable=True)          # predicted value (str or cast float)
-    prediction_proba  = Column(Float, nullable=True)                # confidence/probability
-    ground_truth      = Column(String(255), nullable=True)          # filled via label endpoint
-    latency_ms        = Column(Float, nullable=True)
-    data_source       = Column(String(50), default="api")           # api | batch | sdk
-    environment       = Column(String(50), default="production")    # production | staging
-    tags              = Column(PortableJSON, nullable=True)          # optional metadata dict
-
-    def __repr__(self):
-        return f"<PredictionLog(id={self.id}, model_id={self.model_id}, ts={self.timestamp})>"
-
 
 class DriftReport(Base):
     """

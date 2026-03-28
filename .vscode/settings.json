@@ -1,8 +1,30 @@
 {
   "python.defaultInterpreterPath": "${workspaceFolder}/ml_guard/backend/venv/Scripts/python.exe",
   "python.analysis.extraPaths": [
-    "${workspaceFolder}/ml_guard/backend"
+    "${workspaceFolder}/ml_guard/backend",
+    "${workspaceFolder}/ml_guard/sdk/python"
   ],
   "python.languageServer": "Pylance",
-  "pylance.typeCheckingMode": "basic"
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.autoImportCompletions": true,
+  "python.analysis.diagnosticMode": "workspace",
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "ms-python.black-formatter",
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter"
+  },
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/venv": true,
+    "**/.venv": true,
+    "**/streamlit_venv": true,
+    "**/*.egg-info": true,
+    "**/.next": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/venv": true,
+    "**/.next": true,
+    "**/legacy_v1": true
+  }
 }
