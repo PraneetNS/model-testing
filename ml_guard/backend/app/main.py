@@ -3,9 +3,20 @@ import sys
 from contextlib import asynccontextmanager
 
 # ML Guard core path injection
-_repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../"))
-if _repo_root not in sys.path:
-    sys.path.append(_repo_root)
+_backend_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+_ml_guard_root = os.path.abspath(os.path.join(_backend_root, ".."))
+_repo_root = os.path.abspath(os.path.join(_ml_guard_root, ".."))
+
+sys.path.insert(0, _backend_root) # For 'import app'
+sys.path.insert(0, _repo_root)    # For 'import ml_guard'
+
+print(f"DEBUG: sys.path[0] = {sys.path[0]}")
+print(f"DEBUG: sys.path[1] = {sys.path[1]}")
+try:
+    import ml_guard
+    print(f"DEBUG: ml_guard file = {ml_guard.__file__}")
+except Exception as e:
+    print(f"DEBUG: ml_guard import failed: {e}")
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware

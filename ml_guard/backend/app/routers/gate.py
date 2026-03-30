@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from ml_guard.core.policy_schema import MLGuardPolicy, GateRequest, GateVerdict
 from ml_guard.core.policy import evaluate_policy
 from ml_guard.core.llm_guard import evaluate_llm_safety
-from ml_guard.core.evaluator import MLEvaluator
+from ml_guard.core import MLEvaluator
 
 router = APIRouter()
 
