@@ -20,6 +20,7 @@ scipy
 joblib
 shap
 fairlearn
+onnxruntime
 
 # Auth & Security
 python-jose[cryptography]

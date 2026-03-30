@@ -2,25 +2,15 @@
   "pythonVersion": "3.11",
   "venvPath": "ml_guard/backend",
   "venv": "venv",
-  "include": [
-    "ml_guard/backend/app",
-    "ml_guard/sdk/python"
-  ],
+  "include": ["ml_guard/backend/app"],
   "exclude": [
     "**/node_modules",
     "**/venv",
-    "**/.venv",
-    "**/legacy_v1",
     "**/__pycache__",
-    "**/streamlit_venv",
-    "ml_guard/sentinel/tests",
-    "**/*.egg-info"
+    "**/.next"
   ],
   "typeCheckingMode": "basic",
   "useLibraryCodeForTypes": true,
   "reportMissingImports": "warning",
-  "reportMissingModuleSource": "none",
-  "reportGeneralTypeIssues": "warning",
-  "reportOptionalSubscript": "warning",
-  "reportOptionalMemberAccess": "warning"
+  "reportMissingModuleSource": "none"
 }
