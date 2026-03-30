@@ -58,3 +58,11 @@ Thumbs.db
 
 # ── Docker ──────────────────────────────────────────────────
 *.log
+venv/
+.venv/
+streamlit_venv/
+__pycache__/
+*.pyc
+.env
+.next/
+node_modules/

@@ -1,0 +1,53 @@
+﻿OK: advisory
+OK: alerts
+FAIL: audit: ModuleNotFoundError: No module named 'celery'
+      from app.core.celery_app import celery_app
+    File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard/backend\app\core\celery_app.py", line 3, in <module>
+      from celery import Celery
+  ModuleNotFoundError: No module named 'celery'
+
+OK: auth
+OK: behavior
+OK: ci
+OK: datasets
+OK: data_quality
+OK: deployments
+OK: drift
+OK: enterprise
+OK: experiments
+OK: explainability
+OK: fairness
+OK: forecast
+FAIL: gate: ImportError: cannot import name 'evaluate_llm_safety' from 'ml_guard.core.llm_guard' (C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\core\llm_guard.py)
+    File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+    File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard/backend\app\routers\gate.py", line 11, in <module>
+      from ml_guard.core.llm_guard import evaluate_llm_safety
+  ImportError: cannot import name 'evaluate_llm_safety' from 'ml_guard.core.llm_guard' (C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\core\llm_guard.py)
+
+OK: governance
+OK: history
+OK: ingest
+OK: init_scan
+OK: jobs
+OK: llm_eval
+OK: model_registry
+OK: monitoring
+OK: observe
+OK: performance
+OK: policies
+OK: predictions
+OK: preflight
+FAIL: red_team: ModuleNotFoundError: No module named 'celery'
+      from app.core.celery_app import celery_app
+    File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard/backend\app\core\celery_app.py", line 3, in <module>
+      from celery import Celery
+  ModuleNotFoundError: No module named 'celery'
+
+FAIL: reports: ImportError: cannot import name 'ScanResult' from 'app.db.models' (C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard/backend\app\db\models.py)
+      from app.services.report_card.builder import ReportCardBuilder
+    File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard/backend\app\services\report_card\builder.py", line 7, in <module>
+      from app.db.models import Model, ScanResult, AuditLog
+  ImportError: cannot import name 'ScanResult' from 'app.db.models' (C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard/backend\app\db\models.py)
+
+OK: sentinel
+OK: streaming
