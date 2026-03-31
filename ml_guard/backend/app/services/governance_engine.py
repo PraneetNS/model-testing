@@ -104,13 +104,14 @@ class GovernanceEngine:
                 .order_by(PerformanceResult.created_at.desc())
                 .first()
             )
-            if perf and perf.computed_metrics_json:
-                m = perf.computed_metrics_json
-                acc = m.get("accuracy", m.get("accuracy_score", 0.75))
+            metrics = getattr(perf, "computed_metrics_json", {}) or {}
+            if metrics:
+                acc = metrics.get("accuracy", metrics.get("accuracy_score", 0.75))
                 component_scores["performance"] = float(acc) * 100
             else:
-                component_scores["performance"] = last_scan.governance_score * 0.25 if last_scan and last_scan.governance_score else 70.0
-                recommendations.append("No recent performance audit — score estimated from last scan.")
+                base = getattr(last_scan, "governance_score", 0.0) or 70.0
+                component_scores["performance"] = float(base) * 0.25 if last_scan else 70.0
+                recommendations.append("No recent performance audit — score estimated.")
         except Exception:
             component_scores["performance"] = 70.0
 
@@ -122,14 +123,13 @@ class GovernanceEngine:
                 .order_by(DriftResult.created_at.desc())
                 .first()
             )
-            if drift and drift.computed_metrics_json:
-                m = drift.computed_metrics_json
-                psi = m.get("psi", m.get("overall_psi", 0.0))
-                # Convert PSI to a 0-100 score: PSI 0 = 100, PSI 0.25 = 0
+            metrics = getattr(drift, "computed_metrics_json", {}) or {}
+            if metrics:
+                psi = metrics.get("psi", metrics.get("overall_psi", 0.0))
                 component_scores["drift"] = max(0, 100 - float(psi) * 400)
             else:
                 component_scores["drift"] = 80.0
-                recommendations.append("No drift audit found — run a drift check to improve score accuracy.")
+                recommendations.append("No drift audit found.")
         except Exception:
             component_scores["drift"] = 80.0
 

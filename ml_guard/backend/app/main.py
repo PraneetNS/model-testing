@@ -215,7 +215,7 @@ app.include_router(ci.router,
 app.include_router(reports.router,
     prefix="/api/v1", tags=["reports"])
 app.include_router(ingest.router,
-    prefix="/api/v1", tags=["ingest"])
+    prefix="/api/v1/ingest", tags=["ingest"])
 app.include_router(observe.router,
     prefix="/api/v1", tags=["observe"])
 

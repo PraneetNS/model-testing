@@ -1,16 +1,12 @@
 """
 governance.py — ML Guard Full Governance Router
 
-Provides the complete governance API surface:
-- Composite score with live decay
-- Certificate generation
-- Public certificate verification (no auth)
-- Audit history with score trends
-- CI/CD synchronous policy gate
+Provides the complete governance API surface for ML Guard v7.2.
+Incorporates composite score computing, certificate generation, and CI/CD gates.
 """
 from __future__ import annotations
 
-import logging
+import structlog
 from dataclasses import asdict
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -24,7 +20,7 @@ from app.services.certificate_engine import CertificateEngine
 from app.services.governance_engine import GovernanceEngine, GovernanceScoreResult
 
 router = APIRouter()
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 _governance_engine = GovernanceEngine()
 _cert_engine = CertificateEngine()
@@ -90,11 +86,9 @@ async def get_live_governance_score(
 ):
     """
     Returns the live governance score with real-time drift/performance decay.
-    Fastest endpoint — queries only latest DriftReport + PerformanceSnapshot.
     """
     from app.db.models import DriftReport, PerformanceSnapshot, ScanRecord
 
-    # Get the base score from last scan
     base_score = 75.0
     try:
         last_scan = (
@@ -154,12 +148,11 @@ async def certify_model(
 ):
     """
     Trigger full governance audit and generate a compliance certificate.
-    Computes GovernanceEngine score, creates ReportCard, returns cert_hash.
-    The cert_hash can be shared publicly for verification.
     """
     try:
         result = _governance_engine.compute_score(model_id=model_id, db=db)
     except Exception as e:
+        logger.error("governance_certify_failed", model_id=model_id, error=str(e))
         raise HTTPException(status_code=500, detail=f"Governance computation failed: {str(e)}")
 
     try:
@@ -171,6 +164,7 @@ async def certify_model(
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
+        logger.error("cert_generation_failed", model_id=model_id, error=str(e))
         raise HTTPException(status_code=500, detail=f"Certificate generation failed: {str(e)}")
 
     download_url = f"/api/v1/governance/verify/{report_card.cert_hash}"
@@ -194,8 +188,6 @@ async def verify_certificate(
 ):
     """
     PUBLIC endpoint — no authentication required.
-    Verifies certificate validity, revocation status, and post-issuance drift.
-    This URL is shareable with external auditors and regulators.
     """
     validity = _cert_engine.check_certificate_validity(cert_hash=cert_hash, db=db)
     return {
@@ -213,53 +205,13 @@ async def verify_certificate(
     }
 
 
-@router.get("/governance/{model_id}/history")
-async def get_governance_history(
-    model_id: str = Path(..., description="Model UUID or name"),
-    limit: int = Query(default=20, le=100),
-    db: Session = Depends(get_db),
-):
-    """
-    All ReportCards for model, newest first, with score trend.
-    """
-    from app.db.models import ReportCard
-    import uuid as uuidlib
-
-    # Try to resolve model_id to UUID
-    model_uuid = None
-    try:
-        model_uuid = uuidlib.UUID(str(model_id))
-    except (ValueError, AttributeError):
-        pass
-
-    query = db.query(ReportCard)
-    if model_uuid:
-        query = query.filter(ReportCard.model_id == model_uuid)
-    else:
-        # String match fallback — no direct string FK; return empty
-        return {"model_id": model_id, "history": [], "score_trend": []}
-
-    cards = query.order_by(ReportCard.issued_at.desc()).limit(limit).all()
-
-    history = [
-        {
-            "cert_hash": c.cert_hash,
-            "issued_at": c.issued_at.isoformat() if c.issued_at else None,
-            "overall_score": c.overall_score,
-            "verdict": c.verdict,
-            "is_revoked": c.is_revoked,
-            "verify_url": f"/api/v1/governance/verify/{c.cert_hash}",
-        }
-        for c in cards
-    ]
-
-    score_trend = [c.overall_score for c in cards]
-
+@router.get("/governance/status")
+async def governance_status():
+    """Health check endpoint for governance module."""
     return {
-        "model_id": model_id,
-        "history": history,
-        "score_trend": score_trend,
-        "latest_verdict": cards[0].verdict if cards else None,
+        "module": "governance",
+        "status": "active",
+        "version": "7.2.0"
     }
 
 
@@ -270,30 +222,21 @@ async def synchronous_gate_check(
     db: Session = Depends(get_db),
 ):
     """
-    SYNCHRONOUS CI/CD policy gate check. Must respond within 30 seconds.
-    Returns: passed(bool), score, failures[]
-    Raises HTTP 422 if gate FAILS — allows curl exit-code detection in CI.
-
-    Example CI usage:
-        curl -f -X POST .../governance/my-model/gate \\
-             -d '{"policy_config": {"min_accuracy": 0.85, "max_psi": 0.2}}'
-        # exits with code 22 if gate fails (curl -f behavior)
+    SYNCHRONOUS CI/CD policy gate check.
     """
-    # 1. Compute current score
     try:
         result = _governance_engine.compute_score(model_id=model_id, db=db)
     except Exception as e:
+        logger.error("gate_computation_failed", model_id=model_id, error=str(e))
         raise HTTPException(status_code=500, detail=f"Gate computation failed: {str(e)}")
 
-    # 2. Build metric map for gate checks
     all_metrics: Dict[str, float] = {
         "governance_score": result.live_score,
         **result.component_scores,
         **(req.metrics or {}),
     }
 
-    # 3. Build a policy object from request or fetch active policy
-    policy_config = req.policy_config
+    policy_config = req.policy_config or {}
     if not policy_config:
         try:
             from app.db.models import PolicyVersion
@@ -306,9 +249,8 @@ async def synchronous_gate_check(
             if active_policy:
                 policy_config = active_policy.config or {}
         except Exception:
-            policy_config = {}
+            pass
 
-    # Create a mock policy object
     class _Policy:
         config = policy_config
 
@@ -323,94 +265,13 @@ async def synchronous_gate_check(
         "passed": passed,
         "score": result.live_score,
         "verdict": result.verdict,
-        "gate_results": [
-            {
-                "metric": g.metric,
-                "value": g.value,
-                "threshold": g.threshold,
-                "verdict": g.verdict,
-                "message": g.message,
-            }
-            for g in gate_results
-        ],
+        "gate_results": [asdict(g) for g in gate_results],
         "failures": [g.message for g in failures],
         "warnings": [g.message for g in warnings],
-        "badge_url": f"/api/v1/governance/{model_id}/badge",
         "checked_at": datetime.utcnow().isoformat(),
     }
 
     if not passed:
-        # HTTP 422 lets CI detect failure via exit code
         raise HTTPException(status_code=422, detail=response)
 
     return response
-
-
-@router.get("/governance/{model_id}/badge")
-async def governance_badge(
-    model_id: str = Path(..., description="Model UUID or name"),
-    db: Session = Depends(get_db),
-):
-    """Returns score badge metadata for shields.io integration."""
-    try:
-        result = _governance_engine.compute_score(model_id=model_id, db=db)
-        score = int(result.live_score)
-        verdict = result.verdict
-        color = "green" if score >= 80 else "yellow" if score >= 60 else "red"
-    except Exception:
-        score = 0
-        verdict = "UNKNOWN"
-        color = "lightgray"
-
-    return {
-        "schemaVersion": 1,
-        "label": "ML Guard",
-        "message": f"{score} · {verdict}",
-        "color": color,
-        "style": "for-the-badge",
-    }
-
-
-@router.post("/governance/{model_id}/revoke/{cert_hash}")
-async def revoke_certificate(
-    model_id: str = Path(...),
-    cert_hash: str = Path(...),
-    req: RevokeRequest = RevokeRequest(reason="Revoked by administrator"),
-    db: Session = Depends(get_db),
-):
-    """Revoke a compliance certificate. Marks it invalid for all future /verify calls."""
-    from app.db.models import ReportCard
-
-    card = db.query(ReportCard).filter(ReportCard.cert_hash == cert_hash).first()
-    if not card:
-        raise HTTPException(status_code=404, detail="Certificate not found.")
-
-    card.is_revoked = True
-    card.revocation_reason = req.reason
-    card.revoked_at = datetime.utcnow()
-    db.commit()
-
-    return {
-        "cert_hash": cert_hash,
-        "status": "revoked",
-        "reason": req.reason,
-        "revoked_at": card.revoked_at.isoformat(),
-    }
-
-
-@router.get("/governance/status")
-async def governance_status():
-    """Health check endpoint for governance module."""
-    return {
-        "module": "governance",
-        "status": "active",
-        "version": "7.2.0",
-        "endpoints": [
-            "GET /governance/{model_id}/score",
-            "GET /governance/{model_id}/score/live",
-            "POST /governance/{model_id}/certify",
-            "GET /governance/verify/{cert_hash}  [PUBLIC]",
-            "GET /governance/{model_id}/history",
-            "POST /governance/{model_id}/gate  [CI/CD]",
-        ],
-    }
