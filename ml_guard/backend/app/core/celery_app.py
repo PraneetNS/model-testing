@@ -10,8 +10,8 @@ if _repo_root not in sys.path:
 
 from app.core.config import settings
 
-celery_app = Celery("ml_guard", broker=settings.CELERY_BROKER_URL)
-celery_app.conf.result_backend = settings.CELERY_RESULT_BACKEND
+celery_app = Celery("ml_guard", broker=settings.REDIS_URL)
+celery_app.conf.result_backend = settings.REDIS_URL
 
 # Automatically discover tasks in all task modules
 celery_app.autodiscover_tasks([

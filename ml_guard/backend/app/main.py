@@ -8,14 +8,15 @@ _repo_root = os.path.abspath(
 if _repo_root not in sys.path:
     sys.path.append(_repo_root)
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import structlog
 from sqlalchemy import desc, text
+from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.db.session import engine, Base, SessionLocal
+from app.db.session import engine, Base, SessionLocal, get_db
 from app.db.models import Job
 
 # ── Core Analysis Routers ──────────────────────────
@@ -137,6 +138,26 @@ async def root():
 async def health():
     # FIX 1: Version consistency
     return {"status": "ok", "version": settings.APP_VERSION}
+
+@app.get("/health/database")
+async def health_database(db: Session = Depends(get_db)):
+    """Heartbeat check for PostgreSQL / SQLite connectivity."""
+    try:
+        db.execute(text("SELECT 1"))
+        return {"status": "ok", "message": "Database connection verified"}
+    except Exception as e:
+        return {"status": "unhealthy", "error": str(e)}
+
+@app.get("/health/storage")
+async def health_storage():
+    """Heartbeat check for MinIO / S3 object storage."""
+    from app.services.storage_service import _get_s3_client
+    try:
+        client = _get_s3_client()
+        client.list_buckets()
+        return {"status": "ok", "message": "Object storage connected"}
+    except Exception as e:
+        return {"status": "unhealthy", "error": str(e)}
 
 # FIX 3: Real Celery health check
 @app.get("/health/worker")
