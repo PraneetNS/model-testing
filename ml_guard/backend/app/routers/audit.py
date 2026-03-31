@@ -9,7 +9,6 @@ import pandas as pd
 import joblib
 import logging
 import time
-import onnxruntime as ort
 from datetime import datetime
 
 # ML Guard core path injection

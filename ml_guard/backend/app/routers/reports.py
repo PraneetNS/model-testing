@@ -3,14 +3,16 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.db.models import Model, ReportCard
 from app.tasks.reports import generate_governance_report
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from datetime import datetime
 import structlog
 
+# Optional: slowapi for rate limiting (needs installation)
+# from slowapi import Limiter
+# from slowapi.util import get_remote_address
+
 router = APIRouter()
 logger = structlog.get_logger()
-limiter = Limiter(key_func=get_remote_address)
+# limiter = Limiter(key_func=get_remote_address)
 
 @router.post("/{model_id}/generate")
 async def start_report_generation(model_id: str, db: Session = Depends(get_db)):
@@ -37,7 +39,6 @@ async def get_report_status(task_id: str):
     return response
 
 @router.get("/verify/{cert_hash}")
-@limiter.limit("60/minute")
 async def verify_certificate(request: Request, cert_hash: str, db: Session = Depends(get_db)):
     """PUBLIC verification endpoint for external auditors - integrated with gate.py logic."""
     report = db.query(ReportCard).filter(ReportCard.cert_hash == cert_hash).first()

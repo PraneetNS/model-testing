@@ -4,8 +4,9 @@ import json
 from datetime import datetime
 from typing import Dict, List, Any, Optional, Tuple
 from sqlalchemy.orm import Session
-from app.db.models import Model, ScanResult, AuditLog
-from app.models.report_card import ReportCard
+from app.db.models import Model, ScanRecord, AuditLog
+# CORRECT - imports from the single source of truth
+from app.db.models import ReportCard
 import structlog
 
 logger = structlog.get_logger()
@@ -37,9 +38,9 @@ class ReportCardBuilder:
         Pulls latest audit metrics for the model across all categories.
         """
         # Fetch latest scan result (most recent audit)
-        latest_audit = self.db.query(ScanResult)\
-            .filter(ScanResult.model_id == self.model_id)\
-            .order_by(ScanResult.created_at.desc())\
+        latest_audit = self.db.query(ScanRecord)\
+            .filter(ScanRecord.model_id == self.model_id)\
+            .order_by(ScanRecord.created_at.desc())\
             .first()
             
         if not latest_audit:

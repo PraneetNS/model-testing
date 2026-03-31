@@ -1,0 +1,218 @@
+﻿2026-03-31 16:15:28 [warning  ] reportlab not installed. PDF generation will be unavailable.
+.\venv\Scripts\python.exe : 
+Traceback (most recent call last):
+At line:1 char:22
++ ... rd/backend; 
+.\venv\Scripts\python.exe -m 
+uvicorn app.main:app --host  ...
++                 ~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~
+    + CategoryInfo          : NotS 
+   pecified: (Traceback (most rec  
+  ent call last)::String) [], Re   
+ moteException
+    + FullyQualifiedErrorId : Nati 
+   veCommandError
+ 
+  File "C:\Users\savan\OneDrive\Des
+ktop\real_Fireflink_ML\ml_guard\bac
+kend\venv\Lib\site-packages\cryptog
+raphy\fernet.py", line 35, in 
+__init__
+    key = 
+base64.urlsafe_b64decode(key)
+  File 
+"C:\Python314\Lib\base64.py", line 
+131, in urlsafe_b64decode
+    return b64decode(s)
+  File 
+"C:\Python314\Lib\base64.py", line 
+85, in b64decode
+    return binascii.a2b_base64(s, 
+strict_mode=validate)
+           ~~~~~~~~~~~~~~~~~~~^^^^^
+^^^^^^^^^^^^^^^^^^^^
+binascii.Error: Invalid 
+base64-encoded string: number of 
+data characters (41) cannot be 1 
+more than a multiple of 4
+
+The above exception was the direct 
+cause of the following exception:
+
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, 
+in _run_module_as_main
+  File "<frozen runpy>", line 88, 
+in _run_code
+  File "C:\Users\savan\OneDrive\Des
+ktop\real_Fireflink_ML\ml_guard\bac
+kend\venv\Lib\site-packages\uvicorn
+\__main__.py", line 4, in <module>
+    uvicorn.main()
+    ~~~~~~~~~~~~^^
+  File "C:\Users\savan\OneDrive\Des
+ktop\real_Fireflink_ML\ml_guard\bac
+kend\venv\Lib\site-packages\click\c
+ore.py", line 1485, in __call__
+    return self.main(*args, 
+**kwargs)
+           
+~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\savan\OneDrive\Des
+ktop\real_Fireflink_ML\ml_guard\bac
+kend\venv\Lib\site-packages\click\c
+ore.py", line 1406, in main
+    rv = self.invoke(ctx)
+  File "C:\Users\savan\OneDrive\Des
+ktop\real_Fireflink_ML\ml_guard\bac
+kend\venv\Lib\site-packages\click\c
+ore.py", line 1269, in invoke
+    return 
+ctx.invoke(self.callback, 
+**ctx.params)
+           ~~~~~~~~~~^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^
+  File "C:\Users\savan\OneDrive\Des
+ktop\real_Fireflink_ML\ml_guard\bac
+kend\venv\Lib\site-packages\click\c
+ore.py", line 824, in invoke
+    return callback(*args, 
+**kwargs)
+  File "C:\Users\savan\OneDrive\Des
+ktop\real_Fireflink_ML\ml_guard\bac
+kend\venv\Lib\site-packages\uvicorn
+\main.py", line 424, in main
+    run(
+    ~~~^
+        app,
+        ^^^^
+    ...<46 lines>...
+        h11_max_incomplete_event_si
+ze=h11_max_incomplete_event_size,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\savan\OneDrive\Des
+ktop\real_Fireflink_ML\ml_guard\bac
+kend\venv\Lib\site-packages\uvicorn
+\main.py", line 594, in run
+    server.run()
+    ~~~~~~~~~~^^
+  File "C:\Users\savan\OneDrive\Des
+ktop\real_Fireflink_ML\ml_guard\bac
+kend\venv\Lib\site-packages\uvicorn
+\server.py", line 67, in run
+    return asyncio_run(self.serve(s
+ockets=sockets), loop_factory=self.
+config.get_loop_factory())
+  File "C:\Python314\Lib\asyncio\ru
+nners.py", line 204, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "C:\Python314\Lib\asyncio\ru
+nners.py", line 127, in run
+    return 
+self._loop.run_until_complete(task)
+           
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Python314\Lib\asyncio\ba
+se_events.py", line 719, in 
+run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "C:\Users\savan\OneDrive\Des
+ktop\real_Fireflink_ML\ml_guard\bac
+kend\venv\Lib\site-packages\uvicorn
+\server.py", line 71, in serve
+    await self._serve(sockets)
+  File "C:\Users\savan\OneDrive\Des
+ktop\real_Fireflink_ML\ml_guard\bac
+kend\venv\Lib\site-packages\uvicorn
+\server.py", line 78, in _serve
+    config.load()
+    ~~~~~~~~~~~^^
+  File "C:\Users\savan\OneDrive\Des
+ktop\real_Fireflink_ML\ml_guard\bac
+kend\venv\Lib\site-packages\uvicorn
+\config.py", line 439, in load
+    self.loaded_app = 
+import_from_string(self.app)
+                      
+~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\savan\OneDrive\Des
+ktop\real_Fireflink_ML\ml_guard\bac
+kend\venv\Lib\site-packages\uvicorn
+\importer.py", line 19, in 
+import_from_string
+    module = 
+importlib.import_module(module_str)
+  File "C:\Python314\Lib\importlib\
+__init__.py", line 88, in 
+import_module
+    return _bootstrap._gcd_import(n
+ame[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen 
+importlib._bootstrap>", line 1398, 
+in _gcd_import
+  File "<frozen 
+importlib._bootstrap>", line 1371, 
+in _find_and_load
+  File "<frozen 
+importlib._bootstrap>", line 1342, 
+in _find_and_load_unlocked
+  File "<frozen 
+importlib._bootstrap>", line 938, 
+in _load_unlocked
+  File "<frozen 
+importlib._bootstrap_external>", 
+line 759, in exec_module
+  File "<frozen 
+importlib._bootstrap>", line 491, 
+in _call_with_frames_removed
+  File "C:\Users\savan\OneDrive\Des
+ktop\real_Fireflink_ML\ml_guard\bac
+kend\app\main.py", line 48, in 
+<module>
+    from app.routers import 
+red_team
+  File "C:\Users\savan\OneDrive\Des
+ktop\real_Fireflink_ML\ml_guard\bac
+kend\app\routers\red_team.py", 
+line 6, in <module>
+    from app.tasks.red_team import 
+execute_red_team_campaign
+  File "C:\Users\savan\OneDrive\Des
+ktop\real_Fireflink_ML\ml_guard\bac
+kend\app\tasks\red_team.py", line 
+4, in <module>
+    from 
+app.services.red_team.agent import 
+AdversarialAgent
+  File "C:\Users\savan\OneDrive\Des
+ktop\real_Fireflink_ML\ml_guard\bac
+kend\app\services\red_team\agent.py
+", line 8, in <module>
+    from app.core.security import 
+encrypt_content, decrypt_content
+  File "C:\Users\savan\OneDrive\Des
+ktop\real_Fireflink_ML\ml_guard\bac
+kend\app\core\security.py", line 
+42, in <module>
+    cipher = 
+Fernet(_REDTEAM_KEY.encode())
+  File "C:\Users\savan\OneDrive\Des
+ktop\real_Fireflink_ML\ml_guard\bac
+kend\venv\Lib\site-packages\cryptog
+raphy\fernet.py", line 37, in 
+__init__
+    raise ValueError(
+        "Fernet key must be 32 
+url-safe base64-encoded bytes."
+    ) from exc
+ValueError: Fernet key must be 32 
+url-safe base64-encoded bytes.

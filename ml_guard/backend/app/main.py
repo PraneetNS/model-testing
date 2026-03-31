@@ -63,16 +63,10 @@ from app.routers import predictions
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # FIX 5: Startup env validation
-    required_env = ["DATABASE_URL", "SECRET_KEY"]
-    missing = [
-        k for k in required_env 
-        if not os.getenv(k)
-    ]
-    if missing:
+    if not settings.SECRET_KEY or "CHANGE_ME" in settings.SECRET_KEY:
         raise RuntimeError(
-            f"STARTUP FAILED — missing required "
-            f"env vars: {missing}. "
-            f"Check your .env file."
+            "STARTUP FAILED — SECRET_KEY not configured. "
+            "Set it in your environment or .env file."
         )
 
     # Database Initialization

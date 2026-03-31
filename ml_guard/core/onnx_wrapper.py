@@ -1,10 +1,16 @@
 import numpy as np
 import pandas as pd
-import onnxruntime as ort
 
 class ONNXModelWrapper:
     """Wrapper to make ONNX models look like Scikit-Learn estimators."""
     def __init__(self, model_path: str):
+        try:
+            import onnxruntime as ort
+        except ImportError:
+            raise ImportError(
+                "onnxruntime is required for ONNXModelWrapper. "
+                "Install it with: pip install onnxruntime"
+            )
         self.session = ort.InferenceSession(model_path)
         self.input_name = self.session.get_inputs()[0].name
         self.output_names = [o.name for o in self.session.get_outputs()]

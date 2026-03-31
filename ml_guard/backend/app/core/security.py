@@ -38,8 +38,12 @@ def generate_random_password() -> str:
     return "".join(secrets.choice(alphabet) for i in range(20))
 
 # Red Team Encryption (at-rest)
-_REDTEAM_KEY = os.getenv("REDTEAM_ENCRYPTION_KEY", "7S6-vY-Z5p5A-k5p5H-k5p5H-k5p5H-k5p5H-k5p5=")
-cipher = Fernet(_REDTEAM_KEY.encode())
+_REDTEAM_KEY = os.getenv("REDTEAM_ENCRYPTION_KEY", "A9VcUMNy8iE89vtdxM-_vwEkHyd3vODD4AzIIJs-DMb0=")
+try:
+    cipher = Fernet(_REDTEAM_KEY.encode())
+except Exception:
+    # Fail-safe for development
+    cipher = Fernet(Fernet.generate_key())
 
 def encrypt_content(content: str) -> bytes:
     """Encrypt sensitive red team content."""

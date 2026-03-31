@@ -8,7 +8,7 @@ import pandas as pd
 from pydantic import BaseModel
 from ml_guard.core.policy_schema import MLGuardPolicy, GateRequest, GateVerdict
 from ml_guard.core.policy import evaluate_policy
-from ml_guard.core.llm_guard import evaluate_llm_safety
+from ml_guard.core.llm_guard import evaluate_llm
 from ml_guard.core import MLEvaluator
 
 router = APIRouter()
@@ -40,7 +40,7 @@ async def evaluate_gate(request: GateRequest):
             # Here we simulate the evaluation based on the policy requirements
             
             # Simulate LLM safety check
-            llm_results = evaluate_llm_safety(test_prompt, "I am a helpful assistant.")
+            llm_results = evaluate_llm(test_prompt, "I am a helpful assistant.")
             
             # Check against policy
             if llm_results["toxicity_score"] > policy.max_toxicity_score:

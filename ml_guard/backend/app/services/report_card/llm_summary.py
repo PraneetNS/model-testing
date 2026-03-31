@@ -1,6 +1,5 @@
 import os
 from typing import Dict, Any
-import anthropic
 import structlog
 
 logger = structlog.get_logger()
@@ -19,7 +18,15 @@ class ExecutiveSummaryGenerator:
 
     def __init__(self, api_key: str = None):
         self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
-        self.client = anthropic.Anthropic(api_key=self.api_key) if self.api_key else None
+        if self.api_key:
+            try:
+                import anthropic
+                self.client = anthropic.Anthropic(api_key=self.api_key)
+            except ImportError:
+                logger.warning("anthropic package not installed. Falling back to mock summary.")
+                self.client = None
+        else:
+            self.client = None
 
     async def generate_summary(self, audit_json: Dict[str, Any]) -> str:
         """

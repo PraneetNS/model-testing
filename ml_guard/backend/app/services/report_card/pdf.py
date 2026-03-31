@@ -1,15 +1,22 @@
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib import colors
-from reportlab.graphics.shapes import Drawing, Circle, String, Arc
-from reportlab.graphics.charts.piecharts import Pie
-from reportlab.lib.units import inch
 import os
 import tempfile
 import structlog
 
 logger = structlog.get_logger()
+
+# Optional dependency handling for reportlab
+try:
+    from reportlab.lib.pagesizes import letter
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib import colors
+    from reportlab.graphics.shapes import Drawing, Circle, String, Arc
+    from reportlab.graphics.charts.piecharts import Pie
+    from reportlab.lib.units import inch
+    HAS_REPORTLAB = True
+except ImportError:
+    HAS_REPORTLAB = False
+    logger.warning("reportlab not installed. PDF generation will be unavailable.")
 
 class PDFGenerator:
     """
@@ -19,12 +26,21 @@ class PDFGenerator:
     
     def __init__(self, output_path: str):
         self.output_path = output_path
+        if not HAS_REPORTLAB:
+            self.doc = None
+            self.styles = None
+            self.elements = []
+            return
+
         self.doc = SimpleDocTemplate(output_path, pagesize=letter)
         self.styles = getSampleStyleSheet()
         self.elements = []
 
     def _create_score_gauge(self, score: float):
         """Draws a circular gauge SVG placeholder for the score."""
+        if not HAS_REPORTLAB:
+            return None
+
         d = Drawing(200, 200)
         # Background Circle
         d.add(Circle(100, 100, 80, strokeColor=colors.lightgrey, fillColor=colors.white))
@@ -38,6 +54,13 @@ class PDFGenerator:
         """
         Assemble the 3-page PDF document.
         """
+        if not HAS_REPORTLAB:
+            logger.error("Cannot generate PDF: reportlab is missing.")
+            # Create a dummy file so the task doesn't fail on missing file
+            with open(self.output_path, 'w') as f:
+                f.write("PDF Generation Failed: reportlab missing.")
+            return
+
         # --- Page 1: Cover ---
         title_style = ParagraphStyle(
             'ReportTitle', 
@@ -73,7 +96,8 @@ class PDFGenerator:
         for k, v in report_data.get('metric_snapshots', {}).items():
             if isinstance(v, (int, float)):
                 status = "PASS" if v > 80 else "WARN" if v > 60 else "FAIL"
-                data.append([k.replace('_', ' ').capitalize(), f"{v:.1f}", "80.0", status])
+                # Use str labels to avoid reportlab complex issues with names
+                data.append([str(k).replace('_', ' ').capitalize(), f"{v:.1f}", "80.0", status])
         
         table = Table(data, colWidths=[2.5*inch, 1*inch, 1*inch, 1*inch])
         table.setStyle(TableStyle([
