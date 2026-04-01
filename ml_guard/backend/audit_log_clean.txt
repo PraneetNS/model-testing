@@ -1,0 +1,39 @@
+═══════════════════════════════════════
+  ML Guard v7.2 — Real Audit Runner    
+═══════════════════════════════════════
+
+── Baseline Governance Score ───────
+  Before audit:
+  Score:   76.45
+  Live:    76.45
+  Verdict: CONDITIONAL
+
+── Logging Sample Predictions ─────
+✓ Logged 20/20 predictions
+
+── Running Full Audit Scan ────────
+  Model: TestChurnModel-v1
+  Checks: drift, performance, fairness, security
+  Sending audit request...
+  Response: 500 (0.0s)
+  Error: {"detail":"(sqlite3.OperationalError) no such column: models.artifact_url\n[SQL: SELECT models.id AS models_id, models.project_id AS models_project_id, models.name AS models_name, models.provider AS models_provider, models.fingerprint AS models_fingerprint, models.metadata_json AS models_metadata_json, models.complexity AS models_complexity, models.version AS models_version, models.parent_id AS models_parent_id, models.artifact_url AS models_artifact_url, models.artifact_size AS models_artifact_
+
+── Post-Audit Governance Score ─────
+  After audit:
+  Score:   76.45
+  Live:    76.45
+  Verdict: CONDITIONAL
+
+  Score delta: +0.00
+
+── Generating Certificate ──────────
+✓ cert_hash: e619833b955cf266d7fe38dd67de99a2...
+✓ Verdict:   CONDITIONAL
+✓ Score:     76.45
+
+  Verify URL:
+  http://localhost:3000/verify/e619833b955cf266d7fe38dd67de99a2cd664cddafbbc3dc55b013efa52191f1
+
+═══════════════════════════════════════
+  ✓ Audit Run Complete                 
+═══════════════════════════════════════

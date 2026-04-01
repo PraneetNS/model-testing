@@ -1,0 +1,225 @@
+ 
+ -------------- celery@Praneet v5.6.2 (recovery)
+--- ***** ----- 
+-- ******* ---- Windows-11-10.0.26200-SP0 2026-04-01 17:59:05
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         ml_guard:0x243f51434d0
+- ** ---------- .> transport:   redis://localhost:6379//
+- ** ---------- .> results:     redis://localhost:6379/
+- *** --- * --- .> concurrency: 16 (solo)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . app.services.forecasting.recompute_all_forecasts
+  . run_comprehensive_scan
+  . run_explainability_task
+  . run_governance_audit_task
+  . test_task
+
+[2026-04-01 17:59:07,694: INFO/MainProcess] Connected to redis://localhost:6379//
+[2026-04-01 17:59:09,729: INFO/MainProcess] mingle: searching for neighbors
+[2026-04-01 17:59:16,821: INFO/MainProcess] mingle: all alone
+[2026-04-01 17:59:26,974: INFO/MainProcess] celery@Praneet ready.
+[2026-04-01 17:59:26,976: INFO/MainProcess] Task run_governance_audit_task[0b2548ae-1c0b-4f90-a798-af5c13827738] received
+[2026-04-01 17:59:27,605: ERROR/MainProcess] Audit task failed: (sqlite3.OperationalError) table scan_records has no column named artifact_url
+[SQL: INSERT INTO scan_records (id, model_id, job_id, scan_type, policy_version_id, checks_run, results_json, governance_score, gate_status, risk_score, risk_level, top_drifted_features, fairness_metrics, bias_violation_flag, fairness_risk_score, artifact_url, training_dataset_url, validation_dataset_url, model_version_id, security_checks, triggered_by, trigger_source, duration_ms, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('2ea39d7a-8256-4d9a-9f7d-eeb8397bea65', 'f9597635-5c66-4b17-9e4b-38e3fde81a53', 'e7e9616b-28e0-4359-b5d9-8a9c7ad15258', 'audit', None, '["drift", "performance", "fairness", "security"]', '{"checks_run": ["drift", "performance", "fairness", "security"], "metrics": {"accuracy": 0.95, "train_accuracy": 0.96}, "drift": {"f1": {"PSI": 0.091 ... (1594 characters truncated) ...  "actual_value": 97.42, "policy_value": 70.0, "message": "Governance 97.42 vs policy min 70.0"}], "policy_name": "Default (No Active Policy Found)"}}', 97.42, 'PASSED', None, None, 'null', 'null', None, None, None, None, None, None, 'null', None, 'celery_worker', None, '2026-04-01 12:29:27.605212')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+[2026-04-01 17:59:27,606: INFO/MainProcess] Cleaned up temp task file: C:\Users\savan\AppData\Local\Temp\tmpzffvynyr.pkl
+[2026-04-01 17:59:27,606: INFO/MainProcess] Cleaned up temp task file: C:\Users\savan\AppData\Local\Temp\tmphy4qn1_r.csv
+[2026-04-01 17:59:27,606: INFO/MainProcess] Cleaned up temp task file: C:\Users\savan\AppData\Local\Temp\tmpsjjnebgu.csv
+[2026-04-01 17:59:29,661: ERROR/MainProcess] Task run_governance_audit_task[0b2548ae-1c0b-4f90-a798-af5c13827738] raised unexpected: PendingRollbackError('This Session\'s transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (sqlite3.OperationalError) table scan_records has no column named artifact_url\n[SQL: INSERT INTO scan_records (id, model_id, job_id, scan_type, policy_version_id, checks_run, results_json, governance_score, gate_status, risk_score, risk_level, top_drifted_features, fairness_metrics, bias_violation_flag, fairness_risk_score, artifact_url, training_dataset_url, validation_dataset_url, model_version_id, security_checks, triggered_by, trigger_source, duration_ms, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]\n[parameters: (\'2ea39d7a-8256-4d9a-9f7d-eeb8397bea65\', \'f9597635-5c66-4b17-9e4b-38e3fde81a53\', \'e7e9616b-28e0-4359-b5d9-8a9c7ad15258\', \'audit\', None, \'["drift", "performance", "fairness", "security"]\', \'{"checks_run": ["drift", "performance", "fairness", "security"], "metrics": {"accuracy": 0.95, "train_accuracy": 0.96}, "drift": {"f1": {"PSI": 0.091 ... (1594 characters truncated) ...  "actual_value": 97.42, "policy_value": 70.0, "message": "Governance 97.42 vs policy min 70.0"}], "policy_name": "Default (No Active Policy Found)"}}\', 97.42, \'PASSED\', None, None, \'null\', \'null\', None, None, None, None, None, None, \'null\', None, \'celery_worker\', None, \'2026-04-01 12:29:27.605212\')]\n(Background on this error at: https://sqlalche.me/e/20/e3q8)')
+Traceback (most recent call last):
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: table scan_records has no column named artifact_url
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\app\workers\tasks.py", line 512, in run_governance_audit_task
+    db.commit()
+    ~~~~~~~~~^^
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2030, in commit
+    trans.commit(_to_root=True)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "<string>", line 2, in commit
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 1311, in commit
+    self._prepare_impl()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "<string>", line 2, in _prepare_impl
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 1286, in _prepare_impl
+    self.session.flush()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4331, in flush
+    self._flush(objects)
+    ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4466, in _flush
+    with util.safe_reraise():
+         ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4427, in _flush
+    flush_context.execute()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+    ~~~~~~~~~~~^^^^^^
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self.mapper,
+        ^^^^^^^^^^^^
+        uow.states_for_mapper_hierarchy(self.mapper, False, False),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        uow,
+        ^^^^
+    )
+    ^
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        base_mapper,
+        ^^^^^^^^^^^^
+    ...<3 lines>...
+        insert,
+        ^^^^^^^
+    )
+    ^
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+        statement,
+        params,
+        execution_options=execution_options,
+    )
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1419, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\sql\elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) table scan_records has no column named artifact_url
+[SQL: INSERT INTO scan_records (id, model_id, job_id, scan_type, policy_version_id, checks_run, results_json, governance_score, gate_status, risk_score, risk_level, top_drifted_features, fairness_metrics, bias_violation_flag, fairness_risk_score, artifact_url, training_dataset_url, validation_dataset_url, model_version_id, security_checks, triggered_by, trigger_source, duration_ms, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('2ea39d7a-8256-4d9a-9f7d-eeb8397bea65', 'f9597635-5c66-4b17-9e4b-38e3fde81a53', 'e7e9616b-28e0-4359-b5d9-8a9c7ad15258', 'audit', None, '["drift", "performance", "fairness", "security"]', '{"checks_run": ["drift", "performance", "fairness", "security"], "metrics": {"accuracy": 0.95, "train_accuracy": 0.96}, "drift": {"f1": {"PSI": 0.091 ... (1594 characters truncated) ...  "actual_value": 97.42, "policy_value": 70.0, "message": "Governance 97.42 vs policy min 70.0"}], "policy_name": "Default (No Active Policy Found)"}}', 97.42, 'PASSED', None, None, 'null', 'null', None, None, None, None, None, None, 'null', None, 'celery_worker', None, '2026-04-01 12:29:27.605212')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\celery\app\trace.py", line 479, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\celery\app\trace.py", line 779, in __protected_call__
+    return self.run(*args, **kwargs)
+           ~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\app\workers\tasks.py", line 518, in run_governance_audit_task
+    job = db.get(JobModel, job_id)
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 3680, in get
+    return self._get_impl(
+           ~~~~~~~~~~~~~~^
+        entity,
+        ^^^^^^^
+    ...<7 lines>...
+        bind_arguments=bind_arguments,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 3859, in _get_impl
+    return db_load_fn(
+        self,
+    ...<5 lines>...
+        bind_arguments=bind_arguments,
+    )
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\orm\loading.py", line 695, in load_on_pk_identity
+    session.execute(
+    ~~~~~~~~~~~~~~~^
+        q,
+        ^^
+    ...<2 lines>...
+        bind_arguments=bind_arguments,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2351, in execute
+    return self._execute_internal(
+           ~~~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+    ...<4 lines>...
+        _add_event=_add_event,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2239, in _execute_internal
+    conn = self._connection_for_bind(bind)
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2108, in _connection_for_bind
+    return trans._connection_for_bind(engine, execution_options)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 2, in _connection_for_bind
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 101, in _go
+    self._raise_for_prerequisite_state(fn.__name__, current_state)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 971, in _raise_for_prerequisite_state
+    raise sa_exc.PendingRollbackError(
+    ...<6 lines>...
+    )
+sqlalchemy.exc.PendingRollbackError: This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (sqlite3.OperationalError) table scan_records has no column named artifact_url
+[SQL: INSERT INTO scan_records (id, model_id, job_id, scan_type, policy_version_id, checks_run, results_json, governance_score, gate_status, risk_score, risk_level, top_drifted_features, fairness_metrics, bias_violation_flag, fairness_risk_score, artifact_url, training_dataset_url, validation_dataset_url, model_version_id, security_checks, triggered_by, trigger_source, duration_ms, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('2ea39d7a-8256-4d9a-9f7d-eeb8397bea65', 'f9597635-5c66-4b17-9e4b-38e3fde81a53', 'e7e9616b-28e0-4359-b5d9-8a9c7ad15258', 'audit', None, '["drift", "performance", "fairness", "security"]', '{"checks_run": ["drift", "performance", "fairness", "security"], "metrics": {"accuracy": 0.95, "train_accuracy": 0.96}, "drift": {"f1": {"PSI": 0.091 ... (1594 characters truncated) ...  "actual_value": 97.42, "policy_value": 70.0, "message": "Governance 97.42 vs policy min 70.0"}], "policy_name": "Default (No Active Policy Found)"}}', 97.42, 'PASSED', None, None, 'null', 'null', None, None, None, None, None, None, 'null', None, 'celery_worker', None, '2026-04-01 12:29:27.605212')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8) (Background on this error at: https://sqlalche.me/e/20/7s2a)

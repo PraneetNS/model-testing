@@ -1,0 +1,42 @@
+═══════════════════════════════════════
+  ML Guard v7.2 — Real Audit Runner    
+═══════════════════════════════════════
+
+── Baseline Governance Score ───────
+  Before audit:
+  Score:   76.45
+  Live:    76.45
+  Verdict: CONDITIONAL
+
+── Logging Sample Predictions ─────
+✓ Logged 20/20 predictions
+
+── Running Full Audit Scan ────────
+  Model: TestChurnModel-v1
+  Checks: drift, performance, fairness, security
+  Sending audit request...
+  Response: 200 (0.0s)
+
+── Audit Results ───────────────────
+
+  Full result keys: ['status', 'job_id', 'message']
+
+── Post-Audit Governance Score ─────
+  After audit:
+  Score:   76.45
+  Live:    76.45
+  Verdict: CONDITIONAL
+
+  Score delta: +0.00
+
+── Generating Certificate ──────────
+✓ cert_hash: 327764813fc946af041f0215b67974cb...
+✓ Verdict:   CONDITIONAL
+✓ Score:     76.45
+
+  Verify URL:
+  http://localhost:3000/verify/327764813fc946af041f0215b67974cbf31dcd0bf7d0ecb656c27bbac58becf1
+
+═══════════════════════════════════════
+  ✓ Audit Run Complete                 
+═══════════════════════════════════════

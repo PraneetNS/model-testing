@@ -1,0 +1,32 @@
+ 
+ -------------- celery@Praneet v5.6.2 (recovery)
+--- ***** ----- 
+-- ******* ---- Windows-11-10.0.26200-SP0 2026-04-01 18:01:19
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         ml_guard:0x1fab57134d0
+- ** ---------- .> transport:   redis://localhost:6379//
+- ** ---------- .> results:     redis://localhost:6379/
+- *** --- * --- .> concurrency: 16 (solo)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . app.services.forecasting.recompute_all_forecasts
+  . run_comprehensive_scan
+  . run_explainability_task
+  . run_governance_audit_task
+  . test_task
+
+[2026-04-01 18:01:21,337: INFO/MainProcess] Connected to redis://localhost:6379//
+[2026-04-01 18:01:23,371: INFO/MainProcess] mingle: searching for neighbors
+[2026-04-01 18:01:30,480: INFO/MainProcess] mingle: all alone
+[2026-04-01 18:01:40,598: INFO/MainProcess] celery@Praneet ready.
+[2026-04-01 18:01:40,599: INFO/MainProcess] Task run_governance_audit_task[0a8db8a9-fa03-4039-b8db-9ec812b31afd] received
+[2026-04-01 18:01:41,253: INFO/MainProcess] Cleaned up temp task file: C:\Users\savan\AppData\Local\Temp\tmp55ujolxr.pkl
+[2026-04-01 18:01:41,253: INFO/MainProcess] Cleaned up temp task file: C:\Users\savan\AppData\Local\Temp\tmpdgykdr79.csv
+[2026-04-01 18:01:41,254: INFO/MainProcess] Cleaned up temp task file: C:\Users\savan\AppData\Local\Temp\tmpg0b0c9mt.csv
+[2026-04-01 18:01:43,300: INFO/MainProcess] Task run_governance_audit_task[0a8db8a9-fa03-4039-b8db-9ec812b31afd] succeeded in 2.700454699999682s: {'status': 'success', 'scan_id': '2f5b0b01-fdde-4d89-95a4-7de01c5275db'}
