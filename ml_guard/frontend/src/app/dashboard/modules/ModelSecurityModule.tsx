@@ -1,8 +1,8 @@
 "use client";
+import { apiFetch } from "@/lib/api";
 import React, { useState, useEffect } from "react";
 import { ShieldCheck, ShieldAlert, Shield, Lock, Unlock, AlertTriangle, AlertCircle, CheckCircle2, Search, Loader2, Info, EyeOff } from "lucide-react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
 const Card = ({ children, className = "" }: any) => (
     <div className={`bg-[#0E1014] border border-white/[0.07] rounded-2xl ${className}`}>{children}</div>
@@ -22,7 +22,7 @@ export default function ModelSecurityModule({ state, setState, onAction }: any) 
         try {
             // Note: In ML Guard, security checks are part of the full model audit.
             // Explain to user how to run a full audit.
-            const res = await fetch(`${API_BASE}/api/v1/audit/run`, {
+            const res = await apiFetch(`/api/v1/audit/run`, {
                 method: "POST",
                 // This requires files, so in the UI we should redirect to Audit tab 
                 // or provide a simpler 'test scan' for security.
@@ -35,7 +35,7 @@ export default function ModelSecurityModule({ state, setState, onAction }: any) 
     const fetchHistory = async () => {
         setFetchingHistory(true);
         try {
-            const res = await fetch(`${API_BASE}/api/v1/security/scans`);
+            const res = await apiFetch(`/api/v1/security/scans`);
             if (!res.ok) throw new Error("Failed to fetch history");
             const d = await res.json();
             const scans = Array.isArray(d) ? d : [];

@@ -15,7 +15,7 @@ const firebaseConfig = {
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
 // Initialize Firebase Auth with persistence explicitly to avoid internal race conditions in Next.js
-let auth;
+let auth: any;
 if (getApps().length > 0) {
     auth = getAuth(app);
 } else {

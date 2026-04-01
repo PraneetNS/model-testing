@@ -1,8 +1,8 @@
 "use client";
+import { apiFetch } from "@/lib/api";
 import React, { useState, useEffect } from "react";
 import { Activity, TrendingUp, TrendingDown, Target, Clock, BarChart3, AlertCircle, ShieldCheck, Zap, Server, ChevronRight, Info } from "lucide-react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
 const Card = ({ children, className = "" }: any) => (
     <div className={`bg-[#0E1014] border border-white/[0.07] rounded-2xl ${className} relative overflow-hidden`}>{children}</div>
@@ -37,8 +37,8 @@ export default function PerformanceModule({ state, setState, onAction }: any) {
         setLoading(true);
         try {
             const [statsRes, logsRes] = await Promise.all([
-                fetch(`${API_BASE}/api/v1/predictions/stats`),
-                fetch(`${API_BASE}/api/v1/predictions/logs?limit=50`)
+                apiFetch(`/api/v1/predictions/stats`),
+                apiFetch(`/api/v1/predictions/logs?limit=50`)
             ]);
             setStats(await statsRes.json());
             setLogs((await logsRes.json()).logs || []);

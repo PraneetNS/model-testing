@@ -1,8 +1,8 @@
 "use client";
+import { apiFetch } from "@/lib/api";
 import React, { useState, useEffect } from "react";
 import { FlaskConical, Beaker, BarChart3, Clock, ChevronRight, Zap, Target, Sliders } from "lucide-react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
 const Card = ({ children, className = "" }: any) => (
     <div className={`bg-[#0E1014] border border-white/[0.07] rounded-2xl ${className}`}>{children}</div>
@@ -23,7 +23,7 @@ export default function ExperimentsModule({ state, setState, onAction }: any) {
     const fetchExperiments = async () => {
         setLoading(true);
         try {
-            const res = await fetch(`${API_BASE}/api/v1/experiments`);
+            const res = await apiFetch(`/api/v1/experiments`);
             const d = await res.json();
             setExperiments(d.items || []);
         } catch (e) { } finally { setLoading(false); }

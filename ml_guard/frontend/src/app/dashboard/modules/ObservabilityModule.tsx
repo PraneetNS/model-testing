@@ -1,4 +1,5 @@
 "use client";
+import { apiFetch } from "@/lib/api";
 import React, { useState, useEffect, useCallback } from "react";
 import {
     Activity, TrendingDown, TrendingUp, Minus, AlertTriangle, CheckCircle2,
@@ -10,7 +11,6 @@ import {
     ResponsiveContainer, ReferenceLine, CartesianGrid, Cell
 } from "recharts";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "";
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
 const Badge = ({ label, variant = "neutral" }: { label: string; variant?: string }) => {
@@ -181,7 +181,7 @@ export default function ObservabilityModule({ state, setState, onAction }: any) 
     // Load global feed always
     const loadFeed = useCallback(async () => {
         try {
-            const r = await fetch(`${API_BASE}/api/v1/observe/feed`);
+            const r = await apiFetch(`/api/v1/observe/feed`);
             const d = await r.json();
             setFeedData(d.models || []);
             if (!modelId && d.models?.[0]) setModelId(d.models[0].model_id);
@@ -191,7 +191,7 @@ export default function ObservabilityModule({ state, setState, onAction }: any) 
     // Load model list
     const loadModels = useCallback(async () => {
         try {
-            const r = await fetch(`${API_BASE}/api/v1/models`);
+            const r = await apiFetch(`/api/v1/models`);
             const d = await r.json();
             setModels(Array.isArray(d) ? d : []);
         } catch { }
@@ -207,9 +207,9 @@ export default function ObservabilityModule({ state, setState, onAction }: any) 
         setLoading(true);
         try {
             const [ov, dr, pt] = await Promise.allSettled([
-                fetch(`${API_BASE}/api/v1/observe/${modelId}/overview`).then(r => r.json()),
-                fetch(`${API_BASE}/api/v1/observe/drift/${modelId}/report`).then(r => r.json()),
-                fetch(`${API_BASE}/api/v1/observe/performance/${modelId}/timeline?limit=24`).then(r => r.json()),
+                apiFetch(`/api/v1/observe/${modelId}/overview`).then(r => r.json()),
+                apiFetch(`/api/v1/observe/drift/${modelId}/report`).then(r => r.json()),
+                apiFetch(`/api/v1/observe/performance/${modelId}/timeline?limit=24`).then(r => r.json()),
             ]);
             if (ov.status === "fulfilled") setOverview(ov.value);
             if (dr.status === "fulfilled") setDriftReport(dr.value);
@@ -406,7 +406,7 @@ export default function ObservabilityModule({ state, setState, onAction }: any) 
                         </div>
                         <div className="flex gap-3">
                             <button
-                                onClick={() => fetch(`${API_BASE}/api/v1/observe/drift/${modelId}/set-baseline`, { method: "POST" }).then(loadModelData)}
+                                onClick={() => apiFetch(`/api/v1/observe/drift/${modelId}/set-baseline`, { method: "POST" }).then(loadModelData)}
                                 className="text-[9px] font-black text-slate-400 hover:text-white border border-white/10 rounded-lg px-3 py-2 transition-colors"
                             >
                                 Set Current as Baseline

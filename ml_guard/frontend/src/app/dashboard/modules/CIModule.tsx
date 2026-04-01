@@ -1,8 +1,8 @@
 "use client";
+import { apiFetch } from "@/lib/api";
 import React, { useState, useEffect } from "react";
 import { GitBranch, GitPullRequest, ShieldCheck, Activity, Terminal, ExternalLink, Play, CheckCircle2, AlertTriangle, AlertCircle, Loader2, Key, Copy, Github, Sliders, Info, Server } from "lucide-react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
 export default function CIModule({ state, setState, onAction }: any) {
     const [integrations, setIntegrations] = useState<any[]>([]);
@@ -15,8 +15,8 @@ export default function CIModule({ state, setState, onAction }: any) {
         setLoading(true);
         try {
             const [intRes, keysRes] = await Promise.all([
-                fetch(`${API_BASE}/api/v1/ci/integrations`),
-                fetch(`${API_BASE}/api/v1/auth/apikeys`)
+                apiFetch(`/api/v1/ci/integrations`),
+                apiFetch(`/api/v1/auth/apikeys`)
             ]);
             setIntegrations(await intRes.json());
             setApiKeys(await keysRes.json());
@@ -32,7 +32,7 @@ export default function CIModule({ state, setState, onAction }: any) {
     const createKey = async () => {
         setCreatingKey(true);
         try {
-            const res = await fetch(`${API_BASE}/api/v1/auth/apikey?label=${newKeyLabel}`, { method: "POST" });
+            const res = await apiFetch(`/api/v1/auth/apikey?label=${newKeyLabel}`, { method: "POST" });
             const d = await res.json();
             setGeneratedKey(d.api_key);
             fetchData();
@@ -47,7 +47,7 @@ export default function CIModule({ state, setState, onAction }: any) {
     const triggerTest = async () => {
         setTesting(true); setTestResult(null);
         try {
-            const res = await fetch(`${API_BASE}/api/v1/ci/audit?model_name=${testModel}&governance_score_override=${testScore}`, {
+            const res = await apiFetch(`/api/v1/ci/audit?model_name=${testModel}&governance_score_override=${testScore}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

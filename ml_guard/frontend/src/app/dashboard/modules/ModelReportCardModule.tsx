@@ -1,11 +1,11 @@
 "use client";
+import { apiFetch } from "@/lib/api";
 import React, { useState, useEffect } from "react";
 import {
     FileText, ShieldCheck, Printer, Download, Share2, AlertTriangle, AlertCircle,
     CheckCircle2, Info, ArrowRight, Activity, Scale, Brain, Database, Zap, Lock
 } from "lucide-react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "";
 
 // ─── Primitives ───
 const Card = ({ children, className = "" }: any) => (
@@ -47,7 +47,7 @@ export default function ModelReportCard({ state, setState, onAction }: any) {
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        fetch(`${API_BASE}/api/v1/history?limit=25`)
+        apiFetch(`/api/v1/history?limit=25`)
             .then(r => r.json())
             .then(d => {
                 const list = Array.isArray(d) ? d : [];
@@ -62,7 +62,7 @@ export default function ModelReportCard({ state, setState, onAction }: any) {
         if (!id) return;
         setLoading(true);
         try {
-            const r = await fetch(`${API_BASE}/api/v1/history/${id}`);
+            const r = await apiFetch(`/api/v1/history/${id}`);
             const d = await r.json();
             setReport(d);
         } catch { }

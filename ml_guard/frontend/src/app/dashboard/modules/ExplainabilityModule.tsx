@@ -1,8 +1,8 @@
 "use client";
+import { apiFetch } from "@/lib/api";
 import React, { useState, useEffect } from "react";
 import { Eye, Zap, Info, ArrowRight, BarChart3, AlertCircle, FileText, Upload, Database, Loader2 } from "lucide-react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
 const Card = ({ children, className = "" }: any) => (
     <div className={`bg-[#0E1014] border border-white/[0.07] rounded-2xl ${className}`}>{children}</div>
@@ -41,7 +41,7 @@ export default function ExplainabilityModule({ state, setState, onAction }: any)
         try {
             const headers: Record<string, string> = {};
             if (token) headers["Authorization"] = `Bearer ${token}`;
-            const res = await fetch(`${API_BASE}/api/v1/explainability/compute`, { method: "POST", headers, body: fd });
+            const res = await apiFetch(`/api/v1/explainability/compute`, { method: "POST", headers, body: fd });
             const d = await res.json();
             if (!res.ok) throw new Error(d.detail || "Computation failed.");
 
@@ -54,7 +54,7 @@ export default function ExplainabilityModule({ state, setState, onAction }: any)
                 try {
                     const pollHeaders: Record<string, string> = {};
                     if (token) pollHeaders["Authorization"] = `Bearer ${token}`;
-                    const r2 = await fetch(`${API_BASE}/api/v1/explainability/${mid}`, { headers: pollHeaders });
+                    const r2 = await apiFetch(`/api/v1/explainability/${mid}`, { headers: pollHeaders });
                     if (r2.status === 404) {
                         // Still computing — keep polling
                         if (pollCount > 20) { clearInterval(poll); setLoading(false); setError("Timed out waiting for results."); }

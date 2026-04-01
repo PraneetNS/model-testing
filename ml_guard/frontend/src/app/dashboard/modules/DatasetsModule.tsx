@@ -1,8 +1,8 @@
 "use client";
+import { apiFetch } from "@/lib/api";
 import React, { useState, useEffect } from "react";
 import { FileText, Database, ShieldCheck, ChevronRight, HardDrive, Filter, Clock } from "lucide-react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
 const Card = ({ children, className = "" }: any) => (
     <div className={`bg-[#0E1014] border border-white/[0.07] rounded-2xl ${className}`}>{children}</div>
@@ -29,7 +29,7 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
     const fetchDatasets = async () => {
         setLoading(true);
         try {
-            const res = await fetch(`${API_BASE}/api/v1/datasets`);
+            const res = await apiFetch(`/api/v1/datasets`);
             const d = await res.json();
             setDatasets(d.items || []);
         } catch (e) { } finally { setLoading(false); }
@@ -37,7 +37,7 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
 
     const fetchLineage = async (datasetId: string) => {
         try {
-            const res = await fetch(`${API_BASE}/api/v1/datasets/${datasetId}/lineage`);
+            const res = await apiFetch(`/api/v1/datasets/${datasetId}/lineage`);
             const d = await res.json();
             setLineage(d.lineage || []);
         } catch (e) { }
@@ -45,7 +45,7 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
 
     const fetchModels = async () => {
         try {
-            const res = await fetch(`${API_BASE}/api/v1/models`);
+            const res = await apiFetch(`/api/v1/models`);
             const d = await res.json();
             setModels(d.items || []);
         } catch (e) { }
@@ -55,7 +55,7 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
         e.preventDefault();
         setRegistering(true);
         try {
-            const res = await fetch(`${API_BASE}/api/v1/datasets/register`, {
+            const res = await apiFetch(`/api/v1/datasets/register`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

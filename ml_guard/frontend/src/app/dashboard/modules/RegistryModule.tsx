@@ -1,8 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { Package, ShieldCheck, ChevronRight, Activity, Clock, User, HardDrive } from "lucide-react";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+import { apiFetch } from "@/lib/api";
 
 const Card = ({ children, className = "" }: any) => (
     <div className={`bg-[#0E1014] border border-white/[0.07] rounded-2xl ${className}`}>{children}</div>
@@ -20,7 +19,7 @@ export default function ModelRegistryModule({ state, setState, onAction }: any) 
     const fetchModels = async () => {
         setLoading(true);
         try {
-            const res = await fetch(`${API_BASE}/api/v1/models`);
+            const res = await apiFetch(`/api/v1/models`);
             const d = await res.json();
             setModels(d.items || []);
         } catch (e) { } finally { setLoading(false); }
@@ -28,7 +27,7 @@ export default function ModelRegistryModule({ state, setState, onAction }: any) 
 
     const fetchVersions = async (modelId: string) => {
         try {
-            const res = await fetch(`${API_BASE}/api/v1/models/${modelId}/versions`);
+            const res = await apiFetch(`/api/v1/models/${modelId}/versions`);
             const d = await res.json();
             setVersions(d.versions || []);
         } catch (e) { }
@@ -38,7 +37,7 @@ export default function ModelRegistryModule({ state, setState, onAction }: any) 
         e.preventDefault();
         setRegistering(true);
         try {
-            const res = await fetch(`${API_BASE}/api/v1/models/register?model_name=${encodeURIComponent(newModel.name)}&owner=${encodeURIComponent(newModel.provider)}&description=${encodeURIComponent(newModel.description)}`, {
+            const res = await apiFetch(`/api/v1/models/register?model_name=${encodeURIComponent(newModel.name)}&owner=${encodeURIComponent(newModel.provider)}&description=${encodeURIComponent(newModel.description)}`, {
                 method: "POST"
             });
             if (res.ok) {
@@ -51,7 +50,7 @@ export default function ModelRegistryModule({ state, setState, onAction }: any) 
 
     const handleDeploy = async (versionId: string) => {
         try {
-            const res = await fetch(`${API_BASE}/api/v1/deployments/promote?version_id=${versionId}&target_environment=DEV`, { method: "POST" });
+            const res = await apiFetch(`/api/v1/deployments/promote?version_id=${versionId}&target_environment=DEV`, { method: "POST" });
             const d = await res.json();
             if (!res.ok) throw new Error(d.detail || "Promotion failed");
             alert("Model version promoted to DEV environment");

@@ -5,8 +5,7 @@ import {
     ChevronDown, ChevronUp, CheckCircle2, AlertCircle, AlertTriangle, Clock, Filter,
     ArrowUpRight, ArrowDownRight
 } from "lucide-react";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "";
+import { apiFetch } from "@/lib/api";
 
 // ─── Primitives ───
 const Card = ({ children, className = "" }: any) => (
@@ -67,7 +66,7 @@ function ComparePanel({ scanA, scanB }: { scanA: any; scanB: any }) {
     useEffect(() => {
         if (!scanA || !scanB) return;
         setLoading(true);
-        fetch(`${API_BASE}/api/v1/compare?scan_a=${scanA.id}&scan_b=${scanB.id}`)
+        apiFetch(`/api/v1/compare?scan_a=${scanA.id}&scan_b=${scanB.id}`)
             .then(r => r.json())
             .then(d => { setComparison(d); setLoading(false); })
             .catch(() => setLoading(false));
@@ -159,7 +158,7 @@ export default function ScanHistoryPage({ state, setState, onAction }: any) {
         try {
             const params = new URLSearchParams({ limit: "50" });
             if (typeFilter) params.set("scan_type", typeFilter);
-            const r = await fetch(`${API_BASE}/api/v1/history?${params}`);
+            const r = await apiFetch(`/api/v1/history?${params}`);
             const d = await r.json();
             const list = Array.isArray(d) ? d : [];
             setScans(list);
@@ -169,7 +168,7 @@ export default function ScanHistoryPage({ state, setState, onAction }: any) {
             const trajMap: Record<string, number[]> = {};
             await Promise.all(modelIds.map(async (mid: string) => {
                 try {
-                    const tr = await fetch(`${API_BASE}/api/v1/history/trajectory/${mid}`);
+                    const tr = await apiFetch(`/api/v1/history/trajectory/${mid}`);
                     const td = await tr.json();
                     if (td.data_points) {
                         trajMap[mid] = td.data_points.map((p: any) => p.score).filter((s: any) => s != null);
@@ -189,7 +188,7 @@ export default function ScanHistoryPage({ state, setState, onAction }: any) {
             return;
         }
         try {
-            const r = await fetch(`${API_BASE}/api/v1/history/${scanId}`);
+            const r = await apiFetch(`/api/v1/history/${scanId}`);
             const d = await r.json();
             setScanDetails(prev => ({ ...prev, [scanId]: d }));
             setExpandedScan(scanId);

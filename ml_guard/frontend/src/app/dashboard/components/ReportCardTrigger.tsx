@@ -4,6 +4,7 @@ import {
     FileText, Play, Loader2, CheckCircle, 
     Download, ExternalLink, AlertTriangle 
 } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 
 export default function ReportCardTrigger({ model_id }: { model_id: string }) {
     const [status, setStatus] = useState<"IDLE" | "PENDING" | "SUCCESS" | "FAILED">("IDLE");
@@ -13,7 +14,7 @@ export default function ReportCardTrigger({ model_id }: { model_id: string }) {
     const startGeneration = async () => {
         setStatus("PENDING");
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/v1/reports/${model_id}/generate`, { method: "POST" });
+            const res = await apiFetch(`/api/v1/reports/${model_id}/generate`, { method: "POST" });
             const data = await res.json();
             setTaskId(data.task_id);
             pollStatus(data.task_id);
@@ -25,7 +26,7 @@ export default function ReportCardTrigger({ model_id }: { model_id: string }) {
 
     const pollStatus = async (id: string) => {
         const interval = setInterval(async () => {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/v1/reports/status/${id}`);
+            const res = await apiFetch(`/api/v1/reports/status/${id}`);
             const data = await res.json();
             if (data.status === "SUCCESS") {
                 setCertHash(data.cert_hash);
@@ -75,14 +76,14 @@ export default function ReportCardTrigger({ model_id }: { model_id: string }) {
                     </div>
                     <div className="flex gap-4">
                         <a 
-                            href={`${process.env.NEXT_PUBLIC_API_BASE}/api/v1/reports/download/${cert_hash}`}
+                            href={`${process.env.NEXT_PUBLIC_API_BASE}/api/v1/reports/download/${certHash}`}
                             target="_blank"
                             className="flex-1 bg-white text-black font-black py-3 rounded-xl text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
                         >
                             <Download className="w-4 h-4" /> Download PDF
                         </a>
                         <a 
-                            href={`/verify/${cert_hash}`}
+                            href={`/verify/${certHash}`}
                             target="_blank"
                             className="flex-1 bg-white/5 border border-white/10 text-white font-black py-3 rounded-xl text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
                         >

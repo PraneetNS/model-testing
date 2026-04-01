@@ -1,8 +1,8 @@
 "use client";
+import { apiFetch } from "@/lib/api";
 import React, { useState } from "react";
 import { ShieldCheck, AlertCircle, CheckCircle2, Search, Database, Upload, Loader2, BarChart3, Info } from "lucide-react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
 const Card = ({ children, className = "" }: any) => (
     <div className={`bg-[#0E1014] border border-white/[0.07] rounded-2xl ${className}`}>{children}</div>
@@ -23,7 +23,7 @@ export default function DataQualityModule({ state, setState, onAction }: any) {
         if (refFile) fd.append("reference_file", refFile);
 
         try {
-            const res = await fetch(`${API_BASE}/api/v1/data-quality/validate`, { method: "POST", body: fd });
+            const res = await apiFetch(`/api/v1/data-quality/validate`, { method: "POST", body: fd });
             const d = await res.json();
             if (!res.ok) throw new Error(d.detail || "Validation failed.");
             setResults(d);

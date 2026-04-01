@@ -25,6 +25,7 @@ import ModelReportCardModule from "./modules/ModelReportCardModule";
 import ObservabilityModule from "./modules/ObservabilityModule";
 import GovernanceModule from "./modules/GovernanceModule";
 import NotificationsBell from "./components/NotificationsBell";
+import { apiFetch } from "@/lib/api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "";
 
@@ -314,7 +315,7 @@ function ModelAuditPage({ state, setState, onAction }: any) {
 
     useEffect(() => {
         if (!activePolicy) {
-            fetch(`${API_BASE}/api/v1/policies/active`)
+            apiFetch(`/api/v1/policies/active`)
                 .then(r => r.json())
                 .then(d => setAuditState({ activePolicy: d }))
                 .catch(() => { });
@@ -324,7 +325,7 @@ function ModelAuditPage({ state, setState, onAction }: any) {
     const onModelUpload = async (f: File) => {
         setAuditState({ modelFile: f, modelMeta: null, error: null });
         const fd = new FormData(); fd.append("model_file", f);
-        try { const res = await fetch(`${API_BASE}/api/v1/audit/inspect-model`, { method: "POST", body: fd }); const d = await res.json(); if (!res.ok) { setAuditState({ error: d.detail }); return; } setAuditState({ modelMeta: d }); } catch (e: any) { setAuditState({ error: e.message }); }
+        try { const res = await apiFetch(`/api/v1/audit/inspect-model`, { method: "POST", body: fd }); const d = await res.json(); if (!res.ok) { setAuditState({ error: d.detail }); return; } setAuditState({ modelMeta: d }); } catch (e: any) { setAuditState({ error: e.message }); }
     };
 
     const [trainSrc, setTrainSrc] = useState<"upload" | "url">("upload");
@@ -335,7 +336,7 @@ function ModelAuditPage({ state, setState, onAction }: any) {
     const onTrainUpload = async (f: File) => {
         setAuditState({ trainFile: f, trainSum: null });
         const fd = new FormData(); fd.append("csv_file", f);
-        try { const res = await fetch(`${API_BASE}/api/v1/audit/dataset-summary`, { method: "POST", body: fd }); const d = await res.json(); if (res.ok) setAuditState({ trainSum: d.dataset_summary }); } catch { }
+        try { const res = await apiFetch(`/api/v1/audit/dataset-summary`, { method: "POST", body: fd }); const d = await res.json(); if (res.ok) setAuditState({ trainSum: d.dataset_summary }); } catch { }
     };
     const setValFile = (f: File) => setAuditState({ valFile: f });
     const setLabelCol = (v: string) => setAuditState({ labelCol: v });
@@ -384,7 +385,7 @@ function ModelAuditPage({ state, setState, onAction }: any) {
         if (valSrc === "url") fd.append("val_dataset_url", valUrl);
 
         try {
-            const res = await fetch(`${API_BASE}/api/v1/audit/run`, { method: "POST", body: fd });
+            const res = await apiFetch(`/api/v1/audit/run`, { method: "POST", body: fd });
             const d = await res.json();
             if (!res.ok) throw new Error(d.detail || "Audit failed.");
 
@@ -400,7 +401,7 @@ function ModelAuditPage({ state, setState, onAction }: any) {
                         return;
                     }
                     try {
-                        const jobRes = await fetch(`${API_BASE}/api/v1/jobs/${d.job_id}`);
+                        const jobRes = await apiFetch(`/api/v1/jobs/${d.job_id}`);
                         const jobData = await jobRes.json();
                         if (jobData.status === "COMPLETED") {
                             clearInterval(poll);
@@ -562,7 +563,7 @@ function BehaviorTestingPage({ state, setState, onAction }: any) {
         fd.append("label_col", labelCol);
         
         try {
-            const res = await fetch(`${API_BASE}/api/v1/behavior/test`, { method: "POST", body: fd });
+            const res = await apiFetch(`/api/v1/behavior/test`, { method: "POST", body: fd });
             const d = await res.json();
             if (!res.ok) throw new Error(d.detail || "Failed.");
             setResults(d);
@@ -789,15 +790,15 @@ function EnterprisePage({ state, setState, onAction }: any) {
         try {
             const [summRes, scansRes, modelsRes, policiesRes, logsRes, dbRes,
                 orgsRes, rulesRes, eventsRes] = await Promise.all([
-                    fetch(`${API_BASE}/api/v1/enterprise/summary`).then(r => r.json()),
-                    fetch(`${API_BASE}/api/v1/enterprise/scans?page=${scanPage}&per_page=15`).then(r => r.json()),
-                    fetch(`${API_BASE}/api/v1/enterprise/models?page=${modelsPage}&per_page=15`).then(r => r.json()),
-                    fetch(`${API_BASE}/api/v1/enterprise/policies`).then(r => r.json()),
-                    fetch(`${API_BASE}/api/v1/enterprise/audit-logs?page=${logsPage}&per_page=25`).then(r => r.json()),
-                    fetch(`${API_BASE}/api/v1/health/db`).then(r => r.json()),
-                    fetch(`${API_BASE}/api/v1/orgs`).then(r => r.json()),
-                    fetch(`${API_BASE}/api/v1/alerts/rules`).then(r => r.json()),
-                    fetch(`${API_BASE}/api/v1/alerts/events`).then(r => r.json()),
+                    apiFetch(`/api/v1/enterprise/summary`).then(r => r.json()),
+                    apiFetch(`/api/v1/enterprise/scans?page=${scanPage}&per_page=15`).then(r => r.json()),
+                    apiFetch(`/api/v1/enterprise/models?page=${modelsPage}&per_page=15`).then(r => r.json()),
+                    apiFetch(`/api/v1/enterprise/policies`).then(r => r.json()),
+                    apiFetch(`/api/v1/enterprise/audit-logs?page=${logsPage}&per_page=25`).then(r => r.json()),
+                    apiFetch(`/api/v1/health/db`).then(r => r.json()),
+                    apiFetch(`/api/v1/orgs`).then(r => r.json()),
+                    apiFetch(`/api/v1/alerts/rules`).then(r => r.json()),
+                    apiFetch(`/api/v1/alerts/events`).then(r => r.json()),
                 ]);
             setSummary(summRes);
             setScansData(scansRes);
@@ -831,7 +832,7 @@ function EnterprisePage({ state, setState, onAction }: any) {
 
     const runCompare = async () => {
         if (!scanA || !scanB) return;
-        try { const r = await fetch(`${API_BASE}/api/v1/compare?scan_a=${scanA}&scan_b=${scanB}`); setComparison(await r.json()); } catch { }
+        try { const r = await apiFetch(`/api/v1/compare?scan_a=${scanA}&scan_b=${scanB}`); setComparison(await r.json()); } catch { }
     };
 
     // ─── PATCH policy ───
@@ -1102,7 +1103,7 @@ function StreamingMonitorPage({ state, setState, onAction }: any) {
     const setStreamModels = (v: any) => setSState({ streamModels: v });
 
     useEffect(() => {
-        fetch(`${API_BASE}/api/v1/stream/models`).then(r => r.json()).then(d => setStreamModels(d.streaming_models || [])).catch(() => { });
+        apiFetch(`/api/v1/stream/models`).then(r => r.json()).then(d => setStreamModels(d.streaming_models || [])).catch(() => { });
     }, [eventCount]);
 
     const connect = () => {
@@ -1166,7 +1167,7 @@ function StreamingMonitorPage({ state, setState, onAction }: any) {
     };
 
     const pollStatus = async () => {
-        try { const r = await fetch(`${API_BASE}/api/v1/stream/status/${modelId}`); setMetrics(await r.json()); } catch { }
+        try { const r = await apiFetch(`/api/v1/stream/status/${modelId}`); setMetrics(await r.json()); } catch { }
     };
 
     const statusColor = wsStatus === "connected" ? "text-emerald-400" : wsStatus === "error" ? "text-red-400" : "text-slate-600";
@@ -1389,7 +1390,7 @@ function FairnessAnalysisPage({ state, setState, onAction }: any) {
         
         fd.append("sensitive_column", sensitiveCol); fd.append("label_col", labelCol);
         try {
-            const r = await fetch(`${API_BASE}/api/v1/fairness/analyze`, { method: "POST", body: fd });
+            const r = await apiFetch(`/api/v1/fairness/analyze`, { method: "POST", body: fd });
             const d = await r.json();
             if (!r.ok) throw new Error(d.detail || "Fairness analysis failed.");
             setFState({ results: d });
@@ -1578,13 +1579,13 @@ function LLMGovernancePage({ state, setState, onAction }: any) {
             setLState({ results: d });
             onAction();
             // Refresh history
-            fetch(`${API_BASE}/api/v1/llm/history`).then(r => r.json()).then(h => setLState({ history: h })).catch(() => { });
+            apiFetch(`/api/v1/llm/history`).then(r => r.json()).then(h => setLState({ history: h })).catch(() => { });
         } catch (e: any) { setLState({ error: e.message }); }
         finally { setLState({ loading: false }); }
     };
 
     useEffect(() => {
-        fetch(`${API_BASE}/api/v1/llm/history`).then(r => r.json()).then(h => setLState({ history: h })).catch(() => { });
+        apiFetch(`/api/v1/llm/history`).then(r => r.json()).then(h => setLState({ history: h })).catch(() => { });
     }, []);
 
     const ev = results?.evaluation;
@@ -1868,13 +1869,13 @@ export default function DashboardPage() {
     const refreshEnterprise = async () => {
         try {
             const [ro, rp, rh, rar, rae, ral, rm] = await Promise.all([
-                fetch(`${API_BASE}/api/v1/orgs`).then(r => r.json()),
-                fetch(`${API_BASE}/api/v1/policies`).then(r => r.json()),
-                fetch(`${API_BASE}/api/v1/history`).then(r => r.json()),
-                fetch(`${API_BASE}/api/v1/alerts/rules`).then(r => r.json()),
-                fetch(`${API_BASE}/api/v1/alerts/events`).then(r => r.json()),
-                fetch(`${API_BASE}/api/v1/audit-logs?limit=40`).then(r => r.json()),
-                fetch(`${API_BASE}/api/v1/models`).then(r => r.json()),
+                apiFetch(`/api/v1/orgs`).then(r => r.json()),
+                apiFetch(`/api/v1/policies`).then(r => r.json()),
+                apiFetch(`/api/v1/history`).then(r => r.json()),
+                apiFetch(`/api/v1/alerts/rules`).then(r => r.json()),
+                apiFetch(`/api/v1/alerts/events`).then(r => r.json()),
+                apiFetch(`/api/v1/audit-logs?limit=40`).then(r => r.json()),
+                apiFetch(`/api/v1/models`).then(r => r.json()),
             ]);
             const isArr = (v: any) => Array.isArray(v) ? v : [];
             setEnterpriseState(prev => ({

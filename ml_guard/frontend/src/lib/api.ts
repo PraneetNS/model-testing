@@ -47,3 +47,29 @@ export async function apiDelete<T>(path: string): Promise<T> {
   if (!res.ok) throw new Error(`DELETE ${path} failed ${res.status}`);
   return res.json();
 }
+
+/**
+ * apiFetch — drop-in authenticated replacement for bare fetch().
+ *
+ * Usage (replaces):  fetch(`${API_BASE}/api/v1/...`, options)
+ * With:              apiFetch(`/api/v1/...`, options)
+ *
+ * - Always injects X-API-Key header
+ * - Skips Content-Type for FormData (browser sets multipart boundary)
+ * - Returns the raw Response so callers can call .json(), .text(), etc.
+ */
+export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const isFormData = init.body instanceof FormData;
+
+  const headers: Record<string, string> = {
+    "X-API-Key": API_KEY,
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
+    ...(init.headers as Record<string, string> | undefined ?? {}),
+  };
+
+  return fetch(`${API_BASE}${path}`, {
+    ...init,
+    headers,
+  });
+}
+
