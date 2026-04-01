@@ -118,7 +118,7 @@ class CertificateEngine:
                 )
                 return msg.content[0].text
         except Exception as e:
-            logger.debug("llm_summary_fallback", reason=str(e))
+            logger.debug(f"llm_summary_fallback reason={str(e)}")
 
         return template
 
@@ -144,7 +144,7 @@ class CertificateEngine:
         # Check for existing cert with same hash (idempotent)
         existing = db.query(ReportCard).filter(ReportCard.cert_hash == cert_hash).first()
         if existing:
-            logger.info("cert_already_exists", cert_hash=cert_hash)
+            logger.info(f"cert_already_exists cert_hash={cert_hash}")
             return existing
 
         executive_summary = self._generate_executive_summary(model_id, governance_result)
@@ -286,7 +286,7 @@ class CertificateEngine:
             drift_events_since_issue = high_drift_count
             still_compliant = high_drift_count == 0
         except Exception as e:
-            logger.warning("drift_event_check_failed", error=str(e))
+            logger.warning(f"drift_event_check_failed error={str(e)}")
 
         message = (
             f"Certificate VALID — Issued {card.issued_at.strftime('%Y-%m-%d') if card.issued_at else 'N/A'}, "
@@ -309,3 +309,4 @@ class CertificateEngine:
             still_compliant=still_compliant,
             message=message,
         )
+

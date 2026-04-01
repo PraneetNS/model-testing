@@ -92,7 +92,7 @@ class GovernanceEngine:
                 .first()
             )
         except Exception as e:
-            logger.warning("scan_record_query_failed", model_id=model_id, error=str(e))
+            logger.warning(f"scan_record_query_failed model_id={model_id} error={str(e)}")
 
         # ── Per-module scores from latest results ───────────────────────────
 

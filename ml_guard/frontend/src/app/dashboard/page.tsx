@@ -23,6 +23,7 @@ import ModelSecurityPage from "./modules/ModelSecurityModule";
 import ScanHistoryPage from "./modules/ScanHistoryModule";
 import ModelReportCardModule from "./modules/ModelReportCardModule";
 import ObservabilityModule from "./modules/ObservabilityModule";
+import GovernanceModule from "./modules/GovernanceModule";
 import NotificationsBell from "./components/NotificationsBell";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "";
@@ -1752,6 +1753,7 @@ const NAV_CATEGORIES = [
         icon: ShieldCheck,
         items: [
             { id: "audit", label: "Model Audit", sub: "Core compliance & risk", icon: ShieldCheck },
+            { id: "governance-score", label: "Governance Score", sub: "Live score · cert · gate", icon: ShieldCheck },
             { id: "report", label: "Report Card", sub: "Compliance certificates", icon: FileText },
             { id: "fairness", label: "Fairness", sub: "Bias & equity metrics", icon: Scale },
             { id: "explainability", label: "Explainability", sub: "SHAP & importance", icon: Zap },
@@ -1861,6 +1863,7 @@ export default function DashboardPage() {
     const [historyState, setHistoryState] = useState({});
     const [reportCardState, setReportCardState] = useState({});
     const [observabilityState, setObservabilityState] = useState({ modelId: "" });
+    const [governanceState, setGovernanceState] = useState<{ selectedModelId: string }>({ selectedModelId: "" });
 
     const refreshEnterprise = async () => {
         try {
@@ -2027,6 +2030,7 @@ export default function DashboardPage() {
                             {active === "history" && <ScanHistoryPage state={historyState} setState={setHistoryState} onAction={refreshEnterprise} />}
                             {active === "report" && <ModelReportCardModule state={reportCardState} setState={setReportCardState} onAction={refreshEnterprise} />}
                             {active === "observe" && <ObservabilityModule state={observabilityState} setState={setObservabilityState} onAction={refreshEnterprise} />}
+                            {active === "governance-score" && <GovernanceModule state={governanceState} setState={setGovernanceState} onAction={refreshEnterprise} />}
                         </div>
                     </div>
                 </div>
