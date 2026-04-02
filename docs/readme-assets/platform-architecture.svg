@@ -1,0 +1,62 @@
+<svg width="1600" height="940" viewBox="0 0 1600 940" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="archBg" x1="100" y1="80" x2="1500" y2="860" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F172A"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+    <linearGradient id="lineA" x1="220" y1="240" x2="1320" y2="600" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F97316"/>
+      <stop offset="1" stop-color="#38BDF8"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1600" height="940" rx="32" fill="url(#archBg)"/>
+  <text x="90" y="110" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="42" font-weight="800">FireFlink ML Guard Architecture</text>
+  <text x="90" y="150" fill="#94A3B8" font-family="Segoe UI, Arial, sans-serif" font-size="22">The repo already spans product marketing, governance workflows, async processing, storage, and observability.</text>
+
+  <rect x="90" y="210" width="310" height="160" rx="24" fill="#111827" stroke="#38BDF8" stroke-opacity="0.35"/>
+  <text x="120" y="255" fill="#93C5FD" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700">1. Visitor and operator entry</text>
+  <text x="120" y="305" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="800">Next.js Frontend</text>
+  <text x="120" y="340" fill="#CBD5E1" font-family="Segoe UI, Arial, sans-serif" font-size="20">Landing page, login, dashboard, certificate verify</text>
+
+  <rect x="470" y="210" width="310" height="160" rx="24" fill="#111827" stroke="#F97316" stroke-opacity="0.35"/>
+  <text x="500" y="255" fill="#FDBA74" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700">2. Control plane</text>
+  <text x="500" y="305" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="800">FastAPI Backend</text>
+  <text x="500" y="340" fill="#CBD5E1" font-family="Segoe UI, Arial, sans-serif" font-size="20">Routers for audit, governance, history, alerts, CI, monitoring</text>
+
+  <rect x="850" y="210" width="310" height="160" rx="24" fill="#111827" stroke="#34D399" stroke-opacity="0.35"/>
+  <text x="880" y="255" fill="#A7F3D0" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700">3. Async execution</text>
+  <text x="880" y="305" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="800">Celery Workers</text>
+  <text x="880" y="340" fill="#CBD5E1" font-family="Segoe UI, Arial, sans-serif" font-size="20">Heavy jobs for evaluation, report generation, and background checks</text>
+
+  <rect x="1230" y="210" width="280" height="160" rx="24" fill="#111827" stroke="#A78BFA" stroke-opacity="0.35"/>
+  <text x="1260" y="255" fill="#C4B5FD" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700">4. Queue layer</text>
+  <text x="1260" y="305" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="800">Redis</text>
+  <text x="1260" y="340" fill="#CBD5E1" font-family="Segoe UI, Arial, sans-serif" font-size="20">Broker and result backend for worker orchestration</text>
+
+  <rect x="190" y="500" width="360" height="180" rx="24" fill="#0F172A" stroke="white" stroke-opacity="0.1"/>
+  <text x="225" y="548" fill="#94A3B8" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700">Structured persistence</text>
+  <text x="225" y="598" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="800">PostgreSQL / SQLite</text>
+  <text x="225" y="638" fill="#CBD5E1" font-family="Segoe UI, Arial, sans-serif" font-size="20">Scans, jobs, models, policies, history, and enterprise state</text>
+
+  <rect x="620" y="500" width="360" height="180" rx="24" fill="#0F172A" stroke="white" stroke-opacity="0.1"/>
+  <text x="655" y="548" fill="#94A3B8" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700">Artifact persistence</text>
+  <text x="655" y="598" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="800">MinIO / S3</text>
+  <text x="655" y="638" fill="#CBD5E1" font-family="Segoe UI, Arial, sans-serif" font-size="20">Reference datasets, baselines, generated assets, and model artifacts</text>
+
+  <rect x="1050" y="500" width="360" height="180" rx="24" fill="#0F172A" stroke="white" stroke-opacity="0.1"/>
+  <text x="1085" y="548" fill="#94A3B8" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700">Realtime surfaces</text>
+  <text x="1085" y="598" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="800">WS + Monitoring APIs</text>
+  <text x="1085" y="638" fill="#CBD5E1" font-family="Segoe UI, Arial, sans-serif" font-size="20">Streaming status, observability feeds, alerts, and production probes</text>
+
+  <path d="M400 290H470" stroke="url(#lineA)" stroke-width="8" stroke-linecap="round"/>
+  <path d="M780 290H850" stroke="url(#lineA)" stroke-width="8" stroke-linecap="round"/>
+  <path d="M1160 290H1230" stroke="url(#lineA)" stroke-width="8" stroke-linecap="round"/>
+  <path d="M625 370V470H370V500" stroke="url(#lineA)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M815 370V470H800V500" stroke="url(#lineA)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M995 370V470H1230V500" stroke="url(#lineA)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <rect x="90" y="760" width="1420" height="110" rx="24" fill="#0B1220" stroke="white" stroke-opacity="0.08"/>
+  <text x="125" y="812" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="800">Deployment-ready stack in this repo</text>
+  <text x="125" y="848" fill="#CBD5E1" font-family="Segoe UI, Arial, sans-serif" font-size="20">`ml_guard/docker-compose.yml` already defines frontend, backend, worker, database, Redis, and MinIO, making the README flow directly match the actual project structure.</text>
+</svg>

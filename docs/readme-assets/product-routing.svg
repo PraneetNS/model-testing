@@ -1,0 +1,77 @@
+<svg width="1600" height="1120" viewBox="0 0 1600 1120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="routeBg" x1="100" y1="70" x2="1500" y2="1040" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#09111F"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1600" height="1120" rx="34" fill="url(#routeBg)"/>
+  <text x="90" y="110" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="44" font-weight="800">Product Routing Map</text>
+  <text x="90" y="150" fill="#94A3B8" font-family="Segoe UI, Arial, sans-serif" font-size="22">Built from the current Next.js pages and dashboard navigation in the repository.</text>
+
+  <rect x="90" y="210" width="260" height="110" rx="24" fill="#111827" stroke="#38BDF8" stroke-opacity="0.35"/>
+  <text x="120" y="256" fill="#93C5FD" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700">Public Route</text>
+  <text x="120" y="296" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="800">/</text>
+
+  <rect x="420" y="210" width="260" height="110" rx="24" fill="#111827" stroke="#F97316" stroke-opacity="0.35"/>
+  <text x="450" y="256" fill="#FDBA74" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700">Auth Route</text>
+  <text x="450" y="296" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="800">/login</text>
+
+  <rect x="750" y="210" width="320" height="110" rx="24" fill="#111827" stroke="#34D399" stroke-opacity="0.35"/>
+  <text x="780" y="256" fill="#A7F3D0" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700">Main Application</text>
+  <text x="780" y="296" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="800">/dashboard</text>
+
+  <rect x="1140" y="210" width="360" height="110" rx="24" fill="#111827" stroke="#A78BFA" stroke-opacity="0.35"/>
+  <text x="1170" y="256" fill="#C4B5FD" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700">Verification Route</text>
+  <text x="1170" y="296" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="800">/verify/[cert_hash]</text>
+
+  <path d="M350 265H420" stroke="#38BDF8" stroke-width="6" stroke-linecap="round"/>
+  <path d="M680 265H750" stroke="#F97316" stroke-width="6" stroke-linecap="round"/>
+  <path d="M1070 265H1140" stroke="#34D399" stroke-width="6" stroke-linecap="round"/>
+
+  <text x="90" y="405" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="800">Dashboard module groups</text>
+
+  <rect x="90" y="450" width="450" height="250" rx="26" fill="#0F172A" stroke="white" stroke-opacity="0.1"/>
+  <text x="125" y="498" fill="#FDBA74" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="800">Governance</text>
+  <text x="125" y="546" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="20">Model Audit</text>
+  <text x="125" y="582" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="20">Governance Score</text>
+  <text x="125" y="618" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="20">Report Card</text>
+  <text x="125" y="654" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="20">Fairness</text>
+  <text x="300" y="546" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="20">Explainability</text>
+  <text x="300" y="582" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="20">Behavior Test</text>
+
+  <rect x="575" y="450" width="450" height="250" rx="26" fill="#0F172A" stroke="white" stroke-opacity="0.1"/>
+  <text x="610" y="498" fill="#93C5FD" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="800">Asset Tracking</text>
+  <text x="610" y="546" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="20">Model Registry</text>
+  <text x="610" y="582" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="20">Datasets</text>
+  <text x="610" y="618" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="20">Experiments</text>
+  <text x="610" y="654" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="20">Scan History</text>
+
+  <rect x="1060" y="450" width="450" height="250" rx="26" fill="#0F172A" stroke="white" stroke-opacity="0.1"/>
+  <text x="1095" y="498" fill="#A7F3D0" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="800">Live Guard</text>
+  <text x="1095" y="546" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="20">Observability</text>
+  <text x="1095" y="582" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="20">Stream Drift</text>
+  <text x="1095" y="618" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="20">Performance</text>
+  <text x="1095" y="654" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="20">Production Probe</text>
+  <text x="1285" y="546" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="20">Data Quality</text>
+
+  <rect x="90" y="740" width="450" height="220" rx="26" fill="#0F172A" stroke="white" stroke-opacity="0.1"/>
+  <text x="125" y="788" fill="#FCA5A5" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="800">Operations</text>
+  <text x="125" y="836" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="20">CI/CD Gate</text>
+  <text x="125" y="872" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="20">Deployments</text>
+  <text x="125" y="908" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="20">Security</text>
+
+  <rect x="575" y="740" width="450" height="220" rx="26" fill="#0F172A" stroke="white" stroke-opacity="0.1"/>
+  <text x="610" y="788" fill="#C4B5FD" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="800">AI Safety</text>
+  <text x="610" y="836" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="20">LLM Guard</text>
+  <text x="610" y="872" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="20">AI Advisor</text>
+
+  <rect x="1060" y="740" width="450" height="220" rx="26" fill="#0F172A" stroke="white" stroke-opacity="0.1"/>
+  <text x="1095" y="788" fill="#FDE68A" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="800">Administration</text>
+  <text x="1095" y="836" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="20">Enterprise Hub</text>
+  <text x="1095" y="878" fill="#CBD5E1" font-family="Segoe UI, Arial, sans-serif" font-size="18">Policies, orgs, users, projects, audit logs, alerts</text>
+
+  <rect x="90" y="1000" width="1420" height="70" rx="20" fill="#111827" stroke="white" stroke-opacity="0.08"/>
+  <text x="122" y="1044" fill="#CBD5E1" font-family="Segoe UI, Arial, sans-serif" font-size="22">This route map mirrors the current dashboard navigation found in `ml_guard/frontend/src/app/dashboard/page.tsx`.</text>
+</svg>

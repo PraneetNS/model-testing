@@ -1,0 +1,103 @@
+<svg width="1600" height="820" viewBox="0 0 1600 820" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="90" y1="70" x2="1510" y2="750" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B1020"/>
+      <stop offset="0.55" stop-color="#111827"/>
+      <stop offset="1" stop-color="#1F2937"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="200" y1="120" x2="1260" y2="640" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F97316"/>
+      <stop offset="0.5" stop-color="#FB7185"/>
+      <stop offset="1" stop-color="#38BDF8"/>
+    </linearGradient>
+    <filter id="blurA" x="0" y="0" width="1600" height="820" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="60"/>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="820" rx="36" fill="url(#bg)"/>
+  <g opacity="0.85" filter="url(#blurA)">
+    <circle cx="310" cy="160" r="120" fill="#F97316"/>
+    <circle cx="1180" cy="180" r="150" fill="#2563EB"/>
+    <circle cx="1300" cy="610" r="170" fill="#FB7185"/>
+  </g>
+
+  <rect x="70" y="70" width="1460" height="680" rx="28" fill="#0A0F1A" fill-opacity="0.7" stroke="white" stroke-opacity="0.12"/>
+  <rect x="110" y="120" width="620" height="500" rx="24" fill="#0F172A" stroke="white" stroke-opacity="0.1"/>
+  <rect x="780" y="120" width="700" height="220" rx="24" fill="#111827" stroke="white" stroke-opacity="0.1"/>
+  <rect x="780" y="370" width="330" height="250" rx="24" fill="#111827" stroke="white" stroke-opacity="0.1"/>
+  <rect x="1150" y="370" width="330" height="250" rx="24" fill="#111827" stroke="white" stroke-opacity="0.1"/>
+
+  <rect x="140" y="160" width="146" height="36" rx="18" fill="#25140A" stroke="#F97316" stroke-opacity="0.5"/>
+  <text x="164" y="184" fill="#FDBA74" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700">AI Governance</text>
+
+  <text x="140" y="260" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="68" font-weight="800">
+    FireFlink
+  </text>
+  <text x="140" y="338" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="68" font-weight="800">
+    ML Guard
+  </text>
+  <text x="140" y="396" fill="#CBD5E1" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="500">
+    Enterprise-grade auditing, observability, and policy control
+  </text>
+  <text x="140" y="434" fill="#94A3B8" font-family="Segoe UI, Arial, sans-serif" font-size="24">
+    for classical ML systems and LLM-powered workflows.
+  </text>
+
+  <rect x="140" y="490" width="220" height="68" rx="18" fill="url(#accent)"/>
+  <text x="185" y="532" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="800">
+    Audit + Monitor
+  </text>
+
+  <rect x="384" y="490" width="220" height="68" rx="18" fill="#0F172A" stroke="white" stroke-opacity="0.14"/>
+  <text x="434" y="532" fill="#E2E8F0" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700">
+    Ship Safely
+  </text>
+
+  <text x="820" y="175" fill="#94A3B8" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700">
+    PLATFORM HIGHLIGHTS
+  </text>
+  <text x="820" y="230" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="800">
+    One dashboard, many control loops
+  </text>
+
+  <g>
+    <rect x="820" y="265" width="190" height="44" rx="14" fill="#18181B" stroke="#F97316" stroke-opacity="0.4"/>
+    <text x="854" y="293" fill="#FDBA74" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700">Model Audit</text>
+    <rect x="1030" y="265" width="180" height="44" rx="14" fill="#18181B" stroke="#38BDF8" stroke-opacity="0.4"/>
+    <text x="1061" y="293" fill="#BAE6FD" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700">LLM Guard</text>
+    <rect x="1230" y="265" width="190" height="44" rx="14" fill="#18181B" stroke="#34D399" stroke-opacity="0.4"/>
+    <text x="1260" y="293" fill="#A7F3D0" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700">Observability</text>
+  </g>
+
+  <text x="810" y="418" fill="#94A3B8" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700">
+    DASHBOARD
+  </text>
+  <text x="810" y="460" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="800">
+    Governance modules
+  </text>
+  <text x="810" y="502" fill="#CBD5E1" font-family="Segoe UI, Arial, sans-serif" font-size="20">
+    Audit, fairness, explainability,
+  </text>
+  <text x="810" y="532" fill="#CBD5E1" font-family="Segoe UI, Arial, sans-serif" font-size="20">
+    CI gates, report cards, and history.
+  </text>
+
+  <text x="1180" y="418" fill="#94A3B8" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700">
+    INFRASTRUCTURE
+  </text>
+  <text x="1180" y="460" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="800">
+    Async platform core
+  </text>
+  <text x="1180" y="502" fill="#CBD5E1" font-family="Segoe UI, Arial, sans-serif" font-size="20">
+    FastAPI, Celery, Redis,
+  </text>
+  <text x="1180" y="532" fill="#CBD5E1" font-family="Segoe UI, Arial, sans-serif" font-size="20">
+    PostgreSQL, and MinIO.
+  </text>
+
+  <rect x="115" y="658" width="1370" height="52" rx="16" fill="#0F172A" stroke="white" stroke-opacity="0.08"/>
+  <text x="148" y="692" fill="#94A3B8" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700">
+    Repository focus: polished landing page, enterprise dashboard, backend governance engine, route-rich API, worker orchestration, artifact storage, and deployment-ready infrastructure.
+  </text>
+</svg>
