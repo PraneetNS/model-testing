@@ -1,0 +1,63 @@
+
+==============================================================
+  ML Guard SDK -- Full Quickstart Demo
+==============================================================
+
+[1] Initializing ML Guard client...
+    ✓ Connected: http://localhost:8000
+
+[2] Building sample model + data...
+    ✓ Model trained — accuracy: 96.50%
+
+[3] Logging predictions (fire-and-forget)...
+    ✓ Logged 10 predictions
+
+[4] Wrapping model for zero-code instrumentation...
+    ✓ Model wrapped — 200 preds auto-logged
+    ✓ Wrapper: <MonitoredSklearnModel model_id='f9597635-5c66-4b17-9e4b-38e3fde81a53' base=RandomForestClassifier calls=2>
+
+[5] Decorator-based monitoring...
+    ✓ @monitor: 5 predictions auto-logged to ML Guard
+
+[6] Building privacy-preserving data profile...
+    ✓ Profile built: <DataProfile model_id='f9597635-5c66-4b17-9e4b-38e3fde81a53' columns=5 rows=200>
+    ✓ Quality score: 100/100
+    ✓ Issues: 0
+    ✓ Profile diff: 2 drifted columns / 5 total
+    ✓ Compact JSON size: 2469 bytes (raw CSV: ~20KB)
+    ~ Profile upload: HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /api/v1/ingest/profile (Caused by NewConnectionError("HTTPConnection(host='localhost', port=8000): Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it")) (backend may not be running)
+
+[7] Running Policy Test Suite...
+
+[1m──────────────────────────────────────────────────────────────[0m
+[1m  ML Guard Suite: Production Quality Gate[0m
+  Model: f9597635-5c66-4b17-9e4b-38e3fde81a53  │  Pass Rate: [93m100%[0m
+──────────────────────────────────────────────────────────────[0m
+  [92m✓ PASS[0m  [performance]   accuracy > 0.75
+  [92m✓ PASS[0m  [drift]         PSI < 0.3 [all]
+  [92m✓ PASS[0m  [quality]       null_rate < 0.1 [all]
+  [92m✓ PASS[0m  [custom]        feature_count_stable
+──────────────────────────────────────────────────────────────
+  [92m[1mOverall: PASSED[0m  (4/4 tests passed)
+──────────────────────────────────────────────────────────────
+
+
+[8] Fetching governance score...
+    ~ Score fetch: HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /api/v1/governance/f9597635-5c66-4b17-9e4b-38e3fde81a53/score (Caused by NewConnectionError("HTTPConnection(host='localhost', port=8000): Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it"))
+
+[9] Generating compliance certificate...
+    ~ Certificate: HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /api/v1/governance/f9597635-5c66-4b17-9e4b-38e3fde81a53/certify (Caused by NewConnectionError("HTTPConnection(host='localhost', port=8000): Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it"))
+
+[10] Governance gate check (@gate decorator)...
+    ✓ @gate PASSED — deployment authorized!
+
+==============================================================
+  [OK] ML Guard SDK Quickstart Complete!
+==============================================================
+
+  Next steps:
+  1. pip install 'mlguard[sklearn]'
+  2. Wrap your real model with ml_guard.wrap_sklearn()
+  3. Add @ml_guard.gate() to your deploy functions
+  4. View dashboard at http://localhost:3000
+

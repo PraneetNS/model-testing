@@ -240,6 +240,59 @@ class MLGuardClient:
         ws_host = self.host.replace("https://", "wss://").replace("http://", "ws://")
         return f"{ws_host}/api/v1/sentinel/stream/{model_id}"
 
+    # ── Module 6: Data Profile Upload ─────────────────────────────────────────
+
+    def upload_profile(self, profile_obj: Any) -> Dict[str, Any]:
+        """
+        Upload a DataProfile object to the ML Guard backend.
+        The profile is serialized to JSON — no raw data is transmitted.
+
+        Args:
+            profile_obj: DataProfile instance from ml_guard.profile
+
+        Returns:
+            Backend acknowledgment with profile_id
+        """
+        return self._post("ingest/profile", json=profile_obj.to_dict())
+
+    def compare_profiles(
+        self,
+        model_id: str,
+        current_profile: Any,
+        reference_profile: Any,
+    ) -> Dict[str, Any]:
+        """
+        Upload two profiles for server-side comparison.
+        Faster than local diff when profiles are already on the server.
+        """
+        return self._post(
+            f"observe/profile/{model_id}/compare",
+            json={
+                "current": current_profile.to_dict(),
+                "reference": reference_profile.to_dict(),
+            },
+        )
+
+    # ── Module 7: Suite Reports ────────────────────────────────────────────────
+
+    def upload_suite_report(
+        self,
+        model_id: str,
+        report: Any,  # SuiteReport
+    ) -> Dict[str, Any]:
+        """
+        Upload a SuiteReport to the ML Guard backend for historical tracking.
+        Allows dashboard visualization of test suite trends.
+        """
+        try:
+            return self._post(
+                f"governance/{model_id}/suite-report",
+                json=report.to_dict(),
+            )
+        except Exception:
+            # Suite upload is best-effort — never block user code
+            return {"status": "skipped", "reason": "upload_failed"}
+
     # ── Legacy Guard interface ────────────────────────────────────────────────
 
     def evaluate(

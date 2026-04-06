@@ -1,0 +1,79 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "mlguard"
+version = "7.2.0"
+description = "ML Guard Python SDK — Enterprise AI Governance, Observability & Compliance"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+    { name = "ML Guard Team" }
+]
+keywords = [
+    "ml-monitoring", "model-governance", "data-drift", "mlops",
+    "ai-observability", "fairness", "compliance"
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "requests>=2.28.0",
+    "numpy>=1.21.0",
+    "pandas>=1.5.0",
+    "scipy>=1.9.0",
+    "click>=8.1.0",
+]
+
+[project.optional-dependencies]
+sklearn = ["scikit-learn>=1.1.0", "joblib>=1.2.0"]
+xgboost = ["xgboost>=1.7.0"]
+all = [
+    "scikit-learn>=1.1.0",
+    "joblib>=1.2.0",
+    "xgboost>=1.7.0",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov",
+    "httpx",
+    "black",
+    "mypy",
+    "ruff",
+]
+
+[project.scripts]
+mlguard = "ml_guard.cli:app"
+
+[project.urls]
+Homepage = "https://mlguard.io"
+Documentation = "https://docs.mlguard.io"
+Repository = "https://github.com/ml-guard/ml-guard"
+"Bug Tracker" = "https://github.com/ml-guard/ml-guard/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ml_guard*"]
+
+[tool.black]
+line-length = 100
+target-version = ["py39", "py310", "py311"]
+
+[tool.ruff]
+line-length = 100
+select = ["E", "W", "F", "I"]
+
+[tool.mypy]
+python_version = "3.9"
+ignore_missing_imports = true
