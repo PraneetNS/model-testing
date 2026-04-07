@@ -1,4 +1,4 @@
-# ML Guard v7.2 — The Enterprise AI Governance Platform
+content = """# ML Guard v7.2 — The Enterprise AI Governance Platform
 
 [![ML Guard](https://img.shields.io/badge/Version-7.2.0%20(Agentic)-blueviolet)](https://github.com/FireFlink/ml_guard)
 [![Stack](https://img.shields.io/badge/Stack-FastAPI%20%7C%20SQLAlchemy%20%7C%20Next.js-blue)](https://github.com/FireFlink/ml_guard)
@@ -83,3 +83,8 @@ ML Guard transforms subjective "AI Ethics" into objective, measurable, and enfor
 
 ---
 © 2026 FireFlink ML Research. Proprietary & Confidential.
+"""
+
+with open("README.md", "w", encoding="utf-8") as f:
+    f.write(content)
+print("Updated README.md")
