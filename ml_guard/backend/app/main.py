@@ -59,6 +59,7 @@ from app.routers import explainability
 from app.routers import data_quality
 from app.routers import deployments
 from app.routers import predictions
+from app.routers import contracts
 
 # ─── Lifespan Management ───
 @asynccontextmanager
@@ -254,6 +255,8 @@ app.include_router(deployments.router,
     prefix="/api/v1", tags=["deployments"])
 app.include_router(predictions.router,
     prefix="/api/v1", tags=["predictions"])
+app.include_router(contracts.router,
+    prefix="/api/v1", tags=["contracts"])
 
 if __name__ == "__main__":
     import uvicorn

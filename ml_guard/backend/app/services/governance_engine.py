@@ -232,10 +232,32 @@ class GovernanceEngine:
             if data_freshness_hours > 168:
                 recommendations.append(f"Last audit was {data_freshness_hours:.0f}h ago. Consider re-auditing for fresh compliance.")
 
+        # ── Contract breach penalty ──────────────────────────────────────────
+        # Deduct governance points for unresolved behavioral contract breaches
+        # in the last 24 hours. Capped at -20 pts total.
+        try:
+            from app.services.contract_engine import ContractEngine
+            _ce = ContractEngine()
+            breach_summary = _ce.get_breach_summary(db, model_id, hours=24)
+            contract_penalty = breach_summary.get("governance_penalty", 0.0)
+            if contract_penalty > 0:
+                live_score = max(0.0, live_score - contract_penalty)
+                n_breaches = breach_summary["total_breaches"]
+                recommendations.append(
+                    f"{n_breaches} contract breach(es) detected in last 24h "
+                    f"(-{contract_penalty:.1f} pts governance penalty). "
+                    f"Review /api/v1/contracts/{model_id}/breach-summary."
+                )
+        except Exception as _ce_err:
+            logger.debug(f"contract_penalty_skipped model_id={model_id} error={_ce_err}")
+
+        # Re-evaluate verdict after contract penalty (score may have dropped)
+        verdict = self.get_verdict(live_score)
+
         return GovernanceScoreResult(
             model_id=model_id,
             overall_score=overall_score,
-            live_score=live_score,
+            live_score=round(live_score, 2),
             verdict=verdict,
             component_scores=component_scores,
             component_weights=self.WEIGHTS,

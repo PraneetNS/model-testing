@@ -1,0 +1,16 @@
+2026-04-07 15:37:24 [warning  ] reportlab not installed. PDF generation will be unavailable.
+INFO:     Started server process [34200]
+INFO:     Waiting for application startup.
+2026-04-07 15:37:24 [warning  ] storage_init_failed            error="'Settings' object has no attribute 'MINIO_REGION'"
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:57450 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51528 - "POST /api/v1/contracts HTTP/1.1" 201 Created
+INFO:     127.0.0.1:51529 - "POST /api/v1/ingest/predict HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:51530 - "POST /api/v1/ingest/predict HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:58815 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53/breaches?hours=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58816 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53/breach-summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58817 - "GET /api/v1/governance/f9597635-5c66-4b17-9e4b-38e3fde81a53/score HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58818 - "POST /api/v1/contracts/validate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58819 - "POST /api/v1/contracts/validate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58820 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53 HTTP/1.1" 200 OK

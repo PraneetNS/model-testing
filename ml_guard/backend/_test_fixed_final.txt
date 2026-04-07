@@ -1,0 +1,74 @@
+==================================================
+  ML Guard -- Contract System Test
+==================================================
+
+--------------------------------------------------
+  STEP 1 ??? Create Behavioral Contract
+--------------------------------------------------
+  POST /contracts -> 201
+  contract_id: 4620c76d-174c-4b80-b68e-9252b1487598
+  promises_count: 3
+  status: active
+
+--------------------------------------------------
+  STEP 2 ??? Ingest Prediction That Violates Promises
+--------------------------------------------------
+  Sending prediction with proba=0.30 (<0.55) and latency=600ms (>500ms)
+  POST /ingest/predict -> 202
+  response: {'log_id': '8f6718f6-faa1-48f9-9b5f-fabdc784bf14', 'status': 'accepted'}
+
+  Sending clean prediction (proba=0.85, latency=120ms)...
+  POST /ingest/predict (clean) -> 202
+
+--------------------------------------------------
+  STEP 3 ??? Query Contract Breaches
+--------------------------------------------------
+  GET /contracts/f9597635-5c6../breaches -> 200
+  total_breaches_found: 0
+
+--------------------------------------------------
+  STEP 4 ??? Breach Summary + Governance Penalty
+--------------------------------------------------
+  GET /contracts/f9597635-5c6../breach-summary -> 200
+  total_breaches: 0
+  by_severity: {}
+  by_promise: {}
+  governance_penalty: -0.0 pts
+
+--------------------------------------------------
+  STEP 5 ??? Governance Score (with contract penalty applied)
+--------------------------------------------------
+  GET /governance/f9597635-5c6../score -> 200
+  overall_score: 65.04
+  live_score: 65.04
+  verdict: CONDITIONAL
+  (no contract breach recommendations yet)
+
+--------------------------------------------------
+  STEP 7 ??? Dry-Run Contract Validation
+--------------------------------------------------
+  Validating a high-confidence, low-latency prediction...
+  POST /contracts/validate -> 200
+  compliant: True
+  breach_count: 0
+
+  Validating a low-confidence prediction (should breach)...
+  POST /contracts/validate -> 200
+  compliant: False
+  breach_count: 4
+    [MEDIUM] Confident predictions only: actual=0.2 threshold=0.55
+    [HIGH] Low latency guarantee: actual=800.0 threshold=500.0
+    [MEDIUM] Confident predictions only: actual=0.2 threshold=0.55
+    [HIGH] Low latency guarantee: actual=800.0 threshold=500.0
+
+--------------------------------------------------
+  STEP 8 ??? List All Contracts for Model
+--------------------------------------------------
+  GET /contracts/f9597635-5c6.. -> 200
+  contracts_found: 2
+    [1.0] Production Safety Contract v1 (active) ??? 3 promises
+    [1.0] Production Safety Contract v1 (active) ??? 3 promises
+
+==================================================
+  Contract Test Complete
+==================================================

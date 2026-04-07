@@ -52,6 +52,37 @@ def ingest_single(
     db.commit()
     db.refresh(log)
     logger.info("ingested_prediction", model_id=model_id, log_id=str(log.id))
+
+    # ── Contract enforcement (fire-and-forget safe) ───────────────────────────
+    # Runs synchronously but NEVER raises. Any failure is silently swallowed
+    # so the ingest pipeline is always safe.
+    try:
+        from app.services.contract_engine import ContractEngine
+        _ce = ContractEngine()
+        breaches = _ce.check_prediction(
+            db=db,
+            model_id=model_id,
+            prediction=prediction,
+            prediction_proba=prediction_proba,
+            features=features or {},
+            latency_ms=latency_ms,
+            log_id=str(log.id),
+        )
+        if breaches:
+            logger.warning(
+                "contract_breaches_detected",
+                model_id=model_id,
+                log_id=str(log.id),
+                count=len(breaches),
+                breaches=[
+                    {"promise": b.get("promise"), "actual": b.get("actual")}
+                    for b in breaches
+                ],
+            )
+    except Exception as _contract_err:
+        # Contract checking must NEVER crash the ingest pipeline
+        logger.debug(f"contract_check_suppressed model_id={model_id} error={_contract_err}")
+
     return str(log.id)
 
 

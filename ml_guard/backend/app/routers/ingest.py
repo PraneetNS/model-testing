@@ -48,8 +48,10 @@ class LabelRequest(BaseModel):
 
 # ─── Internal background write ────────────────────────────────────────────────
 
-def _background_ingest(req: PredictRequest, db: Session, log_id: str) -> None:
+def _background_ingest(req: PredictRequest, log_id: str) -> None:
     """Non-blocking write executed in FastAPI BackgroundTasks."""
+    from app.db.session import SessionLocal
+    db = SessionLocal()
     try:
         ingest_single(
             db=db,
@@ -64,6 +66,8 @@ def _background_ingest(req: PredictRequest, db: Session, log_id: str) -> None:
         )
     except Exception:
         pass  # Fire-and-forget; log handled inside service
+    finally:
+        db.close()
 
 
 # ─── Endpoints ───────────────────────────────────────────────────────────────
@@ -72,14 +76,13 @@ def _background_ingest(req: PredictRequest, db: Session, log_id: str) -> None:
 async def ingest_single_prediction(
     req: PredictRequest,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
 ):
     """
     Accepts a single prediction and writes it asynchronously.
     Returns immediately with a log_id for tracking.
     """
     log_id = str(uuid.uuid4())
-    background_tasks.add_task(_background_ingest, req, db, log_id)
+    background_tasks.add_task(_background_ingest, req, log_id)
     return {"log_id": log_id, "status": "accepted"}
 
 

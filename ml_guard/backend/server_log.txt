@@ -1,0 +1,582 @@
+2026-04-07 10:33:10 [warning  ] reportlab not installed. PDF generation will be unavailable.
+INFO:     Started server process [436]
+INFO:     Waiting for application startup.
+2026-04-07 10:33:11 [warning  ] storage_init_failed            error="'Settings' object has no attribute 'MINIO_REGION'"
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:54455 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52110 - "POST /api/v1/contracts HTTP/1.1" 201 Created
+INFO:     127.0.0.1:52111 - "POST /api/v1/ingest/predict HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:52112 - "POST /api/v1/ingest/predict HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:63167 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53/breaches?hours=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63168 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53/breach-summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63169 - "GET /api/v1/governance/f9597635-5c66-4b17-9e4b-38e3fde81a53/score HTTP/1.1" 200 OK
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 06:01:18.525912')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:63170 - "POST /api/v1/contracts/validate HTTP/1.1" 200 OK
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 06:01:18.538251')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:63171 - "POST /api/v1/contracts/validate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63172 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62553 - "POST /api/v1/contracts HTTP/1.1" 201 Created
+INFO:     127.0.0.1:62554 - "POST /api/v1/ingest/predict HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:62555 - "POST /api/v1/ingest/predict HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:62556 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53/breaches?hours=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62557 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53/breach-summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62558 - "GET /api/v1/governance/f9597635-5c66-4b17-9e4b-38e3fde81a53/score HTTP/1.1" 200 OK
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 07:19:47.427964')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 07:19:47.428604')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:62559 - "POST /api/v1/contracts/validate HTTP/1.1" 200 OK
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 07:19:47.436365')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 07:19:47.773785')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:62560 - "POST /api/v1/contracts/validate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62561 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65164 - "POST /api/v1/contracts HTTP/1.1" 201 Created
+INFO:     127.0.0.1:65165 - "POST /api/v1/ingest/predict HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:65166 - "POST /api/v1/ingest/predict HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:53869 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53/breaches?hours=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53870 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53/breach-summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53871 - "GET /api/v1/governance/f9597635-5c66-4b17-9e4b-38e3fde81a53/score HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53872 - "PATCH /api/v1/contracts/breaches/54cdde29-682c-4ed0-908c-8653d61fdd67/resolve HTTP/1.1" 200 OK
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 07:24:38.419931')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 07:24:38.420361')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 07:24:38.420643')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:53873 - "POST /api/v1/contracts/validate HTTP/1.1" 200 OK
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 07:24:38.426800')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 07:24:38.430353')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 07:24:38.434210')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:53874 - "POST /api/v1/contracts/validate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53875 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56946 - "POST /api/v1/contracts HTTP/1.1" 201 Created
+INFO:     127.0.0.1:56947 - "POST /api/v1/ingest/predict HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:56948 - "POST /api/v1/ingest/predict HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:56949 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53/breaches?hours=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56950 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53/breach-summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56951 - "GET /api/v1/governance/f9597635-5c66-4b17-9e4b-38e3fde81a53/score HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56952 - "PATCH /api/v1/contracts/breaches/a73d6087-302d-4bc7-aee6-0020c8c55c26/resolve HTTP/1.1" 200 OK
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 07:45:24.399279')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 07:45:24.399787')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 07:45:24.400158')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 07:45:24.400486')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:56953 - "POST /api/v1/contracts/validate HTTP/1.1" 200 OK
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 07:45:24.410161')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 07:45:24.416013')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 07:45:24.420761')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 07:45:24.424902')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:56954 - "POST /api/v1/contracts/validate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56955 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59953 - "POST /api/v1/contracts HTTP/1.1" 201 Created
+INFO:     127.0.0.1:59954 - "POST /api/v1/ingest/predict HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:59955 - "POST /api/v1/ingest/predict HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:50185 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53/breaches?hours=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50186 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53/breach-summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50187 - "GET /api/v1/governance/f9597635-5c66-4b17-9e4b-38e3fde81a53/score HTTP/1.1" 200 OK
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:22:05.624715')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:22:05.625061')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:22:05.625326')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:22:05.626047')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:22:05.626339')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:50188 - "POST /api/v1/contracts/validate HTTP/1.1" 200 OK
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:22:05.633115')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:22:05.636893')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:22:05.640499')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:22:05.643716')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:22:05.647286')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:50189 - "POST /api/v1/contracts/validate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50190 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63197 - "POST /api/v1/contracts HTTP/1.1" 201 Created
+INFO:     127.0.0.1:63198 - "POST /api/v1/ingest/predict HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:63199 - "POST /api/v1/ingest/predict HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:63200 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53/breaches?hours=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63201 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53/breach-summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63202 - "GET /api/v1/governance/f9597635-5c66-4b17-9e4b-38e3fde81a53/score HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63203 - "PATCH /api/v1/contracts/breaches/537ab75f-8824-48dc-9e47-d62113aee44b/resolve HTTP/1.1" 200 OK
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:24:40.765870')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:24:40.766254')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:24:40.766540')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:24:40.766804')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:24:40.767073')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:24:40.767339')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:63204 - "POST /api/v1/contracts/validate HTTP/1.1" 200 OK
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:24:40.774765')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:24:40.778005')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:24:40.781627')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:24:40.785113')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:24:40.788324')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:24:40.791773')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:63205 - "POST /api/v1/contracts/validate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63206 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59354 - "POST /api/v1/contracts HTTP/1.1" 201 Created
+INFO:     127.0.0.1:59355 - "POST /api/v1/ingest/predict HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:59356 - "POST /api/v1/ingest/predict HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:59357 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53/breaches?hours=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59358 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53/breach-summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59359 - "GET /api/v1/governance/f9597635-5c66-4b17-9e4b-38e3fde81a53/score HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59360 - "PATCH /api/v1/contracts/breaches/dadb7e7c-8769-4924-9dcc-d386f47008dd/resolve HTTP/1.1" 200 OK
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:06.298069')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:06.298672')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:06.299013')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:06.299291')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:06.299543')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:06.299796')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:06.300052')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:59361 - "POST /api/v1/contracts/validate HTTP/1.1" 200 OK
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:06.308589')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:06.312583')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:06.316822')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:06.321493')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:06.325328')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:06.330126')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:06.334625')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:59362 - "POST /api/v1/contracts/validate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59363 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58867 - "POST /api/v1/contracts HTTP/1.1" 201 Created
+INFO:     127.0.0.1:58868 - "POST /api/v1/ingest/predict HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:58869 - "POST /api/v1/ingest/predict HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:58870 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53/breaches?hours=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58871 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53/breach-summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58872 - "GET /api/v1/governance/f9597635-5c66-4b17-9e4b-38e3fde81a53/score HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58873 - "PATCH /api/v1/contracts/breaches/f8c45283-41ba-4843-a05c-964d3b70ff7d/resolve HTTP/1.1" 200 OK
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:28.440825')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:28.441240')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:28.441509')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:28.441776')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:28.442038')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:28.442292')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:28.442542')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:28.442798')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:58874 - "POST /api/v1/contracts/validate HTTP/1.1" 200 OK
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:28.450139')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:28.454834')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:28.458599')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:28.463129')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:28.467542')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:28.471932')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:28.477187')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:28:28.482709')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:58875 - "POST /api/v1/contracts/validate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58876 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52923 - "POST /api/v1/contracts HTTP/1.1" 201 Created
+INFO:     127.0.0.1:52924 - "POST /api/v1/ingest/predict HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:52925 - "POST /api/v1/ingest/predict HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:52926 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53/breaches?hours=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52927 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53/breach-summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52928 - "GET /api/v1/governance/f9597635-5c66-4b17-9e4b-38e3fde81a53/score HTTP/1.1" 200 OK
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:39:17.348040')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:39:17.348387')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:52929 - "POST /api/v1/contracts/validate HTTP/1.1" 200 OK
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:39:17.354713')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:39:17.357864')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:52930 - "POST /api/v1/contracts/validate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52931 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51280 - "POST /api/v1/contracts HTTP/1.1" 201 Created
+INFO:     127.0.0.1:51281 - "POST /api/v1/ingest/predict HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:51282 - "POST /api/v1/ingest/predict HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:51283 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53/breaches?hours=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51284 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53/breach-summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51285 - "GET /api/v1/governance/f9597635-5c66-4b17-9e4b-38e3fde81a53/score HTTP/1.1" 200 OK
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:45:10.787795')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:45:10.788215')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:51286 - "POST /api/v1/contracts/validate HTTP/1.1" 200 OK
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:45:10.794591')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+distribution_check_failed model_id=f9597635-5c66-4b17-9e4b-38e3fde81a53 error=(sqlite3.OperationalError) no such column: prediction_logs.model_id
+[SQL: SELECT prediction_logs.prediction AS prediction_logs_prediction 
+FROM prediction_logs 
+WHERE prediction_logs.model_id = ? AND prediction_logs.timestamp >= ?]
+[parameters: ('f9597635-5c66-4b17-9e4b-38e3fde81a53', '2026-04-06 09:45:10.797813')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+INFO:     127.0.0.1:51287 - "POST /api/v1/contracts/validate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51288 - "GET /api/v1/contracts/f9597635-5c66-4b17-9e4b-38e3fde81a53 HTTP/1.1" 200 OK
