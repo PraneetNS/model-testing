@@ -70,7 +70,7 @@ def _load_model_artifact(object_key: str):
         raise e
 
 
-@celery_app.task(name="run_comprehensive_scan")
+@celery_app.task(name="run_comprehensive_scan", bind=True, max_retries=3, default_retry_delay=10)
 def run_comprehensive_scan(
     job_id: str,
     model_id: str,
@@ -78,7 +78,7 @@ def run_comprehensive_scan(
     train_path: str,
     test_path: str,
     model_path: str = None,
-    # R2 object keys (optional — used when artifacts are in cloud storage)
+    # R2 object keys (optional â€” used when artifacts are in cloud storage)
     model_artifact_key: str = None,
     train_dataset_key: str = None,
     val_dataset_key: str = None,
@@ -95,7 +95,7 @@ def run_comprehensive_scan(
         job.status = "RUNNING"
         db.commit()
 
-        # ─── Load artifacts: prefer MinIO, fallback to local paths, then mock ───
+        # â”€â”€â”€ Load artifacts: prefer MinIO, fallback to local paths, then mock â”€â”€â”€
         try:
             # Training dataset
             if _has_storage and train_dataset_key:
@@ -246,7 +246,7 @@ def run_comprehensive_scan(
         db.commit()
     finally:
         db.close()
-        # ─── Cleanup temporary files ───
+        # â”€â”€â”€ Cleanup temporary files â”€â”€â”€
         for tmp_path in tmp_files:
             try:
                 if os.path.exists(tmp_path):
@@ -254,7 +254,7 @@ def run_comprehensive_scan(
                     logger.info("Cleaned up temp file: %s", tmp_path)
             except Exception:
                 pass
-@celery_app.task(name="run_explainability_task")
+@celery_app.task(name="run_explainability_task", bind=True, max_retries=3, default_retry_delay=10)
 def run_explainability_task(model_id: str, max_samples: int = 100, model_b64: str = None, data_b64: str = None, model_filename: str = "model.pkl", data_filename: str = "data.csv"):
     db = SessionLocal()
     import base64
@@ -344,7 +344,7 @@ def run_explainability_task(model_id: str, max_samples: int = 100, model_b64: st
             except:
                 pass
 
-@celery_app.task(name="run_governance_audit_task")
+@celery_app.task(name="run_governance_audit_task", bind=True, max_retries=3, default_retry_delay=10)
 def run_governance_audit_task(
     job_id: str,
     model_id: str,

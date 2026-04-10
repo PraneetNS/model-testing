@@ -8,7 +8,7 @@ from app.domain.services.llm_evaluator.engine import LLMEvaluationEngine
 
 logger = structlog.get_logger(__name__)
 
-@celery_app.task(name="app.domain.services.llm_evaluator.tasks.run_llm_evaluation_task")
+@celery_app.task(name="app.domain.services.llm_evaluator.tasks.run_llm_evaluation_task", bind=True, max_retries=3, default_retry_delay=10)
 def run_llm_evaluation_task(job_id: str, provider_config: dict, eval_config: dict):
     """
     Celery background worker task for LLM governance audit.

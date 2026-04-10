@@ -20,7 +20,7 @@ logger = structlog.get_logger(__name__)
 
 from app.domain.services.trainer import Trainer
 
-@celery_app.task(name="app.domain.services.governance_engine.run_async_training")
+@celery_app.task(name="app.domain.services.governance_engine.run_async_training", bind=True, max_retries=3, default_retry_delay=10)
 def run_async_training(
     job_id: str,
     data_path: str,
@@ -53,7 +53,7 @@ def run_async_training(
         if os.path.exists(data_path):
             os.remove(data_path)
 
-@celery_app.task(name="app.domain.services.governance_engine.run_async_evaluation")
+@celery_app.task(name="app.domain.services.governance_engine.run_async_evaluation", bind=True, max_retries=3, default_retry_delay=10)
 def run_async_evaluation(
     run_id: str,
     project_id: str,
@@ -153,7 +153,7 @@ def run_async_evaluation(
     finally:
         db.close()
 
-@celery_app.task(name="app.domain.services.governance_engine.run_scheduled_monitoring")
+@celery_app.task(name="app.domain.services.governance_engine.run_scheduled_monitoring", bind=True, max_retries=3, default_retry_delay=10)
 def run_scheduled_monitoring(job_id: str):
     """
     Background worker task for scheduled drift detection.

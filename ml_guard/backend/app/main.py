@@ -61,6 +61,9 @@ from app.routers import deployments
 from app.routers import predictions
 from app.routers import contracts
 
+# ── API/Tasks Router ───────────────────────────────
+from app.api.routers import tasks
+
 # ─── Lifespan Management ───
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -257,6 +260,8 @@ app.include_router(predictions.router,
     prefix="/api/v1", tags=["predictions"])
 app.include_router(contracts.router,
     prefix="/api/v1", tags=["contracts"])
+app.include_router(tasks.router)
+
 
 if __name__ == "__main__":
     import uvicorn

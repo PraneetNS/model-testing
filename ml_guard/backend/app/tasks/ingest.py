@@ -1,5 +1,5 @@
 """
-app/tasks/ingest.py — Celery tasks for batch prediction ingestion
+app/tasks/ingest.py â€” Celery tasks for batch prediction ingestion
 """
 from app.core.celery_app import celery_app
 from app.services.ingestion_service import ingest_batch
@@ -8,7 +8,7 @@ import structlog
 logger = structlog.get_logger()
 
 
-@celery_app.task(name="app.tasks.ingest.ingest_batch_task", bind=True, max_retries=3)
+@celery_app.task(name="app.tasks.ingest.ingest_batch_task", bind=True, max_retries=3, default_retry_delay=10)
 def ingest_batch_task(self, rows: list) -> dict:
     """Bulk-insert prediction rows into DB. Retryable on DB error."""
     try:

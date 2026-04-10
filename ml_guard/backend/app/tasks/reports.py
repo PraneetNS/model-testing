@@ -19,7 +19,7 @@ async def upload_to_minio(file_path: str, destination: str):
     await asyncio.sleep(1) # Simulate upload
     return f"minio://{destination}"
 
-@celery_app.task(name="app.tasks.reports.generate_governance_report")
+@celery_app.task(name="app.tasks.reports.generate_governance_report", bind=True, max_retries=3, default_retry_delay=10)
 def generate_governance_report(model_id: str):
     """
     Async task to synthesize audit data, generate LLM summary, 

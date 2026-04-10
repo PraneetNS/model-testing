@@ -7,7 +7,7 @@ import structlog
 
 logger = structlog.get_logger()
 
-@celery_app.task(name="app.services.forecasting.recompute_all_forecasts")
+@celery_app.task(name="app.services.forecasting.recompute_all_forecasts", bind=True, max_retries=3, default_retry_delay=10)
 def recompute_all_forecasts():
     """
     Background job to update forecasts for all active models.

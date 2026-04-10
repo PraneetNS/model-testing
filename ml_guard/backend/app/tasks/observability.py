@@ -1,8 +1,8 @@
 """
-app/tasks/observability.py — Celery beat tasks for scheduled observability scans.
+app/tasks/observability.py â€” Celery beat tasks for scheduled observability scans.
 
-drift_scan:             every 1 hour  — for all active models
-performance_snapshot:   every 6 hours — for all active models
+drift_scan:             every 1 hour  â€” for all active models
+performance_snapshot:   every 6 hours â€” for all active models
 """
 from celery import shared_task
 from app.core.celery_app import celery_app
@@ -23,7 +23,7 @@ def _get_active_model_ids() -> list:
         db.close()
 
 
-@celery_app.task(name="app.tasks.observability.run_hourly_drift_scan")
+@celery_app.task(name="app.tasks.observability.run_hourly_drift_scan", bind=True, max_retries=3, default_retry_delay=10)
 def run_hourly_drift_scan():
     """
     Beat job: run drift analysis for all active models every hour.
@@ -56,7 +56,7 @@ def run_hourly_drift_scan():
     return {"scanned": len(model_ids), "results": results}
 
 
-@celery_app.task(name="app.tasks.observability.run_performance_snapshot")
+@celery_app.task(name="app.tasks.observability.run_performance_snapshot", bind=True, max_retries=3, default_retry_delay=10)
 def run_performance_snapshot():
     """
     Beat job: compute performance snapshots for all active models every 6 hours.

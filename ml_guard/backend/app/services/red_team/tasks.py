@@ -9,7 +9,7 @@ import structlog
 
 logger = structlog.get_logger()
 
-@celery_app.task(name="app.services.red_team.execute_red_team_campaign")
+@celery_app.task(name="app.services.red_team.execute_red_team_campaign", bind=True, max_retries=3, default_retry_delay=10)
 def execute_red_team_campaign(session_id: str, max_attacks: int = 10):
     """
     Background worker to execute the red-teaming autopilot.
