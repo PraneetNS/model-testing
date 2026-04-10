@@ -1,0 +1,16 @@
+{
+  "model_name": "TestChurnModel-v1",
+  "model_id": "f9597635-5c66-4b17-9e4b-38e3fde81a53",
+  "overall_score": 65.04,
+  "live_score": 65.04,
+  "verdict": "CONDITIONAL",
+  "gate_passed": true,
+  "contract_breaches": 0,
+  "recommendations": [
+    "No recent performance audit \u2014 score estimated.",
+    "No drift audit found.",
+    "No fairness audit found \u2014 run a fairness check for compliance.",
+    "Last audit was 210h ago. Consider re-auditing for fresh compliance."
+  ],
+  "passed": true
+}
