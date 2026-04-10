@@ -71,7 +71,7 @@ def _load_model_artifact(object_key: str):
 
 
 @celery_app.task(name="run_comprehensive_scan", bind=True, max_retries=3, default_retry_delay=10)
-def run_comprehensive_scan(
+async def run_comprehensive_scan(
     job_id: str,
     model_id: str,
     modules: dict,
@@ -84,7 +84,7 @@ def run_comprehensive_scan(
     val_dataset_key: str = None,
 ):
     db = SessionLocal()
-    job = db.query(Job).filter(Job.id == job_id).first()
+    job = (await db.execute(select(Job).filter(Job.id == job_id))).scalars().first()
     if not job:
         db.close()
         return
@@ -93,7 +93,7 @@ def run_comprehensive_scan(
 
     try:
         job.status = "RUNNING"
-        db.commit()
+        await db.commit()
 
         # â”€â”€â”€ Load artifacts: prefer MinIO, fallback to local paths, then mock â”€â”€â”€
         try:
@@ -238,12 +238,12 @@ def run_comprehensive_scan(
         db.add(gov)
 
         job.status = "COMPLETED"
-        db.commit()
+        await db.commit()
 
     except Exception as e:
         job.status = "FAILED"
         job.error = str(e)
-        db.commit()
+        await db.commit()
     finally:
         db.close()
         # â”€â”€â”€ Cleanup temporary files â”€â”€â”€
@@ -255,7 +255,7 @@ def run_comprehensive_scan(
             except Exception:
                 pass
 @celery_app.task(name="run_explainability_task", bind=True, max_retries=3, default_retry_delay=10)
-def run_explainability_task(model_id: str, max_samples: int = 100, model_b64: str = None, data_b64: str = None, model_filename: str = "model.pkl", data_filename: str = "data.csv"):
+async def run_explainability_task(model_id: str, max_samples: int = 100, model_b64: str = None, data_b64: str = None, model_filename: str = "model.pkl", data_filename: str = "data.csv"):
     db = SessionLocal()
     import base64
     tmp_files = []
@@ -330,7 +330,7 @@ def run_explainability_task(model_id: str, max_samples: int = 100, model_b64: st
             },
         )
         db.add(result_record)
-        db.commit()
+        await db.commit()
         return {"status": "success", "model_id": model_id}
     except Exception as e:
         logger.error(f"Explainability task failed: {e}")
@@ -345,7 +345,7 @@ def run_explainability_task(model_id: str, max_samples: int = 100, model_b64: st
                 pass
 
 @celery_app.task(name="run_governance_audit_task", bind=True, max_retries=3, default_retry_delay=10)
-def run_governance_audit_task(
+async def run_governance_audit_task(
     job_id: str,
     model_id: str,
     checks: list,
@@ -380,7 +380,7 @@ def run_governance_audit_task(
         job = db.get(JobModel, job_id)
         if job:
             job.status = "RUNNING"
-            db.commit()
+            await db.commit()
 
         # 1. Reconstruct Data from Base64
         if model_b64:
@@ -509,7 +509,7 @@ def run_governance_audit_task(
         db.add(scan_rec)
         if job:
             job.status = "COMPLETED"
-        db.commit()
+        await db.commit()
 
         return {"status": "success", "scan_id": str(scan_rec.id)}
     except Exception as e:
@@ -519,7 +519,7 @@ def run_governance_audit_task(
         if job:
             job.status = "FAILED"
             job.error = str(e)
-            db.commit()
+            await db.commit()
         return {"status": "error", "message": str(e)}
     finally:
         # Cleanup temporary files downloaded to worker

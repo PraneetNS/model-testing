@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from app.db.session import SessionLocal
 from app.db.models import Model
 from app.services.forecasting.forecaster import GovernanceForecaster
@@ -21,7 +22,7 @@ def get_db():
         db.close()
 
 @router.get("/{model_id}", response_model=ModelForecastSummary)
-async def get_model_forecast(model_id: str, db: Session = Depends(get_db)):
+async def get_model_forecast(model_id: str, db: AsyncSession = Depends(get_db)):
     """
     Get governance forecasts for a specific model.
     Cached in Redis for 1 hour.
@@ -32,7 +33,7 @@ async def get_model_forecast(model_id: str, db: Session = Depends(get_db)):
         return ModelForecastSummary(**json.loads(cached))
 
     # Check if model exists
-    model = db.query(Model).filter(Model.id == model_id).first()
+    model = (await db.execute(select(Model).filter(Model.id == model_id))).scalars().first()
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
 
@@ -58,7 +59,7 @@ async def get_model_forecast(model_id: str, db: Session = Depends(get_db)):
     return result
 
 @router.get("/{model_id}/summary")
-async def get_model_forecast_summary(model_id: str, db: Session = Depends(get_db)):
+async def get_model_forecast_summary(model_id: str, db: AsyncSession = Depends(get_db)):
     """Plain-English summary for business stakeholders."""
     res = await get_model_forecast(model_id, db)
     return {"model_id": model_id, "summary": res.summary}

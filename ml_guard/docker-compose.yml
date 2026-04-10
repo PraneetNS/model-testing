@@ -44,10 +44,7 @@ services:
     env_file:
       - .env.production.template   # Override with real .env in CI/CD
     environment:
-      POSTGRES_SERVER: db
-      POSTGRES_USER: ${POSTGRES_USER:-ml_guard_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme_in_production}
-      POSTGRES_DB: ${POSTGRES_DB:-ml_guard}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-ml_guard_user}:${POSTGRES_PASSWORD:-changeme_in_production}@db:5432/${POSTGRES_DB:-ml_guard}
       REDIS_HOST: redis
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
@@ -70,10 +67,7 @@ services:
     restart: always
     command: celery -A app.core.celery_app worker --loglevel=info --concurrency=2
     environment:
-      POSTGRES_SERVER: db
-      POSTGRES_USER: ${POSTGRES_USER:-ml_guard_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme_in_production}
-      POSTGRES_DB: ${POSTGRES_DB:-ml_guard}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-ml_guard_user}:${POSTGRES_PASSWORD:-changeme_in_production}@db:5432/${POSTGRES_DB:-ml_guard}
       REDIS_HOST: redis
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0

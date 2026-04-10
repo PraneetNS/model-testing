@@ -5,7 +5,8 @@ Endpoints for dataset validation before training.
 import io
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from app.db.session import get_db
 from app.core.auth import AuthContext, require_role
 
@@ -17,7 +18,7 @@ async def validate_dataset(
     dataset_file: UploadFile = File(...),
     target_column: str = Form(""),
     reference_file: UploadFile = File(None),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("ml_engineer")),
 ):
     """Validate a dataset and return a quality report."""

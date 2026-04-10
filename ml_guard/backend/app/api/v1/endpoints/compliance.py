@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 import structlog
 from app.api.v1 import deps
 from app.infrastructure.persistence import models as sql_models
@@ -13,13 +14,13 @@ compliance_service = ComplianceService()
 @router.get("/report/{run_id}")
 async def get_compliance_report(
     run_id: str,
-    db: Session = Depends(deps.get_db),
+    db: AsyncSession = Depends(deps.get_db),
     current_user: sql_models.User = Depends(deps.get_current_active_user)
 ):
     """
     Generate a full compliance audit report for a specific test run.
     """
-    run = db.query(sql_models.TestRun).filter(sql_models.TestRun.id == run_id).first()
+    run = (await db.execute(select(sql_models.TestRun).filter(sql_models.TestRun.id == run_id))).scalars().first()
     if not run:
         raise HTTPException(status_code=404, detail="Test run not found")
 

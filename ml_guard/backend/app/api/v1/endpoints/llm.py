@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from typing import List, Dict, Any, Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 import structlog
 import uuid
 
@@ -15,7 +16,7 @@ router = APIRouter()
 @router.post("/pull", response_model=LLMEvalJobResponse)
 async def pull_and_eval_llm(
     request: LLMModelPullRequest, 
-    db: Session = Depends(deps.get_db),
+    db: AsyncSession = Depends(deps.get_db),
     config: LLMEvaluationConfig = Depends()
 ):
     """
@@ -25,7 +26,7 @@ async def pull_and_eval_llm(
     job_id = f"llm_{str(uuid.uuid4())[:12]}"
     
     # Check for existing job for this model to avoid redundancy
-    # existing = db.query(sql_models.LLMEvaluation).filter(sql_models.LLMEvaluation.model_name == request.model_name).first()
+    # existing = (await db.execute(select(sql_models.LLMEvaluation).filter(sql_models.LLMEvaluation.model_name == request.model_name))).scalars().first()
     
     # 1. Register job in database
     eval_record = sql_models.LLMEvaluation(
@@ -35,7 +36,7 @@ async def pull_and_eval_llm(
         status="IN_PROGRESS"
     )
     db.add(eval_record)
-    db.commit()
+    await db.commit()
     
     # 2. Dispatch to Celery worker (Redis queue)
     provider_config = {
@@ -57,11 +58,11 @@ async def pull_and_eval_llm(
     )
 
 @router.get("/status/{job_id}")
-async def get_job_status(job_id: str, db: Session = Depends(deps.get_db)):
+async def get_job_status(job_id: str, db: AsyncSession = Depends(deps.get_db)):
     """
     Poll the enterprise ledger for the status and results of an LLM audit.
     """
-    eval_record = db.query(sql_models.LLMEvaluation).filter(sql_models.LLMEvaluation.id == job_id).first()
+    eval_record = (await db.execute(select(sql_models.LLMEvaluation).filter(sql_models.LLMEvaluation.id == job_id))).scalars().first()
     if not eval_record:
         raise HTTPException(status_code=404, detail="Governance job not found")
         
@@ -86,7 +87,7 @@ async def get_job_status(job_id: str, db: Session = Depends(deps.get_db)):
     return response
 
 @router.get("/history", response_model=List[Dict[str, Any]])
-async def get_eval_history(db: Session = Depends(deps.get_db)):
+async def get_eval_history(db: AsyncSession = Depends(deps.get_db)):
     """Retrieve history of all LLM governance audits."""
-    evals = db.query(sql_models.LLMEvaluation).order_by(sql_models.LLMEvaluation.created_at.desc()).all()
+    evals = (await db.execute(select(sql_models.LLMEvaluation).order_by(sql_models.LLMEvaluation.created_at.desc()))).scalars().all()
     return evals

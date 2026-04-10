@@ -3,7 +3,8 @@ Enterprise Service Layer.
 Aggregates data across scans, models, policies, and audit logs
 for the organization-level governance control center.
 """
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from sqlalchemy import desc, func
 from typing import Optional
 from app.db.models import (
@@ -12,7 +13,7 @@ from app.db.models import (
 )
 
 
-def get_enterprise_summary(db: Session, org_id: Optional[str] = None) -> dict:
+async def get_enterprise_summary(db: AsyncSession, org_id: Optional[str] = None) -> dict:
     """
     Compute real-time enterprise-level summary metrics.
     All numbers come from the database — zero dummy data.
@@ -74,7 +75,7 @@ def get_enterprise_summary(db: Session, org_id: Optional[str] = None) -> dict:
     total_orgs = db.query(Organization).count()
 
     # ─── Recent Activity (last 10 audit log entries) ───
-    recent_logs = db.query(AuditLog).order_by(desc(AuditLog.created_at)).limit(10).all()
+    recent_logs = (await db.execute(select(AuditLog).order_by(desc(AuditLog.created_at)).limit(10))).scalars().all()
     recent_activity = [
         {
             "id": str(l.id),
@@ -111,8 +112,8 @@ def get_enterprise_summary(db: Session, org_id: Optional[str] = None) -> dict:
     }
 
 
-def get_scans_paginated(
-    db: Session, page: int = 1, per_page: int = 20,
+async def get_scans_paginated(
+    db: AsyncSession, page: int = 1, per_page: int = 20,
     sort_by: str = "created_at", sort_dir: str = "desc",
 ) -> dict:
     """Paginated scan history with sorting."""
@@ -160,8 +161,8 @@ def get_scans_paginated(
     }
 
 
-def get_models_paginated(
-    db: Session, page: int = 1, per_page: int = 20,
+async def get_models_paginated(
+    db: AsyncSession, page: int = 1, per_page: int = 20,
 ) -> dict:
     """Paginated model registry."""
     q = db.query(Model).order_by(desc(Model.created_at))
@@ -206,8 +207,8 @@ def get_models_paginated(
     }
 
 
-def get_audit_logs_paginated(
-    db: Session, page: int = 1, per_page: int = 30,
+async def get_audit_logs_paginated(
+    db: AsyncSession, page: int = 1, per_page: int = 30,
     org_id: Optional[str] = None,
 ) -> dict:
     """Paginated audit log trail."""

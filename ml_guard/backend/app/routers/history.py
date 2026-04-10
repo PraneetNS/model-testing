@@ -6,7 +6,8 @@ Scan History + Model Comparison Router
 """
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from sqlalchemy import desc
 from app.db.session import get_db
 from app.db.models import ScanRecord, Model, AuditLog, utcnow
@@ -22,7 +23,7 @@ def list_scans(
     model_id: str = "",
     scan_type: str = "",
     limit: int = 50,
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     q = db.query(ScanRecord).order_by(desc(ScanRecord.created_at))
     if model_id:
@@ -47,7 +48,7 @@ def list_scans(
 
 
 @router.get("/history/{scan_id}")
-def get_scan(scan_id: str, db: Session = Depends(get_db)):
+def get_scan(scan_id: str, db: AsyncSession = Depends(get_db)):
     s = db.get(ScanRecord, scan_id)
     if not s:
         raise HTTPException(404, "Scan record not found.")
@@ -69,7 +70,7 @@ def get_scan(scan_id: str, db: Session = Depends(get_db)):
 # GOVERNANCE SCORE TRAJECTORY
 # ══════════════════════════
 @router.get("/history/trajectory/{model_id}")
-def governance_trajectory(model_id: str, limit: int = 20, db: Session = Depends(get_db)):
+def governance_trajectory(model_id: str, limit: int = 20, db: AsyncSession = Depends(get_db)):
     scans = (
         db.query(ScanRecord)
         .filter(ScanRecord.model_id == model_id)
@@ -98,7 +99,7 @@ def governance_trajectory(model_id: str, limit: int = 20, db: Session = Depends(
 def compare_scans(
     scan_a: str = Query(..., description="Scan ID A"),
     scan_b: str = Query(..., description="Scan ID B"),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     a = db.get(ScanRecord, scan_a)
     b = db.get(ScanRecord, scan_b)
@@ -165,7 +166,7 @@ def compare_scans(
 # MODEL REGISTRY
 # ══════════════════════════
 @router.get("/models")
-def list_models(project_id: str = "", limit: int = 50, db: Session = Depends(get_db)):
+def list_models(project_id: str = "", limit: int = 50, db: AsyncSession = Depends(get_db)):
     q = db.query(Model).order_by(desc(Model.created_at))
     if project_id:
         q = q.filter(Model.project_id == project_id)
@@ -183,8 +184,8 @@ def list_models(project_id: str = "", limit: int = 50, db: Session = Depends(get
 
 
 @router.get("/models/by-fingerprint/{fingerprint}")
-def find_by_fingerprint(fingerprint: str, db: Session = Depends(get_db)):
-    models = db.query(Model).filter(Model.fingerprint == fingerprint).all()
+async def find_by_fingerprint(fingerprint: str, db: AsyncSession = Depends(get_db)):
+    models = (await db.execute(select(Model).filter(Model.fingerprint == fingerprint))).scalars().all()
     if not models:
         return {"found": False, "message": "No model with this fingerprint has been evaluated."}
     return {
@@ -200,7 +201,7 @@ def find_by_fingerprint(fingerprint: str, db: Session = Depends(get_db)):
 # AUDIT LOGS
 # ══════════════════════════
 @router.get("/audit-logs")
-def list_audit_logs(org_id: str = "", limit: int = 100, db: Session = Depends(get_db)):
+def list_audit_logs(org_id: str = "", limit: int = 100, db: AsyncSession = Depends(get_db)):
     q = db.query(AuditLog).order_by(desc(AuditLog.created_at))
     if org_id:
         q = q.filter(AuditLog.org_id == org_id)

@@ -13,7 +13,8 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
 from app.db.models import PredictionLog
 from app.db.session import SessionLocal
@@ -25,8 +26,8 @@ logger = logging.getLogger(__name__)
 # Single prediction write (called from background task in endpoint)
 # ─────────────────────────────────────────────────────────────────────
 
-def ingest_single(
-    db: Session,
+async def ingest_single(
+    db: AsyncSession,
     model_id: str,
     features: Dict[str, Any],
     prediction: Any,
@@ -49,8 +50,8 @@ def ingest_single(
         tags=tags or {},
     )
     db.add(log)
-    db.commit()
-    db.refresh(log)
+    await db.commit()
+    await db.refresh(log)
     logger.info("ingested_prediction", model_id=model_id, log_id=str(log.id))
 
     # ── Contract enforcement (fire-and-forget safe) ───────────────────────────
@@ -90,7 +91,7 @@ def ingest_single(
 # Batch write (via Celery task, see tasks/ingest.py)
 # ─────────────────────────────────────────────────────────────────────
 
-def ingest_batch(rows: List[Dict[str, Any]]) -> int:
+async def ingest_batch(rows: List[Dict[str, Any]]) -> int:
     """Bulk-insert prediction rows. Uses a fresh DB session (Celery-safe)."""
     db = SessionLocal()
     try:
@@ -108,7 +109,7 @@ def ingest_batch(rows: List[Dict[str, Any]]) -> int:
                 tags=row.get("tags", {}),
             ))
         db.bulk_save_objects(logs)
-        db.commit()
+        await db.commit()
         logger.info("batch_ingested", count=len(logs))
         return len(logs)
     except Exception as e:
@@ -123,8 +124,8 @@ def ingest_batch(rows: List[Dict[str, Any]]) -> int:
 # Label stitching — fills ground_truth after the fact
 # ─────────────────────────────────────────────────────────────────────
 
-def stitch_labels(
-    db: Session,
+async def stitch_labels(
+    db: AsyncSession,
     log_ids: List[str],
     ground_truths: List[Any],
 ) -> int:
@@ -134,12 +135,12 @@ def stitch_labels(
 
     updated = 0
     for lid, gt in zip(log_ids, ground_truths):
-        row = db.query(PredictionLog).filter(PredictionLog.id == lid).first()
+        row = (await db.execute(select(PredictionLog).filter(PredictionLog.id == lid))).scalars().first()
         if row:
             row.ground_truth = str(gt)
             updated += 1
 
-    db.commit()
+    await db.commit()
     logger.info("labels_stitched", updated=updated, requested=len(log_ids))
     return updated
 
@@ -193,8 +194,8 @@ def load_baseline_from_minio(model_id: str) -> Optional[pd.DataFrame]:
 # Fetch recent predictions as DataFrame (for drift / perf analysis)
 # ─────────────────────────────────────────────────────────────────────
 
-def get_recent_predictions_df(
-    db: Session,
+async def get_recent_predictions_df(
+    db: AsyncSession,
     model_id: str,
     hours: int = 24,
     environment: Optional[str] = None,

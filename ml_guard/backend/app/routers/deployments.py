@@ -4,7 +4,8 @@ Endpoints for environment management and model promotion.
 """
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from sqlalchemy import func
 from app.db.session import get_db
 from app.db.models import (
@@ -20,7 +21,7 @@ router = APIRouter()
 # ═══════════════════════════════════════════════
 @router.get("/deployments/environments")
 async def list_environments(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("viewer")),
 ):
     """List all deployment environments."""
@@ -37,8 +38,8 @@ async def list_environments(
                 description=f"{env_name} deployment environment",
             )
             db.add(env)
-        db.commit()
-        envs = db.query(Environment).filter(Environment.org_id == auth.org_id).all()
+        await db.commit()
+        envs = (await db.execute(select(Environment).filter(Environment.org_id == auth.org_id))).scalars().all()
 
     return [
         {
@@ -58,7 +59,7 @@ async def list_environments(
 async def promote_model(
     version_id: str,
     target_environment: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("ml_engineer")),
 ):
     """Promote a model version to a target environment."""
@@ -101,8 +102,8 @@ async def promote_model(
         deployed_by=auth.user_id,
     )
     db.add(deployment)
-    db.commit()
-    db.refresh(deployment)
+    await db.commit()
+    await db.refresh(deployment)
     log_action(db, auth, "deployment.promote", "deployment", str(deployment.id), {
         "version_id": version_id, "target": target_environment
     })
@@ -122,7 +123,7 @@ async def promote_model(
 @router.post("/deployments/rollback")
 async def rollback_deployment(
     deployment_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("ml_engineer")),
 ):
     """Rollback a specific deployment."""
@@ -131,7 +132,7 @@ async def rollback_deployment(
         raise HTTPException(404, "Deployment not found.")
 
     deployment.status = "ROLLED_BACK"
-    db.commit()
+    await db.commit()
     log_action(db, auth, "deployment.rollback", "deployment", deployment_id, {
         "environment": deployment.environment
     })
@@ -152,7 +153,7 @@ async def list_deployments(
     status: str = None,
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("viewer")),
 ):
     """List all deployments with optional filtering."""

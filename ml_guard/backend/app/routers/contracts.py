@@ -22,7 +22,8 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
 from app.db.session import get_db
 from app.db.models import ModelContract, ContractBreach
@@ -71,7 +72,7 @@ class ValidateRequest(BaseModel):
 @router.post("/contracts", status_code=201, tags=["contracts"])
 async def create_contract(
     req: ContractCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
     """
     Create a new behavioral contract for a model.
@@ -91,8 +92,8 @@ async def create_contract(
         is_active=True,
     )
     db.add(contract)
-    db.commit()
-    db.refresh(contract)
+    await db.commit()
+    await db.refresh(contract)
 
     return {
         "contract_id": str(contract.id),
@@ -109,7 +110,7 @@ async def create_contract(
 async def list_contracts(
     model_id: str,
     active_only: bool = Query(default=False),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> List[Dict[str, Any]]:
     """List all contracts (or only active ones) for a model."""
     q = db.query(ModelContract).filter(ModelContract.model_id == model_id)
@@ -135,7 +136,7 @@ async def list_contracts(
 @router.patch("/contracts/{contract_id}/deactivate", tags=["contracts"])
 async def deactivate_contract(
     contract_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
     """
     Deactivate a contract. Stops checking inbound predictions immediately.
@@ -147,14 +148,14 @@ async def deactivate_contract(
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
     contract.is_active = False
-    db.commit()
+    await db.commit()
     return {"status": "deactivated", "contract_id": contract_id}
 
 
 @router.delete("/contracts/{contract_id}", status_code=204, tags=["contracts"])
 async def delete_contract(
     contract_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> None:
     """
     Hard-delete a contract and all associated breaches (CASCADE).
@@ -166,7 +167,7 @@ async def delete_contract(
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
     db.delete(contract)
-    db.commit()
+    await db.commit()
 
 
 # ── Breach Reporting ────────────────────────────────────────────────────────────
@@ -178,7 +179,7 @@ async def get_breaches(
     resolved: Optional[bool] = Query(default=None),
     severity: Optional[str] = Query(default=None),
     promise_type: Optional[str] = Query(default=None),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> List[Dict[str, Any]]:
     """
     List contract breaches for a model within a time window.
@@ -219,7 +220,7 @@ async def get_breaches(
 async def get_breach_summary(
     model_id: str,
     hours: int = Query(default=24, ge=1, le=720),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
     """
     Governance-linked breach summary for a model.
@@ -234,7 +235,7 @@ async def get_breach_summary(
 @router.patch("/contracts/breaches/{breach_id}/resolve", tags=["contracts"])
 async def resolve_breach(
     breach_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
     """Mark a specific breach as resolved."""
     breach = db.query(ContractBreach).filter(
@@ -243,7 +244,7 @@ async def resolve_breach(
     if not breach:
         raise HTTPException(status_code=404, detail="Breach not found")
     breach.resolved = True
-    db.commit()
+    await db.commit()
     return {"status": "resolved", "breach_id": breach_id}
 
 
@@ -251,7 +252,7 @@ async def resolve_breach(
 async def resolve_all_breaches(
     model_id: str,
     hours: int = Query(default=24),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
     """Bulk-resolve all open breaches for a model in the last N hours."""
     cutoff = datetime.utcnow() - timedelta(hours=hours)
@@ -266,7 +267,7 @@ async def resolve_all_breaches(
     )
     for b in updated:
         b.resolved = True
-    db.commit()
+    await db.commit()
     return {"resolved_count": len(updated), "model_id": model_id}
 
 
@@ -275,7 +276,7 @@ async def resolve_all_breaches(
 @router.post("/contracts/validate", tags=["contracts"])
 async def validate_prediction(
     req: ValidateRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
     """
     Dry-run contract check for a prediction without persisting anything.

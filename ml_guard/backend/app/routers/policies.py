@@ -5,7 +5,8 @@ Versioned Governance Policy Router.
 """
 import uuid
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from sqlalchemy import desc
 from pydantic import BaseModel
 from typing import Optional
@@ -35,7 +36,7 @@ class PolicyCreate(BaseModel):
 
 
 @router.get("/policies")
-def list_policies(org_id: str = "", db: Session = Depends(get_db)):
+def list_policies(org_id: str = "", db: AsyncSession = Depends(get_db)):
     # Also include the new PolicyRule model in the list
     q_version = db.query(PolicyVersion).order_by(desc(PolicyVersion.created_at))
     q_rule    = db.query(PolicyRule).order_by(desc(PolicyRule.created_at))
@@ -58,7 +59,7 @@ def list_policies(org_id: str = "", db: Session = Depends(get_db)):
 
 
 @router.post("/policies")
-def create_policy(body: PolicyCreate, db: Session = Depends(get_db)):
+async def create_policy(body: PolicyCreate, db: AsyncSession = Depends(get_db)):
     # Merge with defaults — any missing keys get default values
     full_config = {**DEFAULT_POLICY_CONFIG, **body.config}
 
@@ -87,8 +88,8 @@ def create_policy(body: PolicyCreate, db: Session = Depends(get_db)):
     for o in old:
         o.is_active = False
 
-    db.commit()
-    db.refresh(policy)
+    await db.commit()
+    await db.refresh(policy)
 
     db.add(AuditLog(
         org_id=body.org_id or None,
@@ -97,7 +98,7 @@ def create_policy(body: PolicyCreate, db: Session = Depends(get_db)):
         resource_id=str(policy.id),
         details={"name": body.name, "version": policy.version, "config": full_config},
     ))
-    db.commit()
+    await db.commit()
 
     return {
         "id": str(policy.id), "name": policy.name, "version": policy.version,
@@ -106,7 +107,7 @@ def create_policy(body: PolicyCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/policies/active")
-def get_active_policy(org_id: str = "", db: Session = Depends(get_db)):
+def get_active_policy(org_id: str = "", db: AsyncSession = Depends(get_db)):
     # 1. First try the new PolicyRule model
     q_rule = db.query(PolicyRule).filter(PolicyRule.is_active == True)
     if org_id:
@@ -144,7 +145,7 @@ def get_active_policy(org_id: str = "", db: Session = Depends(get_db)):
 
 
 @router.get("/policies/{policy_id}")
-def get_policy(policy_id: str, db: Session = Depends(get_db)):
+def get_policy(policy_id: str, db: AsyncSession = Depends(get_db)):
     p = db.get(PolicyVersion, policy_id)
     if not p:
         raise HTTPException(404, "Policy not found.")

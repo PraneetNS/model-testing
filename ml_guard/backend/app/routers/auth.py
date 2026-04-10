@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 import hashlib
 from app.db.session import get_db
 from app.db.models import APIKey, Organization, User, generate_api_key, utcnow
@@ -10,7 +11,7 @@ router = APIRouter()
 @router.post("/auth/apikey")
 async def create_api_key(
     label: str = "CI/CD Key",
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_admin)
 ):
     """Generate a new API key for the organization."""
@@ -25,7 +26,7 @@ async def create_api_key(
         scopes=["audit", "behavior", "monitor"]
     )
     db.add(new_key)
-    db.commit()
+    await db.commit()
     
     return {
         "label": label,
@@ -35,11 +36,11 @@ async def create_api_key(
 
 @router.get("/auth/apikeys")
 async def list_api_keys(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_admin)
 ):
     """List active API keys (hashes only)."""
-    keys = db.query(APIKey).filter(APIKey.org_id == auth.org_id).all()
+    keys = (await db.execute(select(APIKey).filter(APIKey.org_id == auth.org_id))).scalars().all()
     return [
         {
             "id": str(k.id),

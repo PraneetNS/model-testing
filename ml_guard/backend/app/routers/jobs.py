@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from app.db.session import get_db
 from app.db.models import Job, ScanRecord
 
 router = APIRouter()
 
 @router.get("/jobs/{job_id}")
-async def get_job_status(job_id: str, db: Session = Depends(get_db)):
+async def get_job_status(job_id: str, db: AsyncSession = Depends(get_db)):
     job = db.get(Job, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -20,10 +21,10 @@ async def get_job_status(job_id: str, db: Session = Depends(get_db)):
 
     if job.status == "COMPLETED":
         # Check for related ScanRecord
-        scan = db.query(ScanRecord).filter(ScanRecord.job_id == job_id).first()
+        scan = (await db.execute(select(ScanRecord).filter(ScanRecord.job_id == job_id))).scalars().first()
         if not scan:
              # Fallback: check by trigger context or most recent
-             scan = db.query(ScanRecord).order_by(ScanRecord.created_at.desc()).first()
+             scan = (await db.execute(select(ScanRecord).order_by(ScanRecord.created_at.desc()))).scalars().first()
         
         if scan:
             response["results"] = scan.results_json

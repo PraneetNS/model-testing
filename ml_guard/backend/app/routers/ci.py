@@ -10,7 +10,8 @@ import hmac
 import hashlib
 import json
 from fastapi import APIRouter, Depends, HTTPException, Request, Header, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from app.db.session import get_db
 from app.db.models import CIIntegration, ScanRecord, Model, AuditLog, utcnow
 from app.core.auth import AuthContext, require_role, log_action
@@ -26,7 +27,7 @@ async def ci_audit_gate(
     model_name: str,
     governance_score_override: float = None,  # For simulation/mocking in pipelines
     pipeline_metadata: dict = {},
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("ml_engineer")),
 ):
     """
@@ -38,7 +39,7 @@ async def ci_audit_gate(
     
     # Check latest scan for this model
     from app.db.models import Model
-    model = db.query(Model).filter(Model.name == model_name).order_by(Model.created_at.desc()).first()
+    model = (await db.execute(select(Model).filter(Model.name == model_name).order_by(Model.created_at.desc()))).scalars().first()
     
     score = governance_score_override
     if score is None:
@@ -80,7 +81,7 @@ async def register_integration(
     repo_url: str = "",
     webhook_secret: str = "",
     access_token: str = "",
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("admin")),
 ):
     if provider not in ("github", "gitlab", "jenkins"):
@@ -98,8 +99,8 @@ async def register_integration(
         settings={"raw_token": access_token} if access_token else {},  # For demo; production should use vault
     )
     db.add(integration)
-    db.commit()
-    db.refresh(integration)
+    await db.commit()
+    await db.refresh(integration)
     log_action(db, auth, "ci.register", "ci_integration", str(integration.id), {
         "provider": provider, "repo": repo_url
     })
@@ -107,11 +108,11 @@ async def register_integration(
 
 
 @router.get("/ci/integrations")
-def list_integrations(
-    db: Session = Depends(get_db),
+async def list_integrations(
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("viewer")),
 ):
-    items = db.query(CIIntegration).filter(CIIntegration.org_id == auth.org_id).all()
+    items = (await db.execute(select(CIIntegration).filter(CIIntegration.org_id == auth.org_id))).scalars().all()
     
     if not items:
         # Seed a default integration for ML Guard Enterprise Demo
@@ -125,8 +126,8 @@ def list_integrations(
             settings={"branch_pattern": "main", "auto_comment": True}
         )
         db.add(default_int)
-        db.commit()
-        db.refresh(default_int)
+        await db.commit()
+        await db.refresh(default_int)
         items = [default_int]
 
     return [
@@ -150,7 +151,7 @@ def list_integrations(
 async def github_webhook(
     request: Request,
     x_hub_signature_256: str = Header(None, alias="X-Hub-Signature-256"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Receive GitHub webhook events.
@@ -192,7 +193,7 @@ async def github_webhook(
         resource_id=str(integration.id) if integration else None,
         details={"event": event, "repo": repo_url, "action": payload.get("action")},
     ))
-    db.commit()
+    await db.commit()
 
     # ─── Handle PR events ───
     if event == "pull_request" and payload.get("action") in ("opened", "synchronize", "reopened"):
@@ -240,7 +241,7 @@ async def report_status(
     repo: str = Query(..., description="owner/repo"),
     sha: str = Query(..., description="commit SHA"),
     pr_number: int = Query(None),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("ml_engineer")),
 ):
     """
@@ -309,7 +310,7 @@ async def report_status(
 # CI STATUS CHECK (polling endpoint)
 # ═══════════════════════════════════════════════
 @router.get("/ci/status/{scan_id}")
-async def ci_status(scan_id: str, db: Session = Depends(get_db)):
+async def ci_status(scan_id: str, db: AsyncSession = Depends(get_db)):
     """CI-compatible status for a governance scan."""
     scan = db.get(ScanRecord, scan_id)
     if not scan:

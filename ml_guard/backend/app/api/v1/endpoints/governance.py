@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from typing import List, Optional
 from uuid import UUID
 
@@ -11,7 +12,7 @@ router = APIRouter()
 
 @router.get("/projects")
 def get_projects(
-    db: Session = Depends(deps.get_db),
+    db: AsyncSession = Depends(deps.get_db),
     current_user: sql_models.User = Depends(deps.get_current_active_user)
 ):
     """List all projects for the current tenant."""
@@ -21,7 +22,7 @@ def get_projects(
 @router.get("/project/{project_id}/history")
 def get_project_history(
     project_id: str,
-    db: Session = Depends(deps.get_db),
+    db: AsyncSession = Depends(deps.get_db),
     current_user: sql_models.User = Depends(deps.get_current_active_user)
 ):
     """Get the full evaluation history for a project."""
@@ -32,7 +33,7 @@ def get_project_history(
 def get_drift_trends(
     project_id: str,
     feature_name: Optional[str] = None,
-    db: Session = Depends(deps.get_db),
+    db: AsyncSession = Depends(deps.get_db),
     current_user: sql_models.User = Depends(deps.get_current_active_user)
 ):
     """Get time-series drift metrics for the project."""
@@ -50,7 +51,7 @@ def get_drift_trends(
 
 @router.get("/audit-trail")
 def get_audit_trail(
-    db: Session = Depends(deps.get_db),
+    db: AsyncSession = Depends(deps.get_db),
     current_user: sql_models.User = Depends(deps.get_current_active_user)
 ):
     """
@@ -73,14 +74,14 @@ class OverrideRequest(BaseModel):
     reason: str
 
 @router.post("/project/{project_id}/override")
-def manual_override(
+async def manual_override(
     project_id: str,
     request: OverrideRequest,
-    db: Session = Depends(deps.get_db),
+    db: AsyncSession = Depends(deps.get_db),
     current_user: sql_models.User = Depends(deps.get_current_active_user)
 ):
     """Enable manual override with audit log for blocked deployments."""
-    run = db.query(sql_models.TestRun).filter(sql_models.TestRun.id == request.run_id, sql_models.TestRun.project_id == project_id).first()
+    run = (await db.execute(select(sql_models.TestRun).filter(sql_models.TestRun.id == request.run_id, sql_models.TestRun.project_id == project_id))).scalars().first()
     if not run:
         raise HTTPException(status_code=404, detail="TestRun not found")
         
@@ -101,6 +102,6 @@ def manual_override(
         }
     )
     db.add(audit)
-    db.commit()
+    await db.commit()
     
     return {"status": "success", "message": "Deployment allowed via manual override"}

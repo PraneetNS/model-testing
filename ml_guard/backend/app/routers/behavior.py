@@ -16,7 +16,8 @@ from ml_guard.core.sensitivity import (
 )
 
 from app.db.session import get_db
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from app.core.auth import AuthContext, require_engineer, log_action
 

@@ -7,7 +7,8 @@ import uuid
 import hashlib
 import secrets
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from pydantic import BaseModel
 from typing import Optional, List
 from app.db.session import get_db
@@ -52,13 +53,13 @@ class PolicyPatch(BaseModel):
 
 
 # ─── LOG HELPER ───
-def _log(db, org_id, user_id, action, resource_type=None, resource_id=None, details=None, ip=None):
+async def _log(db, org_id, user_id, action, resource_type=None, resource_id=None, details=None, ip=None):
     db.add(AuditLog(
         org_id=org_id, user_id=user_id, action=action,
         resource_type=resource_type, resource_id=str(resource_id) if resource_id else None,
         details=details, ip_address=ip,
     ))
-    db.commit()
+    await db.commit()
 
 
 # ══════════════════════════════════════════════════════
@@ -66,7 +67,7 @@ def _log(db, org_id, user_id, action, resource_type=None, resource_id=None, deta
 # ══════════════════════════════════════════════════════
 
 @router.get("/enterprise/summary")
-def enterprise_summary(org_id: str = "", db: Session = Depends(get_db)):
+def enterprise_summary(org_id: str = "", db: AsyncSession = Depends(get_db)):
     """Real-time enterprise summary powered by actual database records."""
     return get_enterprise_summary(db, org_id or None)
 
@@ -77,7 +78,7 @@ def enterprise_scans(
     per_page: int = Query(20, ge=1, le=100),
     sort_by: str = Query("created_at"),
     sort_dir: str = Query("desc"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Paginated, sortable scan history."""
     return get_scans_paginated(db, page, per_page, sort_by, sort_dir)
@@ -87,14 +88,14 @@ def enterprise_scans(
 def enterprise_models(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Paginated model registry with latest scan data."""
     return get_models_paginated(db, page, per_page)
 
 
 @router.get("/enterprise/policies")
-def enterprise_policies(org_id: str = "", db: Session = Depends(get_db)):
+def enterprise_policies(org_id: str = "", db: AsyncSession = Depends(get_db)):
     """All policies — both PolicyVersion and PolicyRule models."""
     from sqlalchemy import desc as sql_desc
     q_version = db.query(PolicyVersion).order_by(sql_desc(PolicyVersion.created_at))
@@ -123,14 +124,14 @@ def enterprise_audit_logs(
     page: int = Query(1, ge=1),
     per_page: int = Query(30, ge=1, le=100),
     org_id: str = "",
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Paginated audit log trail."""
     return get_audit_logs_paginated(db, page, per_page, org_id or None)
 
 
 @router.get("/health/db")
-def health_db(db: Session = Depends(get_db)):
+def health_db(db: AsyncSession = Depends(get_db)):
     """Check database connection and type (Postgres/SQLite/Neon)."""
     try:
         from sqlalchemy import text
@@ -154,7 +155,7 @@ def health_db(db: Session = Depends(get_db)):
 # ══════════════════════════════════════════════════════
 
 @router.patch("/policies/{policy_id}")
-def patch_policy(policy_id: str, body: PolicyPatch, db: Session = Depends(get_db)):
+async def patch_policy(policy_id: str, body: PolicyPatch, db: AsyncSession = Depends(get_db)):
     """
     Partial update of a policy (config thresholds, name, notes, active status).
     Creates an audit log entry for traceability.
@@ -191,8 +192,8 @@ def patch_policy(policy_id: str, body: PolicyPatch, db: Session = Depends(get_db
             policy.rules_json = merged
             changes["config"] = merged
 
-    db.commit()
-    db.refresh(policy)
+    await db.commit()
+    await db.refresh(policy)
 
     # Audit log
     db.add(AuditLog(
@@ -202,7 +203,7 @@ def patch_policy(policy_id: str, body: PolicyPatch, db: Session = Depends(get_db
         resource_id=str(policy.id),
         details={"changes": changes, "policy_type": policy_type},
     ))
-    db.commit()
+    await db.commit()
 
     return {
         "id": str(policy.id), "name": policy.name,
@@ -217,7 +218,7 @@ def patch_policy(policy_id: str, body: PolicyPatch, db: Session = Depends(get_db
 # ══════════════════════════════════════════════════════
 
 @router.get("/health/db")
-def db_health_check(db: Session = Depends(get_db)):
+def db_health_check(db: AsyncSession = Depends(get_db)):
     """Check database connectivity and return status."""
     try:
         from sqlalchemy import text
@@ -239,26 +240,26 @@ def db_health_check(db: Session = Depends(get_db)):
 # ORGANIZATIONS (existing, unchanged)
 # ══════════════════════════════════════════════════════
 @router.post("/orgs")
-def create_org(body: OrgCreate, db: Session = Depends(get_db)):
-    existing = db.query(Organization).filter(Organization.slug == body.slug).first()
+async def create_org(body: OrgCreate, db: AsyncSession = Depends(get_db)):
+    existing = (await db.execute(select(Organization).filter(Organization.slug == body.slug))).scalars().first()
     if existing:
         raise HTTPException(400, "Organization slug already exists.")
     org = Organization(name=body.name, slug=body.slug, plan=body.plan)
     db.add(org)
-    db.commit()
-    db.refresh(org)
+    await db.commit()
+    await db.refresh(org)
     _log(db, str(org.id), None, "org.create", "organization", org.id, {"name": body.name})
     return {"id": str(org.id), "name": org.name, "slug": org.slug, "plan": org.plan}
 
 
 @router.get("/orgs")
-def list_orgs(db: Session = Depends(get_db)):
-    orgs = db.query(Organization).all()
+async def list_orgs(db: AsyncSession = Depends(get_db)):
+    orgs = (await db.execute(select(Organization))).scalars().all()
     return [{"id": str(o.id), "name": o.name, "slug": o.slug, "plan": o.plan, "created_at": str(o.created_at)} for o in orgs]
 
 
 @router.get("/orgs/{org_id}")
-def get_org(org_id: str, db: Session = Depends(get_db)):
+def get_org(org_id: str, db: AsyncSession = Depends(get_db)):
     org = db.get(Organization, org_id)
     if not org:
         raise HTTPException(404, "Organization not found.")
@@ -273,13 +274,13 @@ def get_org(org_id: str, db: Session = Depends(get_db)):
 # USERS (existing, unchanged)
 # ══════════════════════════════════════════════════════
 @router.post("/orgs/{org_id}/users")
-def create_user(org_id: str, body: UserCreate, db: Session = Depends(get_db)):
+async def create_user(org_id: str, body: UserCreate, db: AsyncSession = Depends(get_db)):
     org = db.get(Organization, org_id)
     if not org:
         raise HTTPException(404, "Organization not found.")
     if body.role not in ("admin", "ml_engineer", "auditor", "viewer"):
         raise HTTPException(400, "Invalid role. Must be: admin, ml_engineer, auditor, viewer.")
-    existing = db.query(User).filter(User.email == body.email).first()
+    existing = (await db.execute(select(User).filter(User.email == body.email))).scalars().first()
     if existing:
         raise HTTPException(400, "Email already in use.")
     pw_hash = hashlib.sha256(body.password.encode()).hexdigest() if body.password else None
@@ -288,15 +289,15 @@ def create_user(org_id: str, body: UserCreate, db: Session = Depends(get_db)):
         role=body.role, password_hash=pw_hash,
     )
     db.add(user)
-    db.commit()
-    db.refresh(user)
+    await db.commit()
+    await db.refresh(user)
     _log(db, org_id, str(user.id), "user.create", "user", user.id, {"email": body.email, "role": body.role})
     return {"id": str(user.id), "email": user.email, "name": user.name, "role": user.role}
 
 
 @router.get("/orgs/{org_id}/users")
-def list_users(org_id: str, db: Session = Depends(get_db)):
-    users = db.query(User).filter(User.org_id == org_id).all()
+async def list_users(org_id: str, db: AsyncSession = Depends(get_db)):
+    users = (await db.execute(select(User).filter(User.org_id == org_id))).scalars().all()
     return [{"id": str(u.id), "email": u.email, "name": u.name, "role": u.role, "is_active": u.is_active} for u in users]
 
 
@@ -304,21 +305,21 @@ def list_users(org_id: str, db: Session = Depends(get_db)):
 # PROJECTS (existing, unchanged)
 # ══════════════════════════════════════════════════════
 @router.post("/orgs/{org_id}/projects")
-def create_project(org_id: str, body: ProjectCreate, db: Session = Depends(get_db)):
+async def create_project(org_id: str, body: ProjectCreate, db: AsyncSession = Depends(get_db)):
     org = db.get(Organization, org_id)
     if not org:
         raise HTTPException(404, "Organization not found.")
     proj = Project(org_id=org_id, name=body.name, description=body.description)
     db.add(proj)
-    db.commit()
-    db.refresh(proj)
+    await db.commit()
+    await db.refresh(proj)
     _log(db, org_id, None, "project.create", "project", proj.id, {"name": body.name})
     return {"id": str(proj.id), "name": proj.name, "description": proj.description}
 
 
 @router.get("/orgs/{org_id}/projects")
-def list_projects(org_id: str, db: Session = Depends(get_db)):
-    projects = db.query(Project).filter(Project.org_id == org_id).all()
+async def list_projects(org_id: str, db: AsyncSession = Depends(get_db)):
+    projects = (await db.execute(select(Project).filter(Project.org_id == org_id))).scalars().all()
     return [{"id": str(p.id), "name": p.name, "model_count": len(p.models)} for p in projects]
 
 
@@ -326,7 +327,7 @@ def list_projects(org_id: str, db: Session = Depends(get_db)):
 # API KEYS (existing, unchanged)
 # ══════════════════════════════════════════════════════
 @router.post("/orgs/{org_id}/api-keys")
-def create_api_key(org_id: str, body: APIKeyCreate, db: Session = Depends(get_db)):
+async def create_api_key(org_id: str, body: APIKeyCreate, db: AsyncSession = Depends(get_db)):
     org = db.get(Organization, org_id)
     if not org:
         raise HTTPException(404, "Organization not found.")
@@ -334,13 +335,13 @@ def create_api_key(org_id: str, body: APIKeyCreate, db: Session = Depends(get_db
     key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
     api_key = APIKey(org_id=org_id, key_hash=key_hash, label=body.label, scopes=body.scopes)
     db.add(api_key)
-    db.commit()
+    await db.commit()
     _log(db, org_id, None, "api_key.create", "api_key", api_key.id, {"label": body.label})
     return {"id": str(api_key.id), "key": raw_key, "label": body.label, "scopes": body.scopes,
             "warning": "Store this key securely. It will not be shown again."}
 
 
 @router.get("/orgs/{org_id}/api-keys")
-def list_api_keys(org_id: str, db: Session = Depends(get_db)):
-    keys = db.query(APIKey).filter(APIKey.org_id == org_id).all()
+async def list_api_keys(org_id: str, db: AsyncSession = Depends(get_db)):
+    keys = (await db.execute(select(APIKey).filter(APIKey.org_id == org_id))).scalars().all()
     return [{"id": str(k.id), "label": k.label, "scopes": k.scopes, "is_active": k.is_active, "last_used": str(k.last_used)} for k in keys]

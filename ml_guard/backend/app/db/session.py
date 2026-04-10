@@ -1,38 +1,43 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.orm import declarative_base
 from app.core.config import settings
 
-# SQLite needs check_same_thread=False
-# PostgreSQL needs pool settings
 connect_args = {}
 engine_kwargs = {}
 
 if "sqlite" in settings.DATABASE_URL:
+    db_url = settings.DATABASE_URL
+    if db_url.startswith("sqlite:///") and "aiosqlite" not in db_url:
+        settings.DATABASE_URL = db_url.replace("sqlite:///", "sqlite+aiosqlite:///")
     connect_args = {"check_same_thread": False}
 else:
     engine_kwargs = {
-        "pool_size": 5,
-        "max_overflow": 10,
+        "pool_size": 10,
+        "max_overflow": 20,
+        "pool_timeout": 30,
         "pool_pre_ping": True,
     }
 
-engine = create_engine(
+engine = create_async_engine(
     settings.DATABASE_URL,
     connect_args=connect_args,
     **engine_kwargs
 )
 
-SessionLocal = sessionmaker(
+AsyncSessionLocal = async_sessionmaker(
     autocommit=False,
     autoflush=False,
-    bind=engine
+    bind=engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
 )
 
 Base = declarative_base()
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def get_db():
+    """Returns an async SQLAlchemy session to be injected into FastAPI routes."""
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        finally:
+            await session.close()

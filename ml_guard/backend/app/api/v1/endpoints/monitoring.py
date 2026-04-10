@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from typing import List, Dict, Any, Optional
 import uuid
 import structlog
@@ -20,7 +21,7 @@ class PredictionBatch(BaseModel):
 @router.post("/predictions/log")
 async def log_predictions(
     batch: PredictionBatch,
-    db: Session = Depends(deps.get_db),
+    db: AsyncSession = Depends(deps.get_db),
     current_user: sql_models.User = Depends(deps.get_current_active_user)
 ):
     """
@@ -41,7 +42,7 @@ async def log_predictions(
             ))
         
         db.add_all(logs)
-        db.commit()
+        await db.commit()
         
         logger.info("Batch predictions logged", project_id=batch.project_id, count=len(logs))
         return {"status": "success", "logged_count": len(logs)}
@@ -54,7 +55,7 @@ async def get_drift_history(
     project_id: str,
     feature: Optional[str] = None,
     limit: int = 100,
-    db: Session = Depends(deps.get_db),
+    db: AsyncSession = Depends(deps.get_db),
     current_user: sql_models.User = Depends(deps.get_current_active_user)
 ):
     """
@@ -90,7 +91,7 @@ async def monitor_batch(
     reference_file: UploadFile = File(...),
     production_file: UploadFile = File(...),
     target_column: str = Form("churn"),
-    db: Session = Depends(deps.get_db),
+    db: AsyncSession = Depends(deps.get_db),
     current_user: sql_models.User = Depends(deps.get_current_active_user)
 ):
     """

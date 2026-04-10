@@ -1,13 +1,15 @@
-from typing import List, Optional
+from typing import List, Optional, Any
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import model_validator
 
 class Settings(BaseSettings):
     APP_VERSION: str = "7.2.0"
     DEBUG: bool = False
     PROJECT_NAME: str = "ML Guard"
     
-    # Database — SQLite for dev, Neon for prod
-    DATABASE_URL: str = "sqlite:///./ml_guard.db"
+    # Database — PostgreSQL for prod, SQLite only allowed in development
+    MLGUARD_ENV: str = "production"
+    DATABASE_URL: str = "postgresql+asyncpg://user:pass@localhost:5432/mlguard"
     
     # Security
     SECRET_KEY: str = "change-this-in-production"
@@ -38,5 +40,12 @@ class Settings(BaseSettings):
         env_file=".env",
         extra="ignore"
     )
+
+    @model_validator(mode="after")
+    def validate_sqlite_not_in_prod(self) -> 'Settings':
+        if "sqlite" in self.DATABASE_URL.lower():
+            if self.MLGUARD_ENV.lower() != "development":
+                raise RuntimeError("SQLite is not supported in production. Set DATABASE_URL to a PostgreSQL connection string.")
+        return self
 
 settings = Settings()

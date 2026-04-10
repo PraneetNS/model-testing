@@ -21,7 +21,8 @@ import numpy as np
 from collections import deque
 from typing import Optional, Dict, Any
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException, Query, Body
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from app.db.session import SessionLocal
 from app.db.models import ScanRecord, AlertEvent, AlertRule, User, Organization, AuditLog
 from app.core.auth import AuthContext, log_action
@@ -141,7 +142,7 @@ STREAM_THRESHOLDS = {
 }
 
 
-def _check_alerts(snapshot: dict, thresholds: dict = None) -> list:
+async def _check_alerts(snapshot: dict, thresholds: dict = None) -> list:
     """Check snapshot against thresholds, return alert list."""
     th = thresholds or STREAM_THRESHOLDS
     alerts = []
@@ -240,7 +241,7 @@ async def stream_production(websocket: WebSocket, model_id: str = Query("default
                             trigger_source="stream",
                         )
                         db.add(scan_rec)
-                        db.commit()
+                        await db.commit()
                         if auth:
                             log_action(db, auth, "stream.persist", resource_type="model", resource_id=model_id, details={"window_size": window.count})
                         db.close()

@@ -13,7 +13,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
 from app.db.models import PerformanceSnapshot, PredictionLog
 from app.services.ingestion_service import get_recent_predictions_df
@@ -136,7 +137,7 @@ class PerformanceTracker:
     and generates degradation reports against stored baseline metrics.
     """
 
-    def __init__(self, db: Session, model_id: str):
+    def __init__(self, db: AsyncSession, model_id: str):
         self.db = db
         self.model_id = model_id
 
@@ -150,7 +151,7 @@ class PerformanceTracker:
         )
         return snap.task_type if snap else "classification"
 
-    def compute_snapshot(
+    async def compute_snapshot(
         self,
         window_hours: int = 24,
         task_type: Optional[str] = None,
@@ -203,8 +204,8 @@ class PerformanceTracker:
             label_coverage_pct=label_coverage_pct,
         )
         self.db.add(snap)
-        self.db.commit()
-        self.db.refresh(snap)
+        await self.db.commit()
+        await self.db.refresh(snap)
 
         return {
             "snapshot_id": str(snap.id),

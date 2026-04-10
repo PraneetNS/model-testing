@@ -5,7 +5,8 @@ Create alert rules, evaluate them against scan results, trigger notifications.
 import uuid
 import json
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from sqlalchemy import desc
 from pydantic import BaseModel
 from typing import List, Optional
@@ -24,7 +25,7 @@ class AlertRuleCreate(BaseModel):
 
 
 @router.post("/alerts/rules")
-def create_rule(body: AlertRuleCreate, db: Session = Depends(get_db)):
+async def create_rule(body: AlertRuleCreate, db: AsyncSession = Depends(get_db)):
     rule = AlertRule(
         org_id=body.org_id or None,
         name=body.name,
@@ -33,8 +34,8 @@ def create_rule(body: AlertRuleCreate, db: Session = Depends(get_db)):
         webhook_url=body.webhook_url,
     )
     db.add(rule)
-    db.commit()
-    db.refresh(rule)
+    await db.commit()
+    await db.refresh(rule)
     db.add(AuditLog(
         org_id=body.org_id or None,
         action="alert_rule.create",
@@ -42,12 +43,12 @@ def create_rule(body: AlertRuleCreate, db: Session = Depends(get_db)):
         resource_id=str(rule.id),
         details={"name": body.name, "condition": body.condition},
     ))
-    db.commit()
+    await db.commit()
     return {"id": str(rule.id), "name": rule.name, "condition": rule.condition, "channels": rule.channels}
 
 
 @router.get("/alerts/rules")
-def list_rules(org_id: str = "", db: Session = Depends(get_db)):
+def list_rules(org_id: str = "", db: AsyncSession = Depends(get_db)):
     q = db.query(AlertRule)
     if org_id:
         q = q.filter(AlertRule.org_id == org_id)
@@ -59,12 +60,12 @@ def list_rules(org_id: str = "", db: Session = Depends(get_db)):
 
 
 @router.delete("/alerts/rules/{rule_id}")
-def delete_rule(rule_id: str, db: Session = Depends(get_db)):
+async def delete_rule(rule_id: str, db: AsyncSession = Depends(get_db)):
     rule = db.get(AlertRule, rule_id)
     if not rule:
         raise HTTPException(404, "Rule not found.")
     db.delete(rule)
-    db.commit()
+    await db.commit()
     return {"deleted": True}
 
 
@@ -101,13 +102,13 @@ def _extract_metric(scan_results: dict, metric_name: str):
 
 
 @router.post("/alerts/evaluate/{scan_id}")
-def evaluate_alerts(scan_id: str, db: Session = Depends(get_db)):
+async def evaluate_alerts(scan_id: str, db: AsyncSession = Depends(get_db)):
     """Evaluate all active alert rules against a scan result."""
     scan = db.get(ScanRecord, scan_id)
     if not scan:
         raise HTTPException(404, "Scan not found.")
 
-    rules = db.query(AlertRule).filter(AlertRule.is_active == True).all()
+    rules = (await db.execute(select(AlertRule).filter(AlertRule.is_active == True))).scalars().all()
     triggered = []
 
     for rule in rules:
@@ -154,13 +155,13 @@ def evaluate_alerts(scan_id: str, db: Session = Depends(get_db)):
                 except:
                     pass
 
-    db.commit()
+    await db.commit()
     return {"scan_id": str(scan.id), "alerts_triggered": len(triggered), "details": triggered}
 
 
 @router.get("/alerts/events")
-def list_events(limit: int = 50, db: Session = Depends(get_db)):
-    events = db.query(AlertEvent).order_by(desc(AlertEvent.created_at)).limit(limit).all()
+async def list_events(limit: int = 50, db: AsyncSession = Depends(get_db)):
+    events = (await db.execute(select(AlertEvent).order_by(desc(AlertEvent.created_at)).limit(limit))).scalars().all()
     return [
         {
             "id": str(e.id), "rule_id": str(e.rule_id),

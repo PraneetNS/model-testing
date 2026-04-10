@@ -1,6 +1,7 @@
 import pytest
 from uuid import uuid4
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from app.db.models import PolicyRule, Organization
 from app.domain.services.governance_engine import GovernanceEngine
 from ml_guard.core.policy import DEFAULT_POLICY

@@ -7,7 +7,8 @@ import joblib
 import numpy as np
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from app.db.session import get_db
 from app.db.models import Model, ExplainabilityResult, ScanRecord
 from app.core.auth import AuthContext, require_role
@@ -21,7 +22,7 @@ async def compute_explainability(
     dataset_file: UploadFile = File(...),
     model_id: str = Form(""),
     max_samples: int = Form(100),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("ml_engineer")),
 ):
     """Compute explainability metrics for a model + dataset pair."""
@@ -44,11 +45,11 @@ async def compute_explainability(
         valid_model_id = str(uuid.uuid4())
 
     # 2. Ensure model exists to satisfy ExplainabilityResult ForeignKey
-    model_record = db.query(Model).filter(Model.id == valid_model_id).first()
+    model_record = (await db.execute(select(Model).filter(Model.id == valid_model_id))).scalars().first()
     if not model_record:
         dummy_model = Model(id=valid_model_id, name=f"Adhoc Explainer {valid_model_id[:6]}")
         db.add(dummy_model)
-        db.commit()
+        await db.commit()
 
     model_id = valid_model_id
 
@@ -76,7 +77,7 @@ async def compute_explainability(
 @router.get("/explainability/{model_id}")
 async def get_explainability(
     model_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("viewer")),
 ):
     import uuid

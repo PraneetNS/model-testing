@@ -5,7 +5,8 @@ from fastapi.encoders import jsonable_encoder
 import joblib
 import pandas as pd
 from typing import Dict, Any, List, Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 import structlog
 from uuid import UUID
 from datetime import datetime
@@ -54,7 +55,7 @@ def run_async_training(
             os.remove(data_path)
 
 @celery_app.task(name="app.domain.services.governance_engine.run_async_evaluation", bind=True, max_retries=3, default_retry_delay=10)
-def run_async_evaluation(
+async def run_async_evaluation(
     run_id: str,
     project_id: str,
     model_version: str,
@@ -113,7 +114,7 @@ def run_async_evaluation(
         
         # 4. Save to Database
         # First find or create project
-        project = db.query(sql_models.Project).filter(sql_models.Project.id == project_id).first()
+        project = (await db.execute(select(sql_models.Project).filter(sql_models.Project.id == project_id))).scalars().first()
         
         # Save results
         # Use Pydantic's model_dump(mode='json') to ensure all types are JSON-serializable
@@ -144,7 +145,7 @@ def run_async_evaluation(
                     )
                     db.add(drift_log)
 
-        db.commit()
+        await db.commit()
         logger.info("Async Evaluation Complete", run_id=run_id, score=result.score)
         
     except Exception as e:
@@ -154,14 +155,14 @@ def run_async_evaluation(
         db.close()
 
 @celery_app.task(name="app.domain.services.governance_engine.run_scheduled_monitoring", bind=True, max_retries=3, default_retry_delay=10)
-def run_scheduled_monitoring(job_id: str):
+async def run_scheduled_monitoring(job_id: str):
     """
     Background worker task for scheduled drift detection.
     Analyzes PredictionLogs against historical baselines.
     """
     db = SessionLocal()
     try:
-        job = db.query(sql_models.MonitoringJob).filter(sql_models.MonitoringJob.id == job_id).first()
+        job = (await db.execute(select(sql_models.MonitoringJob).filter(sql_models.MonitoringJob.id == job_id))).scalars().first()
         if not job or not job.is_active:
             return
             
@@ -174,7 +175,7 @@ def run_scheduled_monitoring(job_id: str):
         # 5. Trigger alerting hooks if drift detected
         
         job.last_run = datetime.now()
-        db.commit()
+        await db.commit()
     except Exception as e:
         logger.error("Monitoring job failed", job_id=job_id, error=str(e))
     finally:
@@ -184,14 +185,14 @@ class GovernanceEngine:
     """
     Management layer for Governance platform actions.
     """
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self.db = db
 
-    def list_projects(self, tenant_id: UUID) -> List[sql_models.Project]:
-        return self.db.query(sql_models.Project).filter(sql_models.Project.tenant_id == tenant_id).all()
+    async def list_projects(self, tenant_id: UUID) -> List[sql_models.Project]:
+        return (await db.execute(select(sql_models.Project).filter(sql_models.Project.tenant_id == tenant_id))).scalars().all()
 
-    def get_project_history(self, project_id: UUID) -> List[sql_models.TestRun]:
-        return self.db.query(sql_models.TestRun).filter(sql_models.TestRun.project_id == project_id).order_by(sql_models.TestRun.created_at.desc()).all()
+    async def get_project_history(self, project_id: UUID) -> List[sql_models.TestRun]:
+        return (await db.execute(select(sql_models.TestRun).filter(sql_models.TestRun.project_id == project_id).order_by(sql_models.TestRun.created_at.desc()))).scalars().all()
 
     def get_drift_trends(self, project_id: UUID, feature_name: Optional[str] = None):
         query = self.db.query(sql_models.DriftLog).join(sql_models.TestRun).filter(sql_models.TestRun.project_id == project_id)

@@ -15,7 +15,8 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
 from app.db.models import PredictionLog
 from app.db.session import get_db
@@ -116,7 +117,7 @@ async def ingest_batch_predictions(req: BatchPredictRequest):
 @router.post("/label", status_code=200)
 async def add_ground_truth_labels(
     req: LabelRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Stitch ground truth labels onto existing PredictionLog rows.
@@ -139,7 +140,7 @@ async def get_recent_predictions(
     start: Optional[datetime] = Query(default=None),
     end: Optional[datetime] = Query(default=None),
     labeled_only: bool = Query(default=False),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Retrieve the most recent prediction logs for a model.
@@ -180,7 +181,7 @@ async def get_recent_predictions(
 async def get_ingest_stats(
     model_id: str,
     window_hours: int = Query(default=24, le=168),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Summary statistics for ingested predictions:
@@ -244,7 +245,7 @@ class DataProfileRequest(BaseModel):
 async def ingest_data_profile(
     req: DataProfileRequest,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Accept a privacy-preserving data profile from the ML Guard SDK.
@@ -259,7 +260,7 @@ async def ingest_data_profile(
     """
     # Store in a lightweight JSON column in DriftReport or new table
     # For now: persist as metadata in DriftReport scaffold
-    def _store_profile():
+    async def _store_profile():
         try:
             from app.db.models import DriftReport
             # Store columns summary as a compact feature_results payload
@@ -293,7 +294,7 @@ async def ingest_data_profile(
                 alert_triggered=False,
             )
             db.add(record)
-            db.commit()
+            await db.commit()
         except Exception:
             pass  # fire-and-forget
 

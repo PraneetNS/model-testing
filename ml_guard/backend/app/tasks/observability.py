@@ -13,11 +13,11 @@ import structlog
 logger = structlog.get_logger()
 
 
-def _get_active_model_ids() -> list:
+async def _get_active_model_ids() -> list:
     """Fetch distinct model_ids from prediction_logs (active models)."""
     db = SessionLocal()
     try:
-        rows = db.query(PredictionLog.model_id).distinct().all()
+        rows = (await db.execute(select(PredictionLog.model_id).distinct())).scalars().all()
         return [r[0] for r in rows if r[0]]
     finally:
         db.close()

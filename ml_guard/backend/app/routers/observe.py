@@ -16,7 +16,8 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
 from app.db.models import DriftReport, PerformanceSnapshot, PredictionLog
 from app.db.session import get_db
@@ -40,9 +41,9 @@ class TaskTypeRequest(BaseModel):
 
 # ─── MODULE 5: Live Governance Score Computation ─────────────────────────────
 
-def compute_live_governance_score(
+async def compute_live_governance_score(
     model_id: str,
-    db: Session,
+    db: AsyncSession,
 ) -> Dict[str, Any]:
     """
     Decays the last audit governance score based on observed drift
@@ -113,7 +114,7 @@ def compute_live_governance_score(
 
 @router.get("/feed")
 async def global_observability_feed(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     sort_by: str = Query(default="most_degraded"),
 ):
     """
@@ -121,13 +122,13 @@ async def global_observability_feed(
     prediction volume, and last alert. Equivalent to WhyLabs home dashboard.
     """
     # Get all unique model IDs from prediction logs
-    model_ids_result = db.query(PredictionLog.model_id).distinct().all()
+    model_ids_result = (await db.execute(select(PredictionLog.model_id).distinct())).scalars().all()
     model_ids = [r[0] for r in model_ids_result]
 
     # Also pull from scan records for models without logs yet
     try:
         from app.db.models import ScanRecord, Model
-        scan_model_ids = [str(r[0]) for r in db.query(ScanRecord.model_id).distinct().all()]
+        scan_model_ids = [str(r[0]) for r in (await db.execute(select(ScanRecord.model_id).distinct())).scalars().all()]
         model_ids = list(set(model_ids + scan_model_ids))
     except Exception:
         pass
@@ -219,7 +220,7 @@ async def get_drift_report(
     model_id: str,
     window_hours: int = Query(default=24),
     method: str = Query(default="ks"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Run live drift analysis for the model. Returns per-feature breakdown.
@@ -240,7 +241,7 @@ async def get_drift_report(
 async def get_drift_history(
     model_id: str,
     limit: int = Query(default=30, le=100),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Last N drift reports with trend per feature."""
     analyzer = DriftAnalyzer(db, model_id)
@@ -252,7 +253,7 @@ async def get_feature_drift_timeline(
     model_id: str,
     feature: str = Query(..., description="Feature name to fetch timeline for"),
     limit: int = Query(default=30, le=100),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Per-feature drift score timeline for sparkline charts."""
     analyzer = DriftAnalyzer(db, model_id)
@@ -264,7 +265,7 @@ async def get_feature_drift_timeline(
 async def set_drift_baseline(
     model_id: str,
     window_hours: int = Query(default=168, description="Hours of data to use as new baseline"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Manually set the current prediction window as the new reference baseline.
@@ -294,7 +295,7 @@ async def set_drift_baseline(
 async def get_live_performance(
     model_id: str,
     window_hours: int = Query(default=24),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Compute current performance metrics from labeled predictions.
@@ -326,7 +327,7 @@ async def get_live_performance(
 async def get_performance_timeline(
     model_id: str,
     limit: int = Query(default=48, le=200),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Hourly performance snapshots for timeline charts."""
     tracker = PerformanceTracker(db, model_id)
@@ -337,7 +338,7 @@ async def get_performance_timeline(
 async def set_task_type(
     model_id: str,
     req: TaskTypeRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Set classification vs regression for model performance tracking."""
     if req.task_type not in ("classification", "regression", "ranking"):
@@ -349,7 +350,7 @@ async def set_task_type(
 async def get_performance_slice(
     model_id: str,
     req: SliceRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Slice analysis: compute metrics per-value of a feature.
@@ -365,7 +366,7 @@ async def get_performance_slice(
 @router.get("/{model_id}/overview")
 async def get_model_overview(
     model_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Unified overview for model observe page:

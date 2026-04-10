@@ -8,14 +8,14 @@ import structlog
 logger = structlog.get_logger()
 
 @celery_app.task(name="app.services.forecasting.recompute_all_forecasts", bind=True, max_retries=3, default_retry_delay=10)
-def recompute_all_forecasts():
+async def recompute_all_forecasts():
     """
     Background job to update forecasts for all active models.
     Every 6 hours.
     """
     db = SessionLocal()
     try:
-        active_models = db.query(Model).all()
+        active_models = (await db.execute(select(Model))).scalars().all()
         logger.info("Starting background forecasting job", model_count=len(active_models))
         
         for model in active_models:
@@ -38,14 +38,14 @@ def recompute_all_forecasts():
                     logger.error("Forecast computation failed for model/metric", 
                                  model_id=str(model.id), metric=metric, error=str(e))
         
-        db.commit()
+        await db.commit()
     finally:
         db.close()
 
-def _trigger_breach_alert(db, model, metric, breach_date):
+async def _trigger_breach_alert(db, model, metric, breach_date):
     """Integrate with existing alert system."""
     # Find a reasonable alert rule for this model
-    rule = db.query(AlertRule).filter(AlertRule.is_active == True).first()
+    rule = (await db.execute(select(AlertRule).filter(AlertRule.is_active == True))).scalars().first()
     if not rule:
         # Create a dummy rule just so we can log the event if none exists
         rule = AlertRule(name="Default Breach Predictor", condition={}, channels=["ui"])

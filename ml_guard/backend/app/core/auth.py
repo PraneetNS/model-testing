@@ -1,7 +1,7 @@
 """
 Auth + RBAC + Rate Limiting Dependency Layer.
 
-Every protected endpoint injects `current_user` via Depends(require_role(...)).
+Every protected endpoint injects `current_user` via Depends(require_role(..)).
 All DB queries MUST filter by current_user.org_id to ensure zero cross-tenant leakage.
 
 Authentication: Uses X-API-Key with SHA-256 hashing.
@@ -9,7 +9,8 @@ Authentication: Uses X-API-Key with SHA-256 hashing.
 import hashlib
 from fastapi import Header, HTTPException, Depends
 from fastapi.security import APIKeyHeader
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from app.db.session import get_db
 from dataclasses import dataclass
 from typing import Optional, List
@@ -44,7 +45,7 @@ class AuthContext:
 
 async def get_auth_context(
     x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ) -> AuthContext:
     """
     Resolve API credentials from the X-API-Key header.
@@ -77,7 +78,7 @@ async def get_auth_context(
     
     # Update last_used for auditing
     api_key.last_used = utcnow()
-    db.commit()
+    await db.commit()
     
     # Return context. Note: API keys currently act as org-level admins.
     return AuthContext(
@@ -105,8 +106,8 @@ require_engineer = require_role("ml_engineer")
 require_auditor = require_role("auditor")
 require_viewer = require_role("viewer")
 
-def log_action(
-    db: Session, 
+async def log_action(
+    db: AsyncSession, 
     auth: AuthContext,
     action: str,
     resource_type: str = None,
@@ -128,7 +129,7 @@ def log_action(
             details=details or {}
         )
         db.add(log)
-        db.commit()
+        await db.commit()
     except Exception as e:
         logger.error("audit_log_failed", error=str(e))
         pass # Never crash the main request on logging failure

@@ -15,7 +15,8 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 from scipy import stats
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
 from app.db.models import DriftReport, PredictionLog
 from app.db.session import SessionLocal
@@ -171,7 +172,7 @@ class DriftAnalyzer:
     SKIP_COLS = {"log_id", "timestamp", "prediction", "prediction_proba",
                  "ground_truth", "latency_ms", "environment"}
 
-    def __init__(self, db: Session, model_id: str, method: str = "ks"):
+    def __init__(self, db: AsyncSession, model_id: str, method: str = "ks"):
         self.db = db
         self.model_id = model_id
         self.method = method
@@ -179,7 +180,7 @@ class DriftAnalyzer:
     def _get_feature_cols(self, df: pd.DataFrame) -> List[str]:
         return [c for c in df.columns if c not in self.SKIP_COLS]
 
-    def analyze(
+    async def analyze(
         self,
         window_hours: int = 24,
         min_samples: int = 30,
@@ -256,14 +257,14 @@ class DriftAnalyzer:
             sample_count=len(current_df),
         )
         self.db.add(report)
-        self.db.commit()
-        self.db.refresh(report)
+        await self.db.commit()
+        await self.db.refresh(report)
 
         # 4. Trigger governance audit if threshold breached
         if drift_detected and max_severity in ("HIGH", "CRITICAL"):
             self._trigger_governance_audit(str(report.id), max_severity)
             report.alert_triggered = True
-            self.db.commit()
+            await self.db.commit()
 
         return {
             "report_id": str(report.id),

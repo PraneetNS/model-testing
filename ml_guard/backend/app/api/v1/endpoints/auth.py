@@ -3,7 +3,8 @@ from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
 from app.api.v1 import deps
 from app.core import security
@@ -21,7 +22,7 @@ router = APIRouter()
 @router.post("/firebase/login")
 async def firebase_login(
     data: FirebaseLoginRequest,
-    db: Session = Depends(deps.get_db)
+    db: AsyncSession = Depends(deps.get_db)
 ):
     """
     Authenticate a user via Firebase ID Token.
@@ -39,10 +40,10 @@ async def firebase_login(
             raise HTTPException(status_code=400, detail="Firebase token missing email")
 
         # Check if user exists, else create (Fireflink Philosophy: Just-In-Time Provisioning)
-        user = db.query(sql_models.User).filter(sql_models.User.email == email).first()
+        user = (await db.execute(select(sql_models.User).filter(sql_models.User.email == email))).scalars().first()
         if not user:
             # Create a default tenant for new users if needed
-            tenant = db.query(sql_models.Tenant).first()
+            tenant = (await db.execute(select(sql_models.Tenant))).scalars().first()
             if not tenant:
                 tenant = sql_models.Tenant(name="Default Organization")
                 db.add(tenant)
@@ -56,8 +57,8 @@ async def firebase_login(
                 is_active=True
             )
             db.add(user)
-            db.commit()
-            db.refresh(user)
+            await db.commit()
+            await db.refresh(user)
             
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         return {
@@ -79,13 +80,13 @@ async def firebase_login(
 
 
 @router.post("/login", response_model=user_schema.Token)
-def login_access_token(
-    db: Session = Depends(deps.get_db), form_data: OAuth2PasswordRequestForm = Depends()
+async def login_access_token(
+    db: AsyncSession = Depends(deps.get_db), form_data: OAuth2PasswordRequestForm = Depends()
 ) -> Any:
     """
     OAuth2 compatible token login, get an access token for future requests
     """
-    user = db.query(sql_models.User).filter(sql_models.User.email == form_data.username).first()
+    user = (await db.execute(select(sql_models.User).filter(sql_models.User.email == form_data.username))).scalars().first()
     if not user or not security.verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Incorrect email or password")
     elif not user.is_active:
@@ -101,15 +102,15 @@ def login_access_token(
 
 
 @router.post("/register", response_model=user_schema.UserInDB)
-def register_user(
+async def register_user(
     *,
-    db: Session = Depends(deps.get_db),
+    db: AsyncSession = Depends(deps.get_db),
     user_in: user_schema.UserCreate
 ) -> Any:
     """
     Create new user and tenant.
     """
-    user = db.query(sql_models.User).filter(sql_models.User.email == user_in.email).first()
+    user = (await db.execute(select(sql_models.User).filter(sql_models.User.email == user_in.email))).scalars().first()
     if user:
         raise HTTPException(
             status_code=400,
@@ -117,12 +118,12 @@ def register_user(
         )
     
     # Create Tenant
-    tenant = db.query(sql_models.Tenant).filter(sql_models.Tenant.name == user_in.tenant_name).first()
+    tenant = (await db.execute(select(sql_models.Tenant).filter(sql_models.Tenant.name == user_in.tenant_name))).scalars().first()
     if not tenant:
         tenant = sql_models.Tenant(name=user_in.tenant_name)
         db.add(tenant)
-        db.commit()
-        db.refresh(tenant)
+        await db.commit()
+        await db.refresh(tenant)
 
     # Create User
     db_user = sql_models.User(
@@ -133,6 +134,6 @@ def register_user(
         tenant_id=tenant.id
     )
     db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
+    await db.commit()
+    await db.refresh(db_user)
     return db_user

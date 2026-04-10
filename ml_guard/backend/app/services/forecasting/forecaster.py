@@ -2,7 +2,8 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Tuple
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from sqlalchemy import select, and_
 from sklearn.linear_model import LinearRegression
 from app.db.models import ScanRecord, Model
@@ -31,7 +32,7 @@ class GovernanceForecaster:
         "accuracy": "accuracy"
     }
 
-    def __init__(self, db: Session, model_id: str):
+    def __init__(self, db: AsyncSession, model_id: str):
         self.db = db
         self.model_id = model_id
 

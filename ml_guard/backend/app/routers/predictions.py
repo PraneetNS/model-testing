@@ -5,7 +5,8 @@ Extends the monitoring module with prediction tracking for drift detection.
 import uuid
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from sqlalchemy import func
 from app.db.session import get_db
 from app.db.models import PredictionLog, ModelVersion, Model
@@ -25,7 +26,7 @@ async def log_prediction(
     actual: dict = Body(default=None),
     confidence: float = None,
     latency_ms: int = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("ml_engineer")),
 ):
     """Log a single prediction for monitoring."""
@@ -42,7 +43,7 @@ async def log_prediction(
         latency_ms=latency_ms,
     )
     db.add(log_entry)
-    db.commit()
+    await db.commit()
 
     return {"status": "logged", "prediction_id": str(log_entry.id)}
 
@@ -54,7 +55,7 @@ async def log_prediction(
 async def batch_log_predictions(
     model_version_id: str,
     predictions: list = Body(default=[]),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("ml_engineer")),
 ):
     """Log multiple predictions at once."""
@@ -75,7 +76,7 @@ async def batch_log_predictions(
         db.add(log_entry)
         logged += 1
 
-    db.commit()
+    await db.commit()
     return {"status": "logged", "count": logged}
 
 
@@ -86,7 +87,7 @@ async def batch_log_predictions(
 async def prediction_trends(
     model_version_id: str,
     hours: int = Query(24, ge=1, le=168),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("viewer")),
 ):
     """Get prediction distribution and drift trends over time."""
@@ -143,11 +144,11 @@ async def prediction_trends(
 @router.get("/predictions/logs")
 async def latest_logs(
     limit: int = Query(50, ge=1, le=1000),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("viewer")),
 ):
     """Retrieve the latest prediction logs for the dashboard."""
-    logs = db.query(PredictionLog).order_by(PredictionLog.created_at.desc()).limit(limit).all()
+    logs = (await db.execute(select(PredictionLog).order_by(PredictionLog.created_at.desc()).limit(limit))).scalars().all()
     
     # Mock some data if empty for demo/enterprise feel, but try real first
     items = []
@@ -168,7 +169,7 @@ async def latest_logs(
 # ═══════════════════════════════════════════════
 @router.get("/predictions/stats")
 async def prediction_stats(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("viewer")),
 ):
     """Retrieve aggregate prediction statistics."""

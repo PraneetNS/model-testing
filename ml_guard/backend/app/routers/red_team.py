@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from app.db.session import get_db
 from app.db.models import RedTeamSession, RedTeamAttack, Model
 from app.tasks.red_team import execute_red_team_campaign
@@ -10,7 +11,7 @@ from app.core.security import decrypt_content
 router = APIRouter()
 
 @router.post("/start", response_model=dict)
-async def start_red_team_session(model_id: str, max_attacks: int = 10, db: Session = Depends(get_db)):
+async def start_red_team_session(model_id: str, max_attacks: int = 10, db: AsyncSession = Depends(get_db)):
     """Initialize a red-teaming session and dispatch to background worker."""
     model = db.query(Model).get(model_id)
     if not model:
@@ -18,8 +19,8 @@ async def start_red_team_session(model_id: str, max_attacks: int = 10, db: Sessi
         
     session = RedTeamSession(model_id=model_id, total_attacks=0, success_count=0)
     db.add(session)
-    db.commit()
-    db.refresh(session)
+    await db.commit()
+    await db.refresh(session)
     
     # Fire Celery task
     execute_red_team_campaign.delay(str(session.id), max_attacks)
@@ -27,13 +28,13 @@ async def start_red_team_session(model_id: str, max_attacks: int = 10, db: Sessi
     return {"session_id": str(session.id), "status": "RUNNING", "message": "Campaign dispatched."}
 
 @router.get("/{session_id}/report")
-async def get_red_team_report(session_id: str, db: Session = Depends(get_db)):
+async def get_red_team_report(session_id: str, db: AsyncSession = Depends(get_db)):
     """Return structured findings and summary for a red-teaming session."""
     session = db.query(RedTeamSession).get(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
         
-    attacks = db.query(RedTeamAttack).filter(RedTeamAttack.session_id == session.id).all()
+    attacks = (await db.execute(select(RedTeamAttack).filter(RedTeamAttack.session_id == session.id))).scalars().all()
     
     findings = []
     for a in attacks:
@@ -62,7 +63,7 @@ async def get_red_team_report(session_id: str, db: Session = Depends(get_db)):
     }
 
 @router.get("/{session_id}/report/pdf")
-async def export_red_team_pdf(session_id: str, db: Session = Depends(get_db)):
+async def export_red_team_pdf(session_id: str, db: AsyncSession = Depends(get_db)):
     """Generate and return a professional PDF summary of red-team findings (via Service)."""
     report_data = await get_red_team_report(session_id, db)
     # Move complexity to services/red_team/reporting.py

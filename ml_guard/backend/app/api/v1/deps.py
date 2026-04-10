@@ -1,7 +1,8 @@
 from typing import Generator, Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 import firebase_admin
 from firebase_admin import auth as firebase_auth
 import structlog
@@ -22,7 +23,7 @@ def get_db() -> Generator:
         db.close()
 
 async def get_current_user(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     credentials: HTTPAuthorizationCredentials = Depends(security_bearer)
 ) -> sql_models.User:
     """
@@ -35,7 +36,7 @@ async def get_current_user(
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         user_id: str = payload.get("sub")
         if user_id:
-            user = db.query(sql_models.User).filter(sql_models.User.id == user_id).first()
+            user = (await db.execute(select(sql_models.User).filter(sql_models.User.id == user_id))).scalars().first()
             if user:
                 if not user.is_active:
                     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is deactivated.")
@@ -77,13 +78,13 @@ async def get_current_user(
                 role="developer"
             )
             db.add(user)
-            db.commit()
-            db.refresh(user)
+            await db.commit()
+            await db.refresh(user)
         
         # 4. Sync firebase_uid if missing (for legacy users migrating)
         elif not user.firebase_uid:
             user.firebase_uid = firebase_uid
-            db.commit()
+            await db.commit()
 
         if not user.is_active:
             raise HTTPException(status_code=403, detail="Account is deactivated.")

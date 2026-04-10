@@ -9,7 +9,7 @@ from app.domain.services.llm_evaluator.engine import LLMEvaluationEngine
 logger = structlog.get_logger(__name__)
 
 @celery_app.task(name="app.domain.services.llm_evaluator.tasks.run_llm_evaluation_task", bind=True, max_retries=3, default_retry_delay=10)
-def run_llm_evaluation_task(job_id: str, provider_config: dict, eval_config: dict):
+async def run_llm_evaluation_task(job_id: str, provider_config: dict, eval_config: dict):
     """
     Celery background worker task for LLM governance audit.
     """
@@ -20,7 +20,7 @@ def run_llm_evaluation_task(job_id: str, provider_config: dict, eval_config: dic
         logger.info("Starting LLM evaluation task", job_id=job_id)
         
         # Initialize record
-        eval_record = db.query(sql_models.LLMEvaluation).filter(sql_models.LLMEvaluation.id == job_id).first()
+        eval_record = (await db.execute(select(sql_models.LLMEvaluation).filter(sql_models.LLMEvaluation.id == job_id))).scalars().first()
         if not eval_record:
             eval_record = sql_models.LLMEvaluation(
                 id=job_id,
@@ -29,7 +29,7 @@ def run_llm_evaluation_task(job_id: str, provider_config: dict, eval_config: dic
                 status="IN_PROGRESS"
             )
             db.add(eval_record)
-            db.commit()
+            await db.commit()
 
         # Run async engine using asyncio.run
         report = asyncio.run(engine.run_evaluation(provider_config, eval_config))
@@ -39,18 +39,18 @@ def run_llm_evaluation_task(job_id: str, provider_config: dict, eval_config: dic
         eval_record.metrics = report.metrics.model_dump()
         eval_record.detailed_results = report.detailed_results
         eval_record.completed_at = datetime.utcnow()
-        db.commit()
+        await db.commit()
         
         logger.info("LLM evaluation task completed", job_id=job_id)
         return {"status": "success", "job_id": job_id}
         
     except Exception as e:
         logger.error("LLM evaluation task failed", job_id=job_id, error=str(e))
-        eval_record = db.query(sql_models.LLMEvaluation).filter(sql_models.LLMEvaluation.id == job_id).first()
+        eval_record = (await db.execute(select(sql_models.LLMEvaluation).filter(sql_models.LLMEvaluation.id == job_id))).scalars().first()
         if eval_record:
             eval_record.status = "FAILED"
             eval_record.error = str(e)
-            db.commit()
+            await db.commit()
         return {"status": "error", "message": str(e)}
     finally:
         db.close()

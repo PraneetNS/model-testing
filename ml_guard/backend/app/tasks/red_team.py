@@ -9,7 +9,7 @@ import time
 logger = structlog.get_logger()
 
 @celery_app.task(name="app.tasks.red_team.execute_red_team_campaign", bind=True, max_retries=3, default_retry_delay=10)
-def execute_red_team_campaign(session_id: str, max_attacks: int = 10):
+async def execute_red_team_campaign(session_id: str, max_attacks: int = 10):
     """
     Background worker process for adversarial testing.
     Executes an iterative, multi-round attack loop against target LLMs.
@@ -51,19 +51,19 @@ def execute_red_team_campaign(session_id: str, max_attacks: int = 10):
             if attack_result["is_successful"]:
                 session.success_count += 1
             
-            db.commit()
+            await db.commit()
             
             # Rate limiting / Backpressure
             time.sleep(6) # Max 10 per min
             
         session.status = "COMPLETED"
-        db.commit()
+        await db.commit()
         logger.info("Campaign completed", session_id=session_id, success_rate=session.success_count/session.total_attacks)
         
     except Exception as e:
         logger.error("Red Team campaign failed", error=str(e), session_id=session_id)
         if session:
             session.status = "FAILED"
-            db.commit()
+            await db.commit()
     finally:
         db.close()

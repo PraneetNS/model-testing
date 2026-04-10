@@ -17,7 +17,8 @@ if _repo_root not in sys.path:
     sys.path.append(_repo_root)
 
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, Body, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from app.db.session import get_db
 from app.db.models import (
     Job, PreflightResult, DriftResult, PerformanceResult, 
@@ -208,17 +209,17 @@ async def run_audit(
     val_dataset_url: str = Form(None),
     selected: list = Form(["drift", "performance", "fairness", "security"]),
     policy_override: str = Form(None),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("ml_engineer"))
 ):
     from app.services.storage_service import download_from_url
     # ─── Resolve or Create Model for Audit History ───
     from app.db.models import Model, Project
-    model = db.query(Model).filter(Model.name == model_name).first()
+    model = (await db.execute(select(Model).filter(Model.name == model_name))).scalars().first()
     
     if not model:
         # Check for a default CI/CD project or create one
-        project = db.query(Project).filter(Project.name == "CI/CD Audits").first()
+        project = (await db.execute(select(Project).filter(Project.name == "CI/CD Audits"))).scalars().first()
         if not project:
             project = Project(name="CI/CD Audits", org_id=auth.org_id)
             db.add(project)
@@ -231,8 +232,8 @@ async def run_audit(
     # Create Job record
     job = Job(model_id=model.id, status="PENDING")
     db.add(job)
-    db.commit() # Must commit so worker and status API see it
-    db.refresh(job)
+    await db.commit() # Must commit so worker and status API see it
+    await db.refresh(job)
     job_id = str(job.id)
 
     # --- 4. Encode Data for direct transfer to Worker ---
@@ -294,7 +295,7 @@ async def get_default_policy():
 @router.get("/security/scans")
 async def get_security_scans(
     limit: int = Query(10, ge=1, le=50),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("viewer")),
 ):
     """Fetch latest scan records that contain security audit data."""

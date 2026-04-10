@@ -8,7 +8,8 @@ AI Advisory Assistant Router.
 """
 import json
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from pydantic import BaseModel
 from typing import Optional
 from app.db.session import get_db
@@ -191,7 +192,7 @@ def _generate_local_advisory(results: dict, question: str) -> dict:
 @router.post("/advisory/explain")
 async def explain_governance(
     body: AdvisoryRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("viewer")),
 ):
     """
@@ -227,7 +228,7 @@ async def explain_governance(
 @router.post("/advisory/explain-with-llm")
 async def explain_with_llm(
     body: AdvisoryRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("viewer")),
 ):
     """

@@ -4,7 +4,8 @@ Endpoints for evaluating LLM prompt/response pairs for safety and quality.
 """
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, Body
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from app.db.session import get_db
@@ -25,7 +26,7 @@ class LLMEvalRequest(BaseModel):
 @router.post("/llm/evaluate")
 async def evaluate_llm_endpoint(
     req: LLMEvalRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(get_auth_context),
 ):
     """
@@ -69,8 +70,8 @@ async def evaluate_llm_endpoint(
             stability_score=result["stability_score"],
         )
         db.add(llm_scan)
-        db.commit()
-        db.refresh(llm_scan)
+        await db.commit()
+        await db.refresh(llm_scan)
         scan_id = str(llm_scan.id)
     except Exception:
         scan_id = None
@@ -95,11 +96,11 @@ async def evaluate_llm_endpoint(
 @router.get("/llm/history")
 async def get_llm_history(
     limit: int = 20,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Get recent LLM scan history."""
     from sqlalchemy import desc
-    records = db.query(LLMScanRecord).order_by(desc(LLMScanRecord.created_at)).limit(limit).all()
+    records = (await db.execute(select(LLMScanRecord).order_by(desc(LLMScanRecord.created_at)).limit(limit))).scalars().all()
     return [
         {
             "id": str(r.id),
@@ -118,13 +119,13 @@ async def get_llm_history(
 
 
 @router.get("/llm/{job_id}")
-async def get_llm_results(job_id: str, db: Session = Depends(get_db)):
+async def get_llm_results(job_id: str, db: AsyncSession = Depends(get_db)):
     """Get LLM results for a specific job (legacy compatibility)."""
     job = db.get(Job, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    result = db.query(LLMResult).filter(LLMResult.job_id == job_id).first()
+    result = (await db.execute(select(LLMResult).filter(LLMResult.job_id == job_id))).scalars().first()
     if not result:
         return {"status": job.status, "error": job.error, "result": None}
 

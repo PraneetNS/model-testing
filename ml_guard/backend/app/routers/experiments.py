@@ -5,7 +5,8 @@ Endpoints for tracking ML training runs, hyperparameters, and metrics.
 import uuid
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from sqlalchemy import func
 from app.db.session import get_db
 from app.db.models import Experiment, Model, DatasetVersion, utcnow
@@ -25,7 +26,7 @@ async def start_experiment(
     parameters: dict = Body(default={}),
     framework: str = "",
     tags: dict = Body(default={}),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("ml_engineer")),
 ):
     """Start a new experiment/training run."""
@@ -45,8 +46,8 @@ async def start_experiment(
         created_by=auth.user_id,
     )
     db.add(experiment)
-    db.commit()
-    db.refresh(experiment)
+    await db.commit()
+    await db.refresh(experiment)
     log_action(db, auth, "experiment.start", "experiment", str(experiment.id), {
         "model_id": model_id, "name": name
     })
@@ -69,7 +70,7 @@ async def log_experiment(
     metrics: dict = Body(default={}),
     parameters: dict = Body(default={}),
     artifact_url: str = "",
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("ml_engineer")),
 ):
     """Log metrics and parameters to a running experiment."""
@@ -91,7 +92,7 @@ async def log_experiment(
     if artifact_url:
         experiment.artifact_url = artifact_url
 
-    db.commit()
+    await db.commit()
 
     return {
         "experiment_id": experiment_id,
@@ -110,7 +111,7 @@ async def end_experiment(
     status: str = "COMPLETED",
     final_metrics: dict = Body(default={}),
     training_time_ms: int = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("ml_engineer")),
 ):
     """End an experiment with final metrics."""
@@ -131,7 +132,7 @@ async def end_experiment(
     if training_time_ms:
         experiment.training_time_ms = training_time_ms
 
-    db.commit()
+    await db.commit()
     log_action(db, auth, "experiment.end", "experiment", str(experiment.id), {
         "status": status, "metrics": final_metrics
     })
@@ -153,7 +154,7 @@ async def list_experiments(
     status: str = None,
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("viewer")),
 ):
     """List experiments with optional filtering."""

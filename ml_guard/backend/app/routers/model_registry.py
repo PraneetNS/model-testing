@@ -5,7 +5,8 @@ versioning, deployment, and governance tracking.
 """
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from sqlalchemy import func
 from app.db.session import get_db
 from app.db.models import (
@@ -24,7 +25,7 @@ async def register_model(
     model_name: str,
     description: str = "",
     owner: str = "",
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("ml_engineer")),
 ):
     """Register a new model in the registry."""
@@ -47,8 +48,8 @@ async def register_model(
         created_by=auth.user_id,
     )
     db.add(model)
-    db.commit()
-    db.refresh(model)
+    await db.commit()
+    await db.refresh(model)
     log_action(db, auth, "model.register", "model", str(model.id), {"name": model_name})
 
     return {
@@ -72,7 +73,7 @@ async def create_version(
     governance_score: float = None,
     risk_class: str = None,
     description: str = "",
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("ml_engineer")),
 ):
     """Create a new version for an existing model."""
@@ -98,8 +99,8 @@ async def create_version(
         created_by=auth.user_id,
     )
     db.add(version)
-    db.commit()
-    db.refresh(version)
+    await db.commit()
+    await db.refresh(version)
     log_action(db, auth, "model.version", "model_version", str(version.id), {
         "model_id": model_id, "version": max_v + 1
     })
@@ -119,7 +120,7 @@ async def create_version(
 async def deploy_model(
     version_id: str,
     environment: str = "DEV",
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("ml_engineer")),
 ):
     """Deploy a model version to an environment."""
@@ -146,8 +147,8 @@ async def deploy_model(
         deployed_by=auth.user_id,
     )
     db.add(deployment)
-    db.commit()
-    db.refresh(deployment)
+    await db.commit()
+    await db.refresh(deployment)
     log_action(db, auth, "model.deploy", "deployment", str(deployment.id), {
         "version_id": version_id, "environment": environment
     })
@@ -168,13 +169,13 @@ async def deploy_model(
 async def list_models(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("viewer")),
 ):
     """List all registered models with version counts."""
     offset = (page - 1) * per_page
     total = db.query(func.count(Model.id)).scalar() or 0
-    models = db.query(Model).order_by(Model.created_at.desc()).offset(offset).limit(per_page).all()
+    models = (await db.execute(select(Model).order_by(Model.created_at.desc()).offset(offset).limit(per_page))).scalars().all()
 
     items = []
     for m in models:
@@ -205,7 +206,7 @@ async def list_models(
 @router.get("/models/{model_id}/versions")
 async def list_versions(
     model_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("viewer")),
 ):
     """List all versions of a specific model."""
@@ -219,7 +220,7 @@ async def list_versions(
 
     items = []
     for v in versions:
-        deployments = db.query(Deployment).filter(Deployment.version_id == v.id).all()
+        deployments = (await db.execute(select(Deployment).filter(Deployment.version_id == v.id))).scalars().all()
         items.append({
             "version_id": str(v.id),
             "version_number": v.version_number,

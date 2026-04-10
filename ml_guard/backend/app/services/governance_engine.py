@@ -13,7 +13,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
 logger = logging.getLogger(__name__)
 
@@ -63,10 +64,10 @@ class GovernanceEngine:
         "robustness":   0.10,
     }
 
-    def compute_score(
+    async def compute_score(
         self,
         model_id: str,
-        db: Session,
+        db: AsyncSession,
     ) -> GovernanceScoreResult:
         """
         Pull latest result for each module from DB.

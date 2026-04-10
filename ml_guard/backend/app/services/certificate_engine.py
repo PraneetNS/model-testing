@@ -13,7 +13,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, List, Optional
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
 from app.services.governance_engine import GovernanceEngine, GovernanceScoreResult
 
@@ -122,11 +123,11 @@ class CertificateEngine:
 
         return template
 
-    def generate_report_card(
+    async def generate_report_card(
         self,
         model_id: str,
         governance_result: GovernanceScoreResult,
-        db: Session,
+        db: AsyncSession,
     ) -> Any:
         """
         Create ReportCard DB record.
@@ -142,7 +143,7 @@ class CertificateEngine:
         )
 
         # Check for existing cert with same hash (idempotent)
-        existing = db.query(ReportCard).filter(ReportCard.cert_hash == cert_hash).first()
+        existing = (await db.execute(select(ReportCard).filter(ReportCard.cert_hash == cert_hash))).scalars().first()
         if existing:
             logger.info(f"cert_already_exists cert_hash={cert_hash}")
             return existing
@@ -182,7 +183,7 @@ class CertificateEngine:
         except (ValueError, Exception):
             try:
                 from app.db.models import Model
-                m = db.query(Model).filter(Model.name == model_id).first()
+                m = (await db.execute(select(Model).filter(Model.name == model_id))).scalars().first()
                 if m:
                     model_fk = m.id
             except Exception:
@@ -207,8 +208,8 @@ class CertificateEngine:
         )
 
         db.add(report_card)
-        db.commit()
-        db.refresh(report_card)
+        await db.commit()
+        await db.refresh(report_card)
 
         logger.info(
             "report_card_generated",
@@ -220,10 +221,10 @@ class CertificateEngine:
 
         return report_card
 
-    def check_certificate_validity(
+    async def check_certificate_validity(
         self,
         cert_hash: str,
-        db: Session,
+        db: AsyncSession,
     ) -> CertValidityResult:
         """
         Public endpoint logic — no auth required.
@@ -236,7 +237,7 @@ class CertificateEngine:
         """
         from app.db.models import ReportCard, DriftReport
 
-        card = db.query(ReportCard).filter(ReportCard.cert_hash == cert_hash).first()
+        card = (await db.execute(select(ReportCard).filter(ReportCard.cert_hash == cert_hash))).scalars().first()
 
         if not card:
             return CertValidityResult(

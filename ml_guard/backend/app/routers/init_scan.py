@@ -1,5 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from app.db.session import get_db
 from app.db.models import Model, Dataset, NLPIntent, Job
 
@@ -19,7 +20,7 @@ async def initialize_scan(
     file_test: UploadFile = File(None),
     train_dataset_url: str = Form(None),
     test_dataset_url: str = Form(None),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     if not nlp_intent or nlp_intent.strip() == "":
         raise HTTPException(status_code=400, detail="NLP objective required before governance scan.")
@@ -117,7 +118,7 @@ async def initialize_scan(
         val_dataset_key=test_key
     )
     
-    db.commit()
+    await db.commit()
     
     return {
         "model_id": str(model.id),

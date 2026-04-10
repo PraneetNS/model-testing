@@ -3,7 +3,8 @@ import hashlib
 import json
 from datetime import datetime
 from typing import Dict, List, Any, Optional, Tuple
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from app.db.models import Model, ScanRecord, AuditLog
 # CORRECT - imports from the single source of truth
 from app.db.models import ReportCard
@@ -26,7 +27,7 @@ class ReportCardBuilder:
         "robustness": 0.10
     }
 
-    def __init__(self, db: Session, model_id: str):
+    def __init__(self, db: AsyncSession, model_id: str):
         self.db = db
         self.model_id = model_id
         self.model = db.query(Model).get(model_id)

@@ -13,7 +13,8 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path, Query
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
 from app.db.session import get_db
 from app.services.certificate_engine import CertificateEngine
@@ -65,7 +66,7 @@ def _score_to_dict(result: GovernanceScoreResult) -> Dict[str, Any]:
 @router.get("/governance/{model_id}/score")
 async def get_governance_score(
     model_id: str = Path(..., description="Model UUID or name"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Compute the current governance score for a model.
@@ -82,7 +83,7 @@ async def get_governance_score(
 @router.get("/governance/{model_id}/score/live")
 async def get_live_governance_score(
     model_id: str = Path(..., description="Model UUID or name"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Returns the live governance score with real-time drift/performance decay.
@@ -144,7 +145,7 @@ async def certify_model(
     model_id: str = Path(..., description="Model UUID or name"),
     req: CertifyRequest = CertifyRequest(),
     background_tasks: BackgroundTasks = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Trigger full governance audit and generate a compliance certificate.
@@ -184,7 +185,7 @@ async def certify_model(
 @router.get("/governance/verify/{cert_hash}")
 async def verify_certificate(
     cert_hash: str = Path(..., description="SHA-256 certificate hash"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     PUBLIC endpoint — no authentication required.
@@ -219,7 +220,7 @@ async def governance_status():
 async def synchronous_gate_check(
     model_id: str = Path(..., description="Model UUID or name"),
     req: GateRequest = GateRequest(),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     SYNCHRONOUS CI/CD policy gate check.

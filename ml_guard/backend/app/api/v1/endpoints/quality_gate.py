@@ -10,7 +10,8 @@ import os
 import uuid
 import structlog
 from datetime import datetime
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
 from app.api.v1 import deps
 from app.infrastructure.persistence import models as sql_models
@@ -42,7 +43,7 @@ async def evaluate_model(
     val_file: UploadFile = File(...),
     target_column: str = Form("churn"),
     query: Optional[str] = Form(None),
-    db: Session = Depends(deps.get_db),
+    db: AsyncSession = Depends(deps.get_db),
     current_user: sql_models.User = Depends(deps.get_current_active_user)
 ):
     """
@@ -100,11 +101,11 @@ async def evaluate_model(
 
         # 4. Persistence
         # Ensure project exists
-        project = db.query(sql_models.Project).filter(sql_models.Project.id == project_id).first()
+        project = (await db.execute(select(sql_models.Project).filter(sql_models.Project.id == project_id))).scalars().first()
         if not project:
             project = sql_models.Project(id=project_id, name=f"Project {project_id[:8]}", tenant_id=current_user.tenant_id)
             db.add(project)
-            db.commit()
+            await db.commit()
 
         # Save results
         # Use Pydantic's model_dump(mode='json') to ensure all types are JSON-serializable
@@ -148,7 +149,7 @@ async def evaluate_model(
                     percentiles=b_data["percentiles"]
                 ))
 
-        db.commit()
+        await db.commit()
         return result
 
     except Exception as e:
@@ -162,7 +163,7 @@ async def ci_cd_gate(
     train_file: UploadFile = File(...),
     val_file: UploadFile = File(...),
     target_column: str = Form("churn"),
-    db: Session = Depends(deps.get_db),
+    db: AsyncSession = Depends(deps.get_db),
     current_user: sql_models.User = Depends(deps.get_current_active_user)
 ):
     """

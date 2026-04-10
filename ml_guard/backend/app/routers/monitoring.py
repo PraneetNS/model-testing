@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Body
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from app.db.session import get_db
 from app.core.auth import AuthContext, require_engineer, log_action
 from pydantic import BaseModel
@@ -18,7 +19,7 @@ class MonitorLogRequest(BaseModel):
 @router.post("/monitoring/log")
 async def log_monitoring_event(
     body: MonitorLogRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_engineer)
 ):
     """Log a client-side monitoring probe to the enterprise audit trail."""

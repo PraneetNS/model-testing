@@ -2,7 +2,8 @@ import os
 import tempfile
 import asyncio
 from datetime import datetime
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from app.db.session import SessionLocal
 from app.db.models import Model
 from app.models.report_card import ReportCard
@@ -21,7 +22,7 @@ async def upload_to_minio(file_path: str, destination: str):
     return f"minio://{destination}"
 
 @celery_app.task(name="app.services.report_card.generate_governance_report", bind=True, max_retries=3, default_retry_delay=10)
-def generate_governance_report(model_id: str):
+async def generate_governance_report(model_id: str):
     """
     Async task to synthesize audit data, generate LLM summary, 
     render PDF, and persist to storage and database.
@@ -39,7 +40,7 @@ def generate_governance_report(model_id: str):
         cert_hash = builder.generate_cert_hash(model_id, audit_data['audit_timestamp'], score)
 
         # 2. Check Collision 
-        existing = db.query(ReportCard).filter(ReportCard.cert_hash == cert_hash).first()
+        existing = (await db.execute(select(ReportCard).filter(ReportCard.cert_hash == cert_hash))).scalars().first()
         if existing:
             logger.info("Report already exists for this audit snapshot", cert_hash=cert_hash)
             return {"status": "SUCCESS", "cert_hash": cert_hash}
@@ -81,7 +82,7 @@ def generate_governance_report(model_id: str):
             pdf_path=minio_dest
         )
         db.add(new_report)
-        db.commit()
+        await db.commit()
 
         # Cleanup
         if os.path.exists(tmp_path):

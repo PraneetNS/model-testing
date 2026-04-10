@@ -17,7 +17,8 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +32,9 @@ class ContractEngine:
 
     # ── Public API ─────────────────────────────────────────────────────────────
 
-    def check_prediction(
+    async def check_prediction(
         self,
-        db: Session,
+        db: AsyncSession,
         model_id: str,
         prediction: Any,
         prediction_proba: Optional[float],
@@ -101,7 +102,7 @@ class ContractEngine:
                         resolved=False,
                     )
                     db.add(record)
-                    db.commit()
+                    await db.commit()
                 except Exception as e:
                     logger.warning(f"breach_persist_failed promise={promise.get('name')} error={e}")
                     try:
@@ -111,9 +112,9 @@ class ContractEngine:
 
         return breaches
 
-    def get_breach_summary(
+    async def get_breach_summary(
         self,
-        db: Session,
+        db: AsyncSession,
         model_id: str,
         hours: int = 24,
     ) -> Dict[str, Any]:
@@ -174,9 +175,9 @@ class ContractEngine:
 
     # ── Promise evaluation ─────────────────────────────────────────────────────
 
-    def _check_promise(
+    async def _check_promise(
         self,
-        db: Session,
+        db: AsyncSession,
         model_id: str,
         contract_id: str,
         promise: Dict[str, Any],
@@ -291,9 +292,9 @@ class ContractEngine:
 
     # ── Distribution check ─────────────────────────────────────────────────────
 
-    def _check_distribution(
+    async def _check_distribution(
         self,
-        db: Session,
+        db: AsyncSession,
         model_id: str,
         promise: Dict[str, Any],
         prediction: Any,
@@ -345,9 +346,9 @@ class ContractEngine:
 
     # ── Fairness / demographic parity check ───────────────────────────────────
 
-    def _check_fairness(
+    async def _check_fairness(
         self,
-        db: Session,
+        db: AsyncSession,
         model_id: str,
         promise: Dict[str, Any],
         features: Dict[str, Any],

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from typing import Dict, List, Any
 import json
 import time
@@ -66,7 +67,7 @@ async def sentinel_stream(websocket: WebSocket, model_id: str):
                 is_breached=avg_psi > 0.2
             )
             db.add(record)
-            db.commit()
+            await db.commit()
             
             # 2. Broadcast to Dashboards
             await manager.broadcast(model_id, {
@@ -99,7 +100,7 @@ async def dashboard_live_stream(websocket: WebSocket, model_id: str):
         manager.disconnect(model_id, websocket)
 
 @router.get("/{model_id}/live")
-async def get_live_sentinel_data(model_id: str, db: Session = Depends(get_db)):
+async def get_live_sentinel_data(model_id: str, db: AsyncSession = Depends(get_db)):
     """Return last 100 PSI points for historical plotting."""
     records = db.query(SentinelRecord).filter(
         SentinelRecord.model_id == model_id

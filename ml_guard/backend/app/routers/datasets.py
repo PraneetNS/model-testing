@@ -5,7 +5,8 @@ Endpoints for dataset registration, versioning, and lineage tracking.
 import uuid
 import hashlib
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from sqlalchemy import func
 from app.db.session import get_db
 from app.db.models import (
@@ -26,7 +27,7 @@ async def register_dataset(
     dataset_type: str = "training",
     row_count: int = 0,
     schema_info: str = "",
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("ml_engineer")),
 ):
     """Register a new dataset in the lineage store."""
@@ -44,8 +45,8 @@ async def register_dataset(
         fingerprint=schema_hash,
     )
     db.add(dataset)
-    db.commit()
-    db.refresh(dataset)
+    await db.commit()
+    await db.refresh(dataset)
     log_action(db, auth, "dataset.register", "dataset", str(dataset.id), {"name": dataset_name})
 
     return {
@@ -66,7 +67,7 @@ async def create_dataset_version(
     row_count: int = None,
     feature_count: int = None,
     schema_hash: str = "",
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("ml_engineer")),
 ):
     """Create a new versioned snapshot of a dataset."""
@@ -88,8 +89,8 @@ async def create_dataset_version(
         created_by=auth.user_id,
     )
     db.add(version)
-    db.commit()
-    db.refresh(version)
+    await db.commit()
+    await db.refresh(version)
     log_action(db, auth, "dataset.version", "dataset_version", str(version.id), {
         "dataset_id": dataset_id, "version": max_v + 1
     })
@@ -109,13 +110,13 @@ async def create_dataset_version(
 async def list_datasets(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("viewer")),
 ):
     """List all registered datasets."""
     offset = (page - 1) * per_page
     total = db.query(func.count(Dataset.id)).scalar() or 0
-    datasets = db.query(Dataset).order_by(Dataset.created_at.desc()).offset(offset).limit(per_page).all()
+    datasets = (await db.execute(select(Dataset).order_by(Dataset.created_at.desc()).offset(offset).limit(per_page))).scalars().all()
 
     items = []
     for d in datasets:
@@ -147,7 +148,7 @@ async def list_datasets(
 @router.get("/datasets/{dataset_id}/lineage")
 async def get_lineage(
     dataset_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("viewer")),
 ):
     """Get full lineage for a dataset: versions and linked models."""

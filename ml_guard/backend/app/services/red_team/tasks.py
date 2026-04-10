@@ -10,7 +10,7 @@ import structlog
 logger = structlog.get_logger()
 
 @celery_app.task(name="app.services.red_team.execute_red_team_campaign", bind=True, max_retries=3, default_retry_delay=10)
-def execute_red_team_campaign(session_id: str, max_attacks: int = 10):
+async def execute_red_team_campaign(session_id: str, max_attacks: int = 10):
     """
     Background worker to execute the red-teaming autopilot.
     Iterates through categories, runs multi-round attacks, and persists results.
@@ -81,17 +81,17 @@ def execute_red_team_campaign(session_id: str, max_attacks: int = 10):
             # Checkpoint the session update periodically
             session.total_attacks = attack_count
             session.success_count = success_count
-            db.commit()
+            await db.commit()
 
         # Campaign Completed
         session.status = "COMPLETED"
         session.completed_at = datetime.utcnow()
-        db.commit()
+        await db.commit()
     
     except Exception as e:
         logger.error("Red-teaming campaign failed", session_id=session_id, error=str(e))
         if session:
              session.status = "FAILED"
-             db.commit()
+             await db.commit()
     finally:
         db.close()

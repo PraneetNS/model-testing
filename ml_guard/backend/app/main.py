@@ -13,10 +13,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import structlog
 from sqlalchemy import desc, text
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
 from app.core.config import settings
-from app.db.session import engine, Base, SessionLocal, get_db
+from app.db.session import engine, Base, AsyncSessionLocal, get_db
 from app.db.models import Job
 
 # ── Core Analysis Routers ──────────────────────────
@@ -143,14 +144,28 @@ async def health():
     # FIX 1: Version consistency
     return {"status": "ok", "version": settings.APP_VERSION}
 
-@app.get("/health/database")
-async def health_database(db: Session = Depends(get_db)):
-    """Heartbeat check for PostgreSQL / SQLite connectivity."""
+@app.get("/api/health/db")
+async def health_database(db: AsyncSession = Depends(get_db)):
+    """Heartbeat check for PostgreSQL async pool connectivity."""
+    import time
+    from app.db.session import engine
     try:
-        db.execute(text("SELECT 1"))
-        return {"status": "ok", "message": "Database connection verified"}
+        start_time = time.time()
+        await db.execute(text("SELECT 1"))
+        latency_ms = round((time.time() - start_time) * 1000, 2)
+        
+        pool = getattr(engine, "pool", None)
+        pool_size = getattr(pool, "size", 0) if pool else 0
+        checked_out = getattr(pool, "checkedout", 0) if pool else 0
+        
+        return {
+            "status": "ok", 
+            "latency_ms": latency_ms,
+            "pool_size": pool_size,
+            "checked_out_connections": checked_out
+        }
     except Exception as e:
-        return {"status": "unhealthy", "error": str(e)}
+        return {"status": "degraded", "error": str(e)}
 
 @app.get("/health/storage")
 async def health_storage():

@@ -16,7 +16,8 @@ _repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../.
 if _repo_root not in sys.path:
     sys.path.append(_repo_root)
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from app.db.session import get_db
 from app.db.models import Job, FairnessResult, AuditLog, ScanRecord
 from app.core.auth import AuthContext, get_auth_context, log_action
@@ -32,7 +33,7 @@ async def analyze_fairness(
     dataset_url: str = Form(None),
     sensitive_column: str = Form(...),
     label_col: str = Form("target"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(get_auth_context),
 ):
     """
@@ -152,13 +153,13 @@ async def analyze_fairness(
 
 
 @router.get("/fairness/{job_id}")
-async def get_fairness_results(job_id: str, db: Session = Depends(get_db)):
+async def get_fairness_results(job_id: str, db: AsyncSession = Depends(get_db)):
     """Get fairness results for a specific job (legacy compatibility)."""
     job = db.get(Job, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    result = db.query(FairnessResult).filter(FairnessResult.job_id == job_id).first()
+    result = (await db.execute(select(FairnessResult).filter(FairnessResult.job_id == job_id))).scalars().first()
     if not result:
         return {"status": job.status, "error": job.error, "result": None}
 

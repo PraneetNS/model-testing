@@ -55,7 +55,7 @@ A dedicated suite tailored specifically to Large Language Model governance.
 ML Guard operates on an asynchronous microservices architecture meant to run at scale:
 
 - **Core ML Engine (`ml_guard/core`)**: Pure Python libraries housing the deterministic statistics, risk algorithms, and heuristics.
-- **Backend API (`ml_guard/backend`)**: Built with **FastAPI** utilizing **SQLAlchemy** for synchronous persistence into **PostgreSQL** or **SQLite**.
+- **Backend API (`ml_guard/backend`)**: Built with **FastAPI** utilizing **SQLAlchemy** for asynchronous persistence into **PostgreSQL**.
 - **Asynchronous Workers**: Redis-backed **Celery** tasks specifically tasked to compute heavy algorithms (Fairness/Drift computations) outside of the HTTP cycle.
 - **Dashboard (`ml_guard/frontend`)**: A blazing fast **Next.js 14** application styled with Tailwind and Shadcn UI.
 - **Data & Artifact Layer**: S3-compatible generic storage (MinIO interface ready).
@@ -101,7 +101,7 @@ pip install celery redis
 Set up your `.env` file (you can copy `.env.example`):
 ```ini
 SECRET_KEY=your_secure_hash
-DATABASE_URL=sqlite:///./ml_guard.db
+DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/mlguard
 # Redis connection for Celery
 REDIS_URL=redis://localhost:6379/0
 ```
