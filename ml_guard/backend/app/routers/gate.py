@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, Body
+from app.db.session import get_db
 from typing import Optional, List, Dict
 import os
 import time
@@ -105,3 +106,38 @@ async def evaluate_gate(request: GateRequest):
             "metrics_evaluated": list(actual_metrics.keys())
         }
     )
+
+@router.get("/result/{submission_token}")
+async def get_gate_result(submission_token: str, db: Depends = Depends(get_db)):
+    """
+    Deterministically retrieve gate audit results securely utilizing the submission token.
+    Combines Job status polling and Gate metric inspection.
+    """
+    from app.db.models import Job, ScanRecord
+    from sqlalchemy.future import select
+    from fastapi import HTTPException
+    
+    # 1. Verify existence of the submission record using strict token tracking
+    job = (await db.execute(select(Job).filter(Job.submission_token == submission_token))).scalars().first()
+    
+    if not job:
+        raise HTTPException(404, "Invalid submission token")
+        
+    if job.status in ["RUNNING", "PENDING"]:
+        return {"status": "pending", "eta_seconds": 30} # Rough estimate based on task compute overhead
+        
+    if job.status == "FAILED":
+        return {"status": "FAILED", "error": job.error}
+        
+    if job.status == "COMPLETED":
+        scan = (await db.execute(select(ScanRecord).filter(ScanRecord.job_id == str(job.id)).order_by(ScanRecord.created_at.desc()))).scalars().first()
+        if not scan:
+            return {"status": "FAILED", "error": "Job is marked COMPLETED but no underlying artifact scan was correctly generated. Retry scan."}
+            
+        return {
+            "status": "COMPLETED",
+            "model_id": str(job.model_id),
+            "score": scan.governance_score,
+            "verdict": scan.gate_status,
+            "breach_count": len(scan.checks_run) if scan.checks_run else 0
+        }

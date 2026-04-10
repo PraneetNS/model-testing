@@ -32,6 +32,8 @@ AsyncSessionLocal = async_sessionmaker(
     expire_on_commit=False,
 )
 
+SessionLocal = AsyncSessionLocal  # Legacy alias for backward compatibility during migration
+
 Base = declarative_base()
 
 async def get_db():

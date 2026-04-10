@@ -229,8 +229,10 @@ async def run_audit(
         db.add(model)
         db.flush()
 
+    import uuid
+    submission_token = str(uuid.uuid4())
     # Create Job record
-    job = Job(model_id=model.id, status="PENDING")
+    job = Job(model_id=model.id, status="PENDING", submission_token=submission_token)
     db.add(job)
     await db.commit() # Must commit so worker and status API see it
     await db.refresh(job)
@@ -276,8 +278,9 @@ async def run_audit(
     )
 
     return {
-        "status": "pending",
         "job_id": job_id,
+        "submission_token": submission_token,
+        "poll_url": f"/api/v1/gate/result/{submission_token}",
         "message": "Governance audit dispatched. Transferring data via secure message queue."
     }
 

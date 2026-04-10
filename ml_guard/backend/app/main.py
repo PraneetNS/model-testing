@@ -76,7 +76,8 @@ async def lifespan(app: FastAPI):
         )
 
     # Database Initialization
-    Base.metadata.create_all(bind=engine)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
     # Object Storage Initialization (Optional/Warning only)
     from app.services.storage_service import _get_s3_client, _ensure_bucket_exists

@@ -171,6 +171,7 @@ class Job(Base):
     __tablename__ = "jobs"
     id          = Column(UUID(), primary_key=True, default=uuid.uuid4)
     model_id    = Column(UUID(), ForeignKey("models.id", ondelete="CASCADE"), index=True, nullable=False)
+    submission_token = Column(String(255), unique=True, index=True, nullable=True)
     status      = Column(String(50), default="RUNNING")
     error       = Column(String(1024), nullable=True)
     created_at  = Column(DateTime, default=utcnow)
