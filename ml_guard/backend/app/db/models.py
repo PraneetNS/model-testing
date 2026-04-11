@@ -4,7 +4,7 @@ import secrets
 from sqlalchemy import Column, String, Float, DateTime, JSON, ForeignKey, Integer, Boolean, Text, Index, BigInteger, LargeBinary
 from sqlalchemy.types import TypeDecorator, CHAR
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID, JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from datetime import datetime, timezone
 from app.db.session import Base
 
@@ -123,7 +123,7 @@ class Model(Base):
     metadata_json = Column(PortableJSON, nullable=True)  # model_class, framework, task, etc.
     complexity  = Column(PortableJSON, nullable=True)
     version     = Column(Integer, default=1)
-    parent_id   = Column(UUID(), ForeignKey("models.id"), nullable=True)  # for version chains
+    parent_model_id = Column(UUID(), ForeignKey("models.id"), nullable=True)  # for version chains
     # ─── Cloud Storage Fields ────────────────────────────────────────────────
     artifact_url             = Column(String(1024), nullable=True)  # R2 object key / URL
     artifact_size            = Column(BigInteger, nullable=True)     # bytes
@@ -137,6 +137,9 @@ class Model(Base):
     nlp_intents = relationship("NLPIntent", back_populates="model", cascade="all, delete-orphan")
     jobs        = relationship("Job", back_populates="model", cascade="all, delete-orphan")
     scans       = relationship("ScanRecord", back_populates="model", cascade="all, delete-orphan")
+    
+    # DAG Relationship
+    children = relationship("Model", backref=backref("parent", remote_side=[id]))
 
 
 class Dataset(Base):

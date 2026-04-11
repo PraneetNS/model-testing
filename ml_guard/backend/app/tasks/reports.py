@@ -53,6 +53,16 @@ async def generate_governance_report(model_id: str):
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp_pdf:
             tmp_path = tmp_pdf.name
         
+        parent_score_data = None
+        if builder.model.parent_model_id:
+            parent_report = (await db.execute(select(ReportCard).filter(ReportCard.model_id == str(builder.model.parent_model_id)).order_by(ReportCard.created_at.desc()))).scalars().first()
+            parent_model = (await db.execute(select(Model).filter(Model.id == builder.model.parent_model_id))).scalars().first()
+            if parent_report and parent_model:
+                parent_score_data = {
+                    "name": parent_model.name,
+                    "score": parent_report.overall_score
+                }
+
         report_data = {
             "model_name": builder.model.name,
             "overall_score": score,
@@ -60,7 +70,8 @@ async def generate_governance_report(model_id: str):
             "issued_at": datetime.utcnow().isoformat(),
             "cert_hash": cert_hash,
             "metric_snapshots": audit_data,
-            "executive_summary": summary
+            "executive_summary": summary,
+            "parent_score_data": parent_score_data
         }
         
         pdf_gen = PDFGenerator(tmp_path)

@@ -276,6 +276,9 @@ app.include_router(predictions.router,
     prefix="/api/v1", tags=["predictions"])
 app.include_router(contracts.router,
     prefix="/api/v1", tags=["contracts"])
+
+from app.api.routers import lineage
+app.include_router(lineage.router)
 app.include_router(tasks.router)
 
 

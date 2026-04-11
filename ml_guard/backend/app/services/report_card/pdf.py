@@ -86,6 +86,12 @@ class PDFGenerator:
         self.elements.append(Spacer(1, 0.5*inch))
         self.elements.append(Paragraph(f"VERDICT: {report_data.get('verdict')}", badge_style))
         
+        parent_score_data = report_data.get("parent_score_data")
+        if parent_score_data:
+            self.elements.append(Spacer(1, 0.3*inch))
+            self.elements.append(Paragraph("<b>Lineage Context:</b>", self.styles['Heading4'] if 'Heading4' in self.styles else self.styles['Heading3']))
+            self.elements.append(Paragraph(f"Derived from parent: {parent_score_data['name']} (Score: {parent_score_data['score']})", self.styles['Normal']))
+
         self.elements.append(PageBreak())
         
         # --- Page 2: Breakdown ---
