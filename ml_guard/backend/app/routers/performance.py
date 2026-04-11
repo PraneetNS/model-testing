@@ -34,3 +34,25 @@ async def get_performance_results(job_id: str, db: AsyncSession = Depends(get_db
             "module_status": result.status
         }
     }
+
+from pydantic import BaseModel
+
+class ExplainRequest(BaseModel):
+    sample_size: int = 200
+
+@router.post("/performance/{model_id}/explain")
+async def explain_model(model_id: str, req: ExplainRequest, db: AsyncSession = Depends(get_db)):
+    from app.tasks.explainability import run_explainability_task
+    task = run_explainability_task.delay(model_id, req.sample_size)
+    return {"task_id": task.id, "status": "PENDING"}
+
+@router.get("/performance/{model_id}/explanation")
+async def get_explanation(model_id: str, db: AsyncSession = Depends(get_db)):
+    from app.db.models import ModelExplanation
+    exp = (await db.execute(select(ModelExplanation).filter(ModelExplanation.model_id == model_id).order_by(ModelExplanation.computed_at.desc()))).scalars().first()
+    if not exp:
+        return {"feature_importances": [], "top_drift_contributors": []}
+    return {
+        "feature_importances": exp.feature_importances,
+        "top_drift_contributors": exp.top_drift_contributors
+    }

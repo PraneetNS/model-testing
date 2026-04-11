@@ -141,6 +141,16 @@ class Model(Base):
     # DAG Relationship
     children = relationship("Model", backref=backref("parent", remote_side=[id]))
 
+class ModelExplanation(Base):
+    __tablename__ = "model_explanations"
+    id          = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    model_id    = Column(UUID(), ForeignKey("models.id", ondelete="CASCADE"), index=True, nullable=False)
+    computed_at = Column(DateTime, default=utcnow)
+    feature_importances = Column(PortableJSON, nullable=False)
+    top_drift_contributors = Column(PortableJSON, nullable=False)
+    
+    model       = relationship("Model", backref=backref("explanations", cascade="all, delete-orphan"))
+
 
 class Dataset(Base):
     __tablename__ = "datasets"

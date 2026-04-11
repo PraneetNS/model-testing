@@ -86,6 +86,11 @@ class PDFGenerator:
         self.elements.append(Spacer(1, 0.5*inch))
         self.elements.append(Paragraph(f"VERDICT: {report_data.get('verdict')}", badge_style))
         
+        if report_data.get('metric_snapshots', {}).get('shap_fairness_alert'):
+            alert_style = ParagraphStyle('Alert', parent=self.styles['Normal'], backColor=colors.red, textColor=colors.white, alignment=1, borderPadding=5)
+            self.elements.append(Spacer(1, 0.2*inch))
+            self.elements.append(Paragraph("🚨 SHAP-Fairness Alert: Top drifted feature is sensitive!", alert_style))
+
         parent_score_data = report_data.get("parent_score_data")
         if parent_score_data:
             self.elements.append(Spacer(1, 0.3*inch))

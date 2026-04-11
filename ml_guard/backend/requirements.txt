@@ -18,7 +18,7 @@ numpy
 scikit-learn
 scipy
 joblib
-shap
+shap>=0.44
 fairlearn
 onnxruntime
 

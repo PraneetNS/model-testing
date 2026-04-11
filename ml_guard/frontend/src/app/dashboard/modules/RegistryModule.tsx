@@ -12,6 +12,8 @@ export default function ModelRegistryModule({ state, setState, onAction }: any) 
     const [loading, setLoading] = useState(true);
     const [selectedModel, setSelectedModel] = useState<any>(null);
     const [versions, setVersions] = useState<any[]>([]);
+    const [explanation, setExplanation] = useState<any>(null);
+    const [sortMode, setSortMode] = useState<"shap" | "drift">("shap");
     const [showRegister, setShowRegister] = useState(false);
     const [newModel, setNewModel] = useState({ name: "", provider: "", description: "" });
     const [registering, setRegistering] = useState(false);
@@ -25,11 +27,18 @@ export default function ModelRegistryModule({ state, setState, onAction }: any) 
         } catch (e) { } finally { setLoading(false); }
     };
 
-    const fetchVersions = async (modelId: string) => {
+    const fetchVersionsAndExplanation = async (modelId: string) => {
+        setExplanation(null);
         try {
             const res = await apiFetch(`/api/v1/models/${modelId}/versions`);
             const d = await res.json();
             setVersions(d.versions || []);
+            
+            const expRes = await apiFetch(`/api/v1/performance/${modelId}/explanation`);
+            if (expRes.ok) {
+                const expD = await expRes.json();
+                if (expD.feature_importances?.length > 0) setExplanation(expD);
+            }
         } catch (e) { }
     };
 
@@ -54,7 +63,7 @@ export default function ModelRegistryModule({ state, setState, onAction }: any) 
             const d = await res.json();
             if (!res.ok) throw new Error(d.detail || "Promotion failed");
             alert("Model version promoted to DEV environment");
-            if (selectedModel) fetchVersions(selectedModel.model_id);
+            if (selectedModel) fetchVersionsAndExplanation(selectedModel.model_id || selectedModel.id);
         } catch (e: any) { alert(e.message); }
     };
 
@@ -97,7 +106,7 @@ export default function ModelRegistryModule({ state, setState, onAction }: any) 
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {models.map(m => (
-                        <div key={m.model_id || m.id} onClick={() => { setSelectedModel(m); fetchVersions(m.model_id || m.id); }}
+                        <div key={m.model_id || m.id} onClick={() => { setSelectedModel(m); fetchVersionsAndExplanation(m.model_id || m.id); }}
                             className={`p-5 rounded-2xl border cursor-pointer transition-all ${selectedModel?.model_id === (m.model_id || m.id) ? "border-orange-500/40 bg-orange-500/5 shadow-lg shadow-orange-500/5" : "border-white/5 bg-[#0E1014] hover:border-white/10"}`}>
                             <div className="flex items-start justify-between mb-3">
                                 <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/5"><Package className="w-5 h-5 text-slate-400" /></div>
@@ -138,6 +147,43 @@ export default function ModelRegistryModule({ state, setState, onAction }: any) 
                                 </div>
                             </div>
                         </div>
+
+                        {explanation && (
+                            <div className="p-6 rounded-2xl border border-blue-500/10 bg-[#0E1014] space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-[10px] font-black uppercase tracking-widest text-blue-400">SHAP Explainability</h3>
+                                    <select 
+                                        className="bg-black/50 border border-white/10 text-white text-[10px] uppercase font-bold p-1 rounded"
+                                        value={sortMode} onChange={e => setSortMode(e.target.value as any)}>
+                                        <option value="shap">Sort by |SHAP|</option>
+                                        <option value="drift">Sort by Drift Delta</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-3">
+                                    {(sortMode === "shap" ? explanation.feature_importances : explanation.top_drift_contributors || []).slice(0, 10).map((f: any, idx: number) => {
+                                        const featureName = f.feature;
+                                        const val = sortMode === "shap" ? f.mean_abs_shap : Math.abs(f.shap_delta_vs_baseline);
+                                        const displayVal = sortMode === "shap" ? `|SHAP|: ${val.toFixed(4)}` : `Δ: ${f.shap_delta_vs_baseline.toFixed(4)}`;
+                                        
+                                        // Max val across set for proportion
+                                        const maxSet = sortMode === "shap" ? explanation.feature_importances[0]?.mean_abs_shap : Math.abs(explanation.top_drift_contributors?.[0]?.shap_delta_vs_baseline || 1);
+                                        const w = Math.max((val / (maxSet || 1)) * 100, 2);
+
+                                        return (
+                                            <div key={idx} className="space-y-1">
+                                                <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
+                                                    <span className="text-slate-300">{featureName}</span>
+                                                    <span className="text-blue-300">{displayVal}</span>
+                                                </div>
+                                                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                                    <div className={`h-full ${sortMode === "shap" ? "bg-blue-500" : "bg-rose-500"}`} style={{ width: `${w}%` }}></div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
 
                         <div className="space-y-3">
                             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-600 ml-1">Version History</h3>

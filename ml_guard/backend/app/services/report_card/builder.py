@@ -63,7 +63,16 @@ class ReportCardBuilder:
     def compute_governance_score(self, aggregated_data: Dict[str, Any]) -> Tuple[float, str]:
         """
         Computes weighted total score and determines final verdict.
+        Also checks ModelExplanation to flag 'SHAP-Fairness Alert' if top drift is inside sensitive_features.
         """
+        # Fetch explanation
+        from app.db.models import ModelExplanation
+        explanation = self.db.query(ModelExplanation).filter(ModelExplanation.model_id == self.model_id).order_by(ModelExplanation.computed_at.desc()).first()
+        if explanation and explanation.top_drift_contributors:
+            top_drift = explanation.top_drift_contributors[0].get("feature")
+            sensitive_features = (self.model.metadata_json or {}).get("sensitive_features", [])
+            if top_drift in sensitive_features:
+                aggregated_data["shap_fairness_alert"] = True
         total = 0.0
         # Re-adjust weights if LLM safety is not applicable
         active_weights = self.WEIGHTS.copy()
