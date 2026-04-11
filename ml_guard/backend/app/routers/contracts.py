@@ -57,6 +57,8 @@ class ContractCreate(BaseModel):
     version: str = Field(default="1.0", description="Contract version label")
     description: Optional[str] = Field(default=None)
     promises: List[PromiseSchema] = Field(..., min_length=1, description="List of behavioral promises")
+    breach_grace_period_minutes: int = Field(default=5, description="Grace period before penalties apply")
+    breach_window_minutes: int = Field(default=60, description="Window for penalty calculation")
 
 
 class ValidateRequest(BaseModel):
@@ -90,6 +92,8 @@ async def create_contract(
         description=req.description,
         promises=[p.model_dump() for p in req.promises],
         is_active=True,
+        breach_grace_period_minutes=req.breach_grace_period_minutes,
+        breach_window_minutes=req.breach_window_minutes,
     )
     db.add(contract)
     await db.commit()
@@ -102,6 +106,8 @@ async def create_contract(
         "version": contract.version,
         "promises_count": len(req.promises),
         "status": "active",
+        "breach_grace_period_minutes": contract.breach_grace_period_minutes,
+        "breach_window_minutes": contract.breach_window_minutes,
         "created_at": contract.created_at.isoformat(),
     }
 
@@ -125,6 +131,8 @@ async def list_contracts(
             "version": c.version,
             "description": c.description,
             "is_active": c.is_active,
+            "breach_grace_period_minutes": c.breach_grace_period_minutes,
+            "breach_window_minutes": c.breach_window_minutes,
             "promises_count": len(c.promises or []),
             "promises": c.promises,
             "created_at": c.created_at.isoformat(),
@@ -216,20 +224,15 @@ async def get_breaches(
     ]
 
 
-@router.get("/contracts/{model_id}/breach-summary", tags=["contracts"])
+@router.get("/contracts/{contract_id}/breach-summary", tags=["contracts"])
 async def get_breach_summary(
-    model_id: str,
-    hours: int = Query(default=24, ge=1, le=720),
+    contract_id: str,
     db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
     """
-    Governance-linked breach summary for a model.
-
-    Returns:
-        total_breaches, by_severity, by_promise,
-        governance_penalty (pts deducted from live score).
+    Governance-linked breach summary for a contract.
     """
-    return _engine.get_breach_summary(db, model_id, hours)
+    return await _engine.get_contract_breach_summary(db, contract_id)
 
 
 @router.patch("/contracts/breaches/{breach_id}/resolve", tags=["contracts"])

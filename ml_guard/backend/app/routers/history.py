@@ -19,18 +19,20 @@ router = APIRouter()
 # SCAN HISTORY
 # ══════════════════════════
 @router.get("/history")
-def list_scans(
+async def list_scans(
     model_id: str = "",
     scan_type: str = "",
     limit: int = 50,
     db: AsyncSession = Depends(get_db)
 ):
-    q = db.query(ScanRecord).order_by(desc(ScanRecord.created_at))
+    stmt = select(ScanRecord).order_by(desc(ScanRecord.created_at))
     if model_id:
-        q = q.filter(ScanRecord.model_id == model_id)
+        stmt = stmt.filter(ScanRecord.model_id == model_id)
     if scan_type:
-        q = q.filter(ScanRecord.scan_type == scan_type)
-    scans = q.limit(limit).all()
+        stmt = stmt.filter(ScanRecord.scan_type == scan_type)
+    
+    scans = (await db.execute(stmt.limit(limit))).scalars().all()
+    
     return [
         {
             "id": str(s.id),
@@ -48,8 +50,8 @@ def list_scans(
 
 
 @router.get("/history/{scan_id}")
-def get_scan(scan_id: str, db: AsyncSession = Depends(get_db)):
-    s = db.get(ScanRecord, scan_id)
+async def get_scan(scan_id: str, db: AsyncSession = Depends(get_db)):
+    s = await db.get(ScanRecord, scan_id)
     if not s:
         raise HTTPException(404, "Scan record not found.")
     return {
@@ -70,14 +72,15 @@ def get_scan(scan_id: str, db: AsyncSession = Depends(get_db)):
 # GOVERNANCE SCORE TRAJECTORY
 # ══════════════════════════
 @router.get("/history/trajectory/{model_id}")
-def governance_trajectory(model_id: str, limit: int = 20, db: AsyncSession = Depends(get_db)):
-    scans = (
-        db.query(ScanRecord)
+async def governance_trajectory(model_id: str, limit: int = 20, db: AsyncSession = Depends(get_db)):
+    stmt = (
+        select(ScanRecord)
         .filter(ScanRecord.model_id == model_id)
         .order_by(ScanRecord.created_at)
         .limit(limit)
-        .all()
     )
+    scans = (await db.execute(stmt)).scalars().all()
+    
     points = [
         {"scan_id": str(s.id), "score": s.governance_score, "gate": s.gate_status, "ts": str(s.created_at)}
         for s in scans if s.governance_score is not None
@@ -96,13 +99,13 @@ def governance_trajectory(model_id: str, limit: int = 20, db: AsyncSession = Dep
 # MODEL COMPARISON
 # ══════════════════════════
 @router.get("/compare")
-def compare_scans(
+async def compare_scans(
     scan_a: str = Query(..., description="Scan ID A"),
     scan_b: str = Query(..., description="Scan ID B"),
     db: AsyncSession = Depends(get_db)
 ):
-    a = db.get(ScanRecord, scan_a)
-    b = db.get(ScanRecord, scan_b)
+    a = await db.get(ScanRecord, scan_a)
+    b = await db.get(ScanRecord, scan_b)
     if not a or not b:
         raise HTTPException(404, "One or both scan IDs not found.")
 
@@ -166,11 +169,13 @@ def compare_scans(
 # MODEL REGISTRY
 # ══════════════════════════
 @router.get("/models")
-def list_models(project_id: str = "", limit: int = 50, db: AsyncSession = Depends(get_db)):
-    q = db.query(Model).order_by(desc(Model.created_at))
+async def list_models(project_id: str = "", limit: int = 50, db: AsyncSession = Depends(get_db)):
+    stmt = select(Model).order_by(desc(Model.created_at))
     if project_id:
-        q = q.filter(Model.project_id == project_id)
-    models = q.limit(limit).all()
+        stmt = stmt.filter(Model.project_id == project_id)
+    
+    models = (await db.execute(stmt.limit(limit))).scalars().all()
+    
     return {
         "items": [
             {
@@ -201,11 +206,13 @@ async def find_by_fingerprint(fingerprint: str, db: AsyncSession = Depends(get_d
 # AUDIT LOGS
 # ══════════════════════════
 @router.get("/audit-logs")
-def list_audit_logs(org_id: str = "", limit: int = 100, db: AsyncSession = Depends(get_db)):
-    q = db.query(AuditLog).order_by(desc(AuditLog.created_at))
+async def list_audit_logs(org_id: str = "", limit: int = 100, db: AsyncSession = Depends(get_db)):
+    stmt = select(AuditLog).order_by(desc(AuditLog.created_at))
     if org_id:
-        q = q.filter(AuditLog.org_id == org_id)
-    logs = q.limit(limit).all()
+        stmt = stmt.filter(AuditLog.org_id == org_id)
+    
+    logs = (await db.execute(stmt.limit(limit))).scalars().all()
+    
     return [
         {
             "id": str(l.id), "action": l.action,

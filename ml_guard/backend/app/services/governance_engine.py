@@ -239,15 +239,14 @@ class GovernanceEngine:
         try:
             from app.services.contract_engine import ContractEngine
             _ce = ContractEngine()
-            breach_summary = _ce.get_breach_summary(db, model_id, hours=24)
+            breach_summary = await _ce.get_model_breach_summary(db, model_id)
             contract_penalty = breach_summary.get("governance_penalty", 0.0)
             if contract_penalty > 0:
                 live_score = max(0.0, live_score - contract_penalty)
-                n_breaches = breach_summary["total_breaches"]
+                n_breaches = breach_summary.get("total_breaches", 0)
                 recommendations.append(
-                    f"{n_breaches} contract breach(es) detected in last 24h "
-                    f"(-{contract_penalty:.1f} pts governance penalty). "
-                    f"Review /api/v1/contracts/{model_id}/breach-summary."
+                    f"{n_breaches} contract breach(es) detected across contracts "
+                    f"(-{contract_penalty:.1f} pts governance penalty)."
                 )
         except Exception as _ce_err:
             logger.debug(f"contract_penalty_skipped model_id={model_id} error={_ce_err}")

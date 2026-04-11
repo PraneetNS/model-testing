@@ -71,7 +71,7 @@ class ContractEngine:
         for contract in contracts:
             promises: List[Dict[str, Any]] = contract.promises or []
             for promise in promises:
-                breach = self._check_promise(
+                breach = await self._check_promise(
                     db=db,
                     model_id=model_id,
                     contract_id=str(contract.id),
@@ -84,6 +84,47 @@ class ContractEngine:
                 )
                 if breach is None:
                     continue
+
+                is_critical = False
+                if prediction_proba is not None and float(prediction_proba) < 0.1:
+                    is_critical = True
+                if promise.get("type") == "latency" and latency_ms is not None:
+                    if float(latency_ms) > 10.0 * float(promise.get("threshold", 0)):
+                        is_critical = True
+
+                breach["severity"] = promise.get("severity", "HIGH")
+                if is_critical:
+                    breach["severity"] = "CRITICAL"
+                else:
+                    grace_period_mins = getattr(contract, "breach_grace_period_minutes", 5)
+                    if grace_period_mins > 0:
+                        try:
+                            # To satisfy "2 breaches within the grace period result in zero score penalty",
+                            # we treat the grace period as a window starting from the FIRST breach in the recent period.
+                            # So any breach within grace_period_mins of the earliest breach is a WARNING.
+                            window_mins = getattr(contract, "breach_window_minutes", 60)
+                            cutoff_window = datetime.utcnow() - timedelta(minutes=window_mins)
+                            
+                            earliest_breach = (
+                                db.query(ContractBreach)
+                                .filter(
+                                    ContractBreach.contract_id == contract.id,
+                                    ContractBreach.created_at >= cutoff_window
+                                )
+                                .order_by(ContractBreach.created_at.asc())
+                                .first()
+                            )
+                            
+                            if earliest_breach is None:
+                                # This is the first breach!
+                                breach["severity"] = "WARNING"
+                            else:
+                                # Check if we are still within the grace period of the first breach
+                                time_since_first = (datetime.utcnow() - earliest_breach.created_at).total_seconds() / 60
+                                if time_since_first <= grace_period_mins:
+                                    breach["severity"] = "WARNING"
+                        except Exception as e:
+                            logger.warning(f"grace_period_check_failed err={e}")
 
                 breaches.append(breach)
 
@@ -98,79 +139,121 @@ class ContractEngine:
                         expected=str(promise.get("threshold", "")),
                         actual=str(breach.get("actual", "")),
                         prediction_log_id=log_id,
-                        severity=promise.get("severity", "HIGH"),
+                        severity=breach.get("severity", "HIGH"),
                         resolved=False,
                     )
                     db.add(record)
-                    await db.commit()
+                    import inspect
+                    res = db.commit()
+                    if inspect.isawaitable(res):
+                        await res
                 except Exception as e:
                     logger.warning(f"breach_persist_failed promise={promise.get('name')} error={e}")
                     try:
-                        db.rollback()
+                        res2 = db.rollback()
+                        if inspect.isawaitable(res2):
+                            await res2
                     except Exception:
                         pass
 
         return breaches
 
-    async def get_breach_summary(
+    async def get_model_breach_summary(
         self,
         db: AsyncSession,
         model_id: str,
-        hours: int = 24,
     ) -> Dict[str, Any]:
-        """
-        Aggregate contract breaches for a model over the last N hours.
-        Used by the governance engine to compute a score penalty.
+        """Aggregate breach summary across all contracts for a model."""
+        from app.db.models import ModelContract
+        contracts = db.query(ModelContract).filter(ModelContract.model_id == model_id).all()
+        total_breaches = 0
+        total_penalty = 0.0
+        by_severity = {}
+        for c in contracts:
+            c_sum = await self.get_contract_breach_summary(db, str(c.id))
+            total_breaches += c_sum.get("total_breaches_24h", 0)
+            total_penalty += c_sum.get("penalty_applied_today", 0.0)
+            for sev, count in c_sum.get("breaches_by_severity", {}).items():
+                by_severity[sev] = by_severity.get(sev, 0) + count
 
-        Penalty formula (capped at 20 pts):
-            CRITICAL breach  = 2.0 pts
-            HIGH breach      = 1.0 pts
-            MEDIUM breach    = 0.5 pts
-            LOW breach       = 0.0 pts
-        """
-        from app.db.models import ContractBreach
+        return {
+            "total_breaches": total_breaches,
+            "governance_penalty": total_penalty,
+            "by_severity": by_severity
+        }
 
-        cutoff = datetime.utcnow() - timedelta(hours=hours)
+    async def get_contract_breach_summary(
+        self,
+        db: AsyncSession,
+        contract_id: str,
+    ) -> Dict[str, Any]:
+        """Governance-linked breach summary for a contract."""
+        from app.db.models import ContractBreach, ModelContract
+
         try:
-            breaches = (
+            contract = db.query(ModelContract).filter(ModelContract.id == contract_id).first()
+            if not contract:
+                return {}
+            
+            window_mins = getattr(contract, "breach_window_minutes", 60)
+            cutoff_24h = datetime.utcnow() - timedelta(hours=24)
+            cutoff_window = datetime.utcnow() - timedelta(minutes=window_mins)
+            
+            breaches_24h = (
                 db.query(ContractBreach)
                 .filter(
-                    ContractBreach.model_id == model_id,
-                    ContractBreach.created_at >= cutoff,
+                    ContractBreach.contract_id == contract_id,
+                    ContractBreach.created_at >= cutoff_24h,
                 )
                 .all()
             )
         except Exception as e:
-            logger.warning(f"breach_summary_failed model_id={model_id} error={e}")
+            logger.warning(f"get_contract_breach_summary_failed contract_id={contract_id} error={e}")
             return {
-                "total_breaches": 0,
-                "by_severity": {},
-                "by_promise": {},
-                "governance_penalty": 0.0,
-                "window_hours": hours,
+                "total_breaches_24h": 0,
+                "breaches_by_severity": {},
+                "current_window_breaches": 0,
+                "penalty_applied_today": 0.0,
+                "grace_periods_used": 0,
             }
 
         by_severity: Dict[str, int] = {}
-        by_promise: Dict[str, int] = {}
-
-        for b in breaches:
+        current_window_breaches = 0
+        grace_periods_used = 0
+        
+        window_regular_count = 0
+        window_critical_count = 0
+        
+        for b in breaches_24h:
             sev = b.severity or "HIGH"
             by_severity[sev] = by_severity.get(sev, 0) + 1
-            by_promise[b.promise_name] = by_promise.get(b.promise_name, 0) + 1
+            
+            if sev == "WARNING":
+                grace_periods_used += 1
 
-        penalty = (
-            by_severity.get("CRITICAL", 0) * 2.0
-            + by_severity.get("HIGH", 0) * 1.0
-            + by_severity.get("MEDIUM", 0) * 0.5
-            + by_severity.get("LOW", 0) * 0.0
-        )
+            if b.created_at >= cutoff_window:
+                current_window_breaches += 1
+                if sev == "CRITICAL":
+                    window_critical_count += 1
+                elif sev != "WARNING": # WARNING has 0 penalty and shouldn't add to window count for sliding scale
+                    window_regular_count += 1
+
+        penalty = 0.0
+        if 1 <= window_regular_count <= 2:
+            penalty += window_regular_count * 1.0
+        elif 3 <= window_regular_count <= 5:
+            penalty += window_regular_count * 2.0
+        elif window_regular_count >= 6:
+            penalty += min(window_regular_count * 4.0, 20.0)
+
+        penalty += window_critical_count * 10.0
 
         return {
-            "total_breaches": len(breaches),
-            "by_severity": by_severity,
-            "by_promise": by_promise,
-            "governance_penalty": round(min(penalty, 20.0), 2),
-            "window_hours": hours,
+            "total_breaches_24h": len(breaches_24h),
+            "breaches_by_severity": by_severity,
+            "current_window_breaches": current_window_breaches,
+            "penalty_applied_today": round(penalty, 2),
+            "grace_periods_used": grace_periods_used,
         }
 
     # ── Promise evaluation ─────────────────────────────────────────────────────

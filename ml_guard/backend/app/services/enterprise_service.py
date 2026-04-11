@@ -18,64 +18,82 @@ async def get_enterprise_summary(db: AsyncSession, org_id: Optional[str] = None)
     Compute real-time enterprise-level summary metrics.
     All numbers come from the database — zero dummy data.
     """
+    from sqlalchemy import select, func
+
     # ─── Total Models ───
-    q_models = db.query(Model)
-    total_models = q_models.count()
+    total_models = (await db.execute(select(func.count(Model.id)))).scalar() or 0
 
     # ─── Total Scans ───
-    q_scans = db.query(ScanRecord)
-    total_scans = q_scans.count()
+    total_scans = (await db.execute(select(func.count(ScanRecord.id)))).scalar() or 0
 
-    # ─── High Risk Models ───
-    high_risk_scans = db.query(ScanRecord).filter(
-        ScanRecord.risk_level.in_(["HIGH", "CRITICAL"])
-    ).count()
+    # ─── High Risk Scans ───
+    high_risk_scans = (await db.execute(
+        select(func.count(ScanRecord.id))
+        .filter(ScanRecord.risk_level.in_(["HIGH", "CRITICAL"]))
+    )).scalar() or 0
 
     # ─── Unique high-risk model IDs ───
-    high_risk_model_ids = db.query(ScanRecord.model_id).filter(
-        ScanRecord.risk_level.in_(["HIGH", "CRITICAL"])
-    ).distinct().count()
+    high_risk_model_ids = (await db.execute(
+        select(func.count(func.distinct(ScanRecord.model_id)))
+        .filter(ScanRecord.risk_level.in_(["HIGH", "CRITICAL"]))
+    )).scalar() or 0
 
     # ─── Active Policies ───
-    active_policies_v = db.query(PolicyVersion).filter(PolicyVersion.is_active == True).count()
-    active_policies_r = db.query(PolicyRule).filter(PolicyRule.is_active == True).count()
+    active_policies_v = (await db.execute(
+        select(func.count(PolicyVersion.id)).filter(PolicyVersion.is_active == True)
+    )).scalar() or 0
+    active_policies_r = (await db.execute(
+        select(func.count(PolicyRule.id)).filter(PolicyRule.is_active == True)
+    )).scalar() or 0
     active_policies = active_policies_v + active_policies_r
 
     # ─── Total Policies ───
-    total_policies = db.query(PolicyVersion).count() + db.query(PolicyRule).count()
+    total_policies_v = (await db.execute(select(func.count(PolicyVersion.id)))).scalar() or 0
+    total_policies_r = (await db.execute(select(func.count(PolicyRule.id)))).scalar() or 0
+    total_policies = total_policies_v + total_policies_r
 
     # ─── Average Governance Score ───
-    avg_score_result = db.query(func.avg(ScanRecord.governance_score)).filter(
-        ScanRecord.governance_score.isnot(None)
-    ).scalar()
+    avg_score_result = (await db.execute(
+        select(func.avg(ScanRecord.governance_score)).filter(ScanRecord.governance_score.isnot(None))
+    )).scalar()
     avg_governance_score = round(float(avg_score_result), 2) if avg_score_result else 0.0
 
     # ─── Min / Max Governance Score ───
-    min_score = db.query(func.min(ScanRecord.governance_score)).filter(
-        ScanRecord.governance_score.isnot(None)
-    ).scalar()
-    max_score = db.query(func.max(ScanRecord.governance_score)).filter(
-        ScanRecord.governance_score.isnot(None)
-    ).scalar()
+    min_score = (await db.execute(
+        select(func.min(ScanRecord.governance_score)).filter(ScanRecord.governance_score.isnot(None))
+    )).scalar()
+    max_score = (await db.execute(
+        select(func.max(ScanRecord.governance_score)).filter(ScanRecord.governance_score.isnot(None))
+    )).scalar()
 
     # ─── Gate Status Distribution ───
-    gate_passed = db.query(ScanRecord).filter(ScanRecord.gate_status == "PASSED").count()
-    gate_warning = db.query(ScanRecord).filter(ScanRecord.gate_status == "WARNING").count()
-    gate_critical = db.query(ScanRecord).filter(ScanRecord.gate_status == "CRITICAL").count()
+    gate_passed = (await db.execute(
+        select(func.count(ScanRecord.id)).filter(ScanRecord.gate_status == "PASSED")
+    )).scalar() or 0
+    gate_warning = (await db.execute(
+        select(func.count(ScanRecord.id)).filter(ScanRecord.gate_status == "WARNING")
+    )).scalar() or 0
+    gate_critical = (await db.execute(
+        select(func.count(ScanRecord.id)).filter(ScanRecord.gate_status == "CRITICAL")
+    )).scalar() or 0
 
     # ─── Alert Stats ───
-    total_alert_rules = db.query(AlertRule).count()
-    total_alert_events = db.query(AlertEvent).count()
-    undelivered_alerts = db.query(AlertEvent).filter(AlertEvent.delivered == False).count()
+    total_alert_rules = (await db.execute(select(func.count(AlertRule.id)))).scalar() or 0
+    total_alert_events = (await db.execute(select(func.count(AlertEvent.id)))).scalar() or 0
+    undelivered_alerts = (await db.execute(
+        select(func.count(AlertEvent.id)).filter(AlertEvent.delivered == False)
+    )).scalar() or 0
 
     # ─── LLM Scans ───
-    total_llm_scans = db.query(LLMScanRecord).count()
+    total_llm_scans = (await db.execute(select(func.count(LLMScanRecord.id)))).scalar() or 0
 
     # ─── Organizations ───
-    total_orgs = db.query(Organization).count()
+    total_orgs = (await db.execute(select(func.count(Organization.id)))).scalar() or 0
 
     # ─── Recent Activity (last 10 audit log entries) ───
-    recent_logs = (await db.execute(select(AuditLog).order_by(desc(AuditLog.created_at)).limit(10))).scalars().all()
+    recent_logs = (await db.execute(
+        select(AuditLog).order_by(desc(AuditLog.created_at)).limit(10)
+    )).scalars().all()
     recent_activity = [
         {
             "id": str(l.id),
@@ -96,8 +114,8 @@ async def get_enterprise_summary(db: AsyncSession, org_id: Optional[str] = None)
         "active_policies": active_policies,
         "total_policies": total_policies,
         "average_governance_score": avg_governance_score,
-        "min_governance_score": round(float(min_score), 2) if min_score else None,
-        "max_governance_score": round(float(max_score), 2) if max_score else None,
+        "min_governance_score": round(float(min_score), 2) if min_score is not None else None,
+        "max_governance_score": round(float(max_score), 2) if max_score is not None else None,
         "gate_distribution": {
             "passed": gate_passed,
             "warning": gate_warning,
@@ -117,19 +135,22 @@ async def get_scans_paginated(
     sort_by: str = "created_at", sort_dir: str = "desc",
 ) -> dict:
     """Paginated scan history with sorting."""
-    q = db.query(ScanRecord)
-    total = q.count()
+    from sqlalchemy import select, func, desc, asc
+    
+    total = (await db.execute(select(func.count(ScanRecord.id)))).scalar() or 0
 
     # Sorting
     sort_col = getattr(ScanRecord, sort_by, ScanRecord.created_at)
+    stmt = select(ScanRecord)
     if sort_dir == "asc":
-        q = q.order_by(sort_col.asc())
+        stmt = stmt.order_by(asc(sort_col))
     else:
-        q = q.order_by(sort_col.desc())
+        stmt = stmt.order_by(desc(sort_col))
 
     # Pagination
     offset = (page - 1) * per_page
-    scans = q.offset(offset).limit(per_page).all()
+    stmt = stmt.offset(offset).limit(per_page)
+    scans = (await db.execute(stmt)).scalars().all()
 
     return {
         "total": total,
@@ -152,8 +173,8 @@ async def get_scans_paginated(
                 "fairness_risk_score": s.fairness_risk_score,
                 "bias_violation_flag": s.bias_violation_flag,
                 "artifact_url": s.artifact_url,
-                "training_dataset_url": s.training_dataset_url,
-                "validation_dataset_url": s.validation_dataset_url,
+                "training_dataset_url": getattr(s, "training_dataset_url", None),
+                "validation_dataset_url": getattr(s, "validation_dataset_url", None),
                 "created_at": str(s.created_at),
             }
             for s in scans
@@ -165,20 +186,25 @@ async def get_models_paginated(
     db: AsyncSession, page: int = 1, per_page: int = 20,
 ) -> dict:
     """Paginated model registry."""
-    q = db.query(Model).order_by(desc(Model.created_at))
-    total = q.count()
+    from sqlalchemy import select, func, desc
+    
+    total = (await db.execute(select(func.count(Model.id)))).scalar() or 0
     offset = (page - 1) * per_page
-    models = q.offset(offset).limit(per_page).all()
+    
+    stmt = select(Model).order_by(desc(Model.created_at)).offset(offset).limit(per_page)
+    models = (await db.execute(stmt)).scalars().all()
 
     # Enrich models with latest scan data
     items = []
     for m in models:
-        latest_scan = (
-            db.query(ScanRecord)
+        scan_stmt = (
+            select(ScanRecord)
             .filter(ScanRecord.model_id == str(m.id))
             .order_by(desc(ScanRecord.created_at))
-            .first()
+            .limit(1)
         )
+        latest_scan = (await db.execute(scan_stmt)).scalar_one_or_none()
+        
         items.append({
             "id": str(m.id),
             "name": m.name,
@@ -212,12 +238,19 @@ async def get_audit_logs_paginated(
     org_id: Optional[str] = None,
 ) -> dict:
     """Paginated audit log trail."""
-    q = db.query(AuditLog).order_by(desc(AuditLog.created_at))
+    from sqlalchemy import select, func, desc
+    
+    stmt_count = select(func.count(AuditLog.id))
     if org_id:
-        q = q.filter(AuditLog.org_id == org_id)
-    total = q.count()
+        stmt_count = stmt_count.filter(AuditLog.org_id == org_id)
+    total = (await db.execute(stmt_count)).scalar() or 0
+    
     offset = (page - 1) * per_page
-    logs = q.offset(offset).limit(per_page).all()
+    stmt = select(AuditLog).order_by(desc(AuditLog.created_at))
+    if org_id:
+        stmt = stmt.filter(AuditLog.org_id == org_id)
+    stmt = stmt.offset(offset).limit(per_page)
+    logs = (await db.execute(stmt)).scalars().all()
 
     return {
         "total": total,

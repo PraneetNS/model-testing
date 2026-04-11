@@ -1,0 +1,90 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.14.2, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend
+configfile: pyproject.toml
+plugins: anyio-4.12.1
+collecting ... collected 1 item
+
+tests/test_contract_scoring.py::test_grace_period_zero_penalty FAILED
+
+================================== FAILURES ===================================
+_______________________ test_grace_period_zero_penalty ________________________
+
+db = <sqlalchemy.orm.session.Session object at 0x000001B81EC6C6E0>
+
+    @pytest.mark.anyio
+    async def test_grace_period_zero_penalty(db: Session):
+        """
+        Assert that 2 breaches within the grace period result in zero score penalty.
+        """
+        contract_id = uuid.uuid4()
+        model_id = f"test_model_gp_{uuid.uuid4().hex[:6]}"
+        contract = ModelContract(
+            id=contract_id,
+            model_id=model_id,
+            name="Test Grace Period",
+            is_active=True,
+            breach_grace_period_minutes=5,
+            breach_window_minutes=60,
+            promises=[
+                {"name": "Output >= 0", "type": "output", "metric": "prediction", "operator": "gte", "threshold": 0.0, "severity": "HIGH"}
+            ]
+        )
+        db.add(contract)
+        db.commit()
+    
+        engine = ContractEngine()
+    
+        # First breach
+        breaches_1 = await engine.check_prediction(
+            db, model_id, prediction=-1, prediction_proba=0.9, features={}, latency_ms=10
+        )
+        assert len(breaches_1) == 1
+        assert breaches_1[0]["severity"] == "WARNING"
+    
+        # Second breach (within grace period)
+        breaches_2 = await engine.check_prediction(
+            db, model_id, prediction=-1, prediction_proba=0.9, features={}, latency_ms=10
+        )
+        assert len(breaches_2) == 1
+        assert breaches_2[0]["severity"] == "WARNING"
+    
+        # For penalty calculation, count breaches within the last breach_window_minutes.
+        summary = await engine.get_contract_breach_summary(db, str(contract_id))
+    
+        assert summary["current_window_breaches"] == 2
+>       assert summary["penalty_applied_today"] == 0.0
+E       assert 2.0 == 0.0
+
+tests\test_contract_scoring.py:67: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  app.services.contract_engine:contract_engine.py:148 breach_persist_failed promise=Output >= 0 error='NoneType' object can't be awaited
+WARNING  app.services.contract_engine:contract_engine.py:148 breach_persist_failed promise=Output >= 0 error='NoneType' object can't be awaited
+============================== warnings summary ===============================
+venv\Lib\site-packages\_pytest\config\__init__.py:1428
+  C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\venv\Lib\site-packages\_pytest\config\__init__.py:1428: PytestConfigWarning: Unknown config option: asyncio_mode
+  
+    self._warn_or_fail_if_strict(f"Unknown config option: {key}\n")
+
+tests/test_contract_scoring.py::test_grace_period_zero_penalty
+tests/test_contract_scoring.py::test_grace_period_zero_penalty
+  C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\app\services\contract_engine.py:106: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    cutoff_window = datetime.utcnow() - timedelta(minutes=window_mins)
+
+tests/test_contract_scoring.py::test_grace_period_zero_penalty
+  C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\app\services\contract_engine.py:123: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    time_since_first = (datetime.utcnow() - earliest_breach.created_at).total_seconds() / 60
+
+tests/test_contract_scoring.py::test_grace_period_zero_penalty
+  C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\app\services\contract_engine.py:194: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    cutoff_24h = datetime.utcnow() - timedelta(hours=24)
+
+tests/test_contract_scoring.py::test_grace_period_zero_penalty
+  C:\Users\savan\OneDrive\Desktop\real_Fireflink_ML\ml_guard\backend\app\services\contract_engine.py:195: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    cutoff_window = datetime.utcnow() - timedelta(minutes=window_mins)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_contract_scoring.py::test_grace_period_zero_penalty - asser...
+======================== 1 failed, 6 warnings in 0.74s ========================

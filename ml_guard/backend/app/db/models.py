@@ -778,6 +778,8 @@ class ModelContract(Base):
     description = Column(Text, nullable=True)
     promises    = Column(PortableJSON, nullable=False)  # list[PromiseDict]
     is_active   = Column(Boolean, default=True)
+    breach_grace_period_minutes = Column(Integer, default=5)
+    breach_window_minutes       = Column(Integer, default=60)
     created_at  = Column(DateTime, default=utcnow)
     created_by  = Column(UUID(), ForeignKey("users.id"), nullable=True)
 

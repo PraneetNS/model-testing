@@ -67,13 +67,13 @@ async def _log(db, org_id, user_id, action, resource_type=None, resource_id=None
 # ══════════════════════════════════════════════════════
 
 @router.get("/enterprise/summary")
-def enterprise_summary(org_id: str = "", db: AsyncSession = Depends(get_db)):
+async def enterprise_summary(org_id: str = "", db: AsyncSession = Depends(get_db)):
     """Real-time enterprise summary powered by actual database records."""
-    return get_enterprise_summary(db, org_id or None)
+    return await get_enterprise_summary(db, org_id or None)
 
 
 @router.get("/enterprise/scans")
-def enterprise_scans(
+async def enterprise_scans(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     sort_by: str = Query("created_at"),
@@ -81,30 +81,34 @@ def enterprise_scans(
     db: AsyncSession = Depends(get_db),
 ):
     """Paginated, sortable scan history."""
-    return get_scans_paginated(db, page, per_page, sort_by, sort_dir)
+    return await get_scans_paginated(db, page, per_page, sort_by, sort_dir)
 
 
 @router.get("/enterprise/models")
-def enterprise_models(
+async def enterprise_models(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
 ):
     """Paginated model registry with latest scan data."""
-    return get_models_paginated(db, page, per_page)
+    return await get_models_paginated(db, page, per_page)
 
 
 @router.get("/enterprise/policies")
-def enterprise_policies(org_id: str = "", db: AsyncSession = Depends(get_db)):
+async def enterprise_policies(org_id: str = "", db: AsyncSession = Depends(get_db)):
     """All policies — both PolicyVersion and PolicyRule models."""
     from sqlalchemy import desc as sql_desc
-    q_version = db.query(PolicyVersion).order_by(sql_desc(PolicyVersion.created_at))
-    q_rule = db.query(PolicyRule).order_by(sql_desc(PolicyRule.created_at))
+    
+    stmt_v = select(PolicyVersion).order_by(sql_desc(PolicyVersion.created_at)).limit(50)
+    stmt_r = select(PolicyRule).order_by(sql_desc(PolicyRule.created_at)).limit(50)
+    
     if org_id:
-        q_version = q_version.filter(PolicyVersion.org_id == org_id)
-        q_rule = q_rule.filter(PolicyRule.org_id == org_id)
-    versions = q_version.limit(50).all()
-    rules = q_rule.limit(50).all()
+        stmt_v = stmt_v.filter(PolicyVersion.org_id == org_id)
+        stmt_r = stmt_r.filter(PolicyRule.org_id == org_id)
+        
+    versions = (await db.execute(stmt_v)).scalars().all()
+    rules = (await db.execute(stmt_r)).scalars().all()
+    
     return [
         {
             "id": str(p.id), "name": p.name,
@@ -120,22 +124,22 @@ def enterprise_policies(org_id: str = "", db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/enterprise/audit-logs")
-def enterprise_audit_logs(
+async def enterprise_audit_logs(
     page: int = Query(1, ge=1),
     per_page: int = Query(30, ge=1, le=100),
     org_id: str = "",
     db: AsyncSession = Depends(get_db),
 ):
     """Paginated audit log trail."""
-    return get_audit_logs_paginated(db, page, per_page, org_id or None)
+    return await get_audit_logs_paginated(db, page, per_page, org_id or None)
 
 
 @router.get("/health/db")
-def health_db(db: AsyncSession = Depends(get_db)):
+async def health_db(db: AsyncSession = Depends(get_db)):
     """Check database connection and type (Postgres/SQLite/Neon)."""
     try:
         from sqlalchemy import text
-        db.execute(text("SELECT 1"))
+        await db.execute(text("SELECT 1"))
         diag = str(db.bind.url)
         db_type = "postgres" if "postgres" in diag else "sqlite"
         is_neon = "neon" in diag

@@ -36,17 +36,17 @@ class PolicyCreate(BaseModel):
 
 
 @router.get("/policies")
-def list_policies(org_id: str = "", db: AsyncSession = Depends(get_db)):
+async def list_policies(org_id: str = "", db: AsyncSession = Depends(get_db)):
     # Also include the new PolicyRule model in the list
-    q_version = db.query(PolicyVersion).order_by(desc(PolicyVersion.created_at))
-    q_rule    = db.query(PolicyRule).order_by(desc(PolicyRule.created_at))
+    stmt_v = select(PolicyVersion).order_by(desc(PolicyVersion.created_at)).limit(25)
+    stmt_r = select(PolicyRule).order_by(desc(PolicyRule.created_at)).limit(25)
     
     if org_id:
-        q_version = q_version.filter(PolicyVersion.org_id == org_id)
-        q_rule    = q_rule.filter(PolicyRule.org_id == org_id)
+        stmt_v = stmt_v.filter(PolicyVersion.org_id == org_id)
+        stmt_r = stmt_r.filter(PolicyRule.org_id == org_id)
         
-    versions = q_version.limit(25).all()
-    rules    = q_rule.limit(25).all()
+    versions = (await db.execute(stmt_v)).scalars().all()
+    rules = (await db.execute(stmt_r)).scalars().all()
     
     return [
         {
@@ -60,14 +60,17 @@ def list_policies(org_id: str = "", db: AsyncSession = Depends(get_db)):
 
 @router.post("/policies")
 async def create_policy(body: PolicyCreate, db: AsyncSession = Depends(get_db)):
+    from sqlalchemy import func
     # Merge with defaults — any missing keys get default values
     full_config = {**DEFAULT_POLICY_CONFIG, **body.config}
 
     # Auto-version: count existing policies with the same name + org
-    existing = db.query(PolicyVersion).filter(
-        PolicyVersion.name == body.name,
-        PolicyVersion.org_id == (body.org_id or None),
-    ).count()
+    existing = (await db.execute(
+        select(func.count(PolicyVersion.id)).filter(
+            PolicyVersion.name == body.name,
+            PolicyVersion.org_id == (body.org_id or None),
+        )
+    )).scalar() or 0
 
     policy = PolicyVersion(
         org_id=body.org_id or None,
@@ -80,11 +83,12 @@ async def create_policy(body: PolicyCreate, db: AsyncSession = Depends(get_db)):
     db.add(policy)
 
     # Deactivate previous versions with same name
-    old = db.query(PolicyVersion).filter(
+    old_stmt = select(PolicyVersion).filter(
         PolicyVersion.name == body.name,
         PolicyVersion.org_id == (body.org_id or None),
         PolicyVersion.id != policy.id,
-    ).all()
+    )
+    old = (await db.execute(old_stmt)).scalars().all()
     for o in old:
         o.is_active = False
 
@@ -107,13 +111,13 @@ async def create_policy(body: PolicyCreate, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/policies/active")
-def get_active_policy(org_id: str = "", db: AsyncSession = Depends(get_db)):
+async def get_active_policy(org_id: str = "", db: AsyncSession = Depends(get_db)):
     # 1. First try the new PolicyRule model
-    q_rule = db.query(PolicyRule).filter(PolicyRule.is_active == True)
+    stmt_rule = select(PolicyRule).filter(PolicyRule.is_active == True)
     if org_id:
-        q_rule = q_rule.filter(PolicyRule.org_id == org_id)
+        stmt_rule = stmt_rule.filter(PolicyRule.org_id == org_id)
     
-    active_rule = q_rule.order_by(desc(PolicyRule.created_at)).first()
+    active_rule = (await db.execute(stmt_rule.order_by(desc(PolicyRule.created_at)).limit(1))).scalar_one_or_none()
     if active_rule:
         merged_config = {**DEFAULT_POLICY_CONFIG, **active_rule.rules_json}
         return {
@@ -125,10 +129,10 @@ def get_active_policy(org_id: str = "", db: AsyncSession = Depends(get_db)):
         }
 
     # 2. Fallback to older PolicyVersion
-    q_ver = db.query(PolicyVersion).filter(PolicyVersion.is_active == True)
+    stmt_ver = select(PolicyVersion).filter(PolicyVersion.is_active == True)
     if org_id:
-        q_ver = q_ver.filter(PolicyVersion.org_id == org_id)
-    policy = q_ver.order_by(desc(PolicyVersion.created_at)).first()
+        stmt_ver = stmt_ver.filter(PolicyVersion.org_id == org_id)
+    policy = (await db.execute(stmt_ver.order_by(desc(PolicyVersion.created_at)).limit(1))).scalar_one_or_none()
     
     if not policy:
         return {
@@ -145,12 +149,15 @@ def get_active_policy(org_id: str = "", db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/policies/{policy_id}")
-def get_policy(policy_id: str, db: AsyncSession = Depends(get_db)):
-    p = db.get(PolicyVersion, policy_id)
+async def get_policy(policy_id: str, db: AsyncSession = Depends(get_db)):
+    p = await db.get(PolicyVersion, policy_id)
+    if not p:
+        # Try PolicyRule
+        p = await db.get(PolicyRule, policy_id)
     if not p:
         raise HTTPException(404, "Policy not found.")
     return {
-        "id": str(p.id), "name": p.name, "version": p.version,
-        "config": p.config, "is_active": p.is_active,
-        "notes": p.notes, "created_at": str(p.created_at),
+        "id": str(p.id), "name": p.name, "version": getattr(p, "version", "N/A"),
+        "config": getattr(p, "config", getattr(p, "rules_json", {})), "is_active": p.is_active,
+        "notes": getattr(p, "notes", ""), "created_at": str(p.created_at),
     }
