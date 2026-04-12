@@ -16,6 +16,7 @@ alembic
 pandas
 numpy
 scikit-learn
+umap-learn
 scipy
 joblib
 shap>=0.44

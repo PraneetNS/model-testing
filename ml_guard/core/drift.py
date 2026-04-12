@@ -1,7 +1,13 @@
 import numpy as np
 import pandas as pd
 from scipy import stats
+from sklearn.metrics.pairwise import cosine_similarity, rbf_kernel
 from .exceptions import MetricComputationError
+from enum import Enum
+
+class DriftType(str, Enum):
+    TABULAR = "tabular"
+    EMBEDDING = "embedding"
 
 def compute_psi(expected, actual, buckets=10):
     """PSI = Σ (actual_i - expected_i) * ln(actual_i / expected_i)"""
@@ -128,3 +134,58 @@ def compute_feature_drift_report(X_train: pd.DataFrame, X_val: pd.DataFrame, psi
     sorted_by_jsd = sorted(report.items(), key=lambda x: x[1]["JSD"], reverse=True)
     top5 = [col for col, _ in sorted_by_jsd[:5]]
     return report, top5
+
+def mmd_rbf(X, Y, gamma=None):
+    if len(X) == 0 or len(Y) == 0:
+        return 0.0
+    XX = rbf_kernel(X, X, gamma)
+    YY = rbf_kernel(Y, Y, gamma)
+    XY = rbf_kernel(X, Y, gamma)
+    return XX.mean() + YY.mean() - 2 * XY.mean()
+
+def compute_embedding_drift(reference_embeddings, current_embeddings):
+    try:
+        import umap
+        HAS_UMAP = True
+    except ImportError:
+        HAS_UMAP = False
+
+    reference_embeddings = np.array(reference_embeddings)
+    current_embeddings = np.array(current_embeddings)
+    
+    if len(reference_embeddings) == 0 or len(current_embeddings) == 0:
+        return {"cosine_drift": 0.0, "mmd_score": 0.0, "drift_detected": False, "umap_snapshot": {"reference_points": [], "current_points": []}}
+
+    ref_centroid = np.mean(reference_embeddings, axis=0).reshape(1, -1)
+    cos_sim = cosine_similarity(ref_centroid, current_embeddings)
+    cosine_drift = float(1.0 - np.mean(cos_sim))
+
+    mmd_score = float(mmd_rbf(reference_embeddings, current_embeddings))
+
+    umap_snapshot = {"reference_points": [], "current_points": []}
+    if HAS_UMAP and reference_embeddings.shape[0] > 0 and current_embeddings.shape[0] > 0:
+        n_ref = min(250, len(reference_embeddings))
+        n_cur = min(250, len(current_embeddings))
+        
+        ref_idx = np.random.choice(len(reference_embeddings), n_ref, replace=False)
+        cur_idx = np.random.choice(len(current_embeddings), n_cur, replace=False)
+        
+        combined_embeddings = np.vstack([
+            reference_embeddings[ref_idx], 
+            current_embeddings[cur_idx]
+        ])
+        
+        reducer = umap.UMAP(n_components=2, random_state=42)
+        reduced = reducer.fit_transform(combined_embeddings)
+        
+        umap_snapshot["reference_points"] = reduced[:n_ref].tolist()
+        umap_snapshot["current_points"] = reduced[n_ref:].tolist()
+
+    drift_detected = bool(cosine_drift > 0.05 or mmd_score > 0.1)
+
+    return {
+        "cosine_drift": cosine_drift,
+        "mmd_score": mmd_score,
+        "drift_detected": drift_detected,
+        "umap_snapshot": umap_snapshot
+    }

@@ -849,3 +849,17 @@ class ContractBreach(Base):
             f"<ContractBreach(id={self.id}, model_id={self.model_id!r}, "
             f"promise={self.promise_name!r}, severity={self.severity})>"
         )
+
+
+class EmbeddingBatch(Base):
+    """Stores batches of embeddings for model drift detection."""
+    __tablename__ = "embedding_batches"
+    
+    id = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    model_id = Column(String(255), nullable=False, index=True)
+    batch_id = Column(String(255), nullable=False, index=True)
+    embeddings = Column(PortableJSON, nullable=False)
+    timestamp = Column(DateTime, default=utcnow, index=True)
+
+    def __repr__(self):
+        return f"<EmbeddingBatch(id={self.id}, model_id={self.model_id}, batch_id={self.batch_id})>"

@@ -12,6 +12,51 @@ import {
 } from "recharts";
 
 
+function UmapScatterPlot({ data }: { data: { reference_points: number[][], current_points: number[][] } }) {
+    const canvasRef = React.useRef<HTMLCanvasElement>(null);
+    React.useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        
+        const width = canvas.width;
+        const height = canvas.height;
+        ctx.clearRect(0, 0, width, height);
+        
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        const allPoints = [...(data.reference_points || []), ...(data.current_points || [])];
+        if (allPoints.length === 0) return;
+        
+        allPoints.forEach(([x, y]) => {
+            if (x < minX) minX = x; if (x > maxX) maxX = x;
+            if (y < minY) minY = y; if (y > maxY) maxY = y;
+        });
+        
+        const padding = 15;
+        const scaleX = (width - padding * 2) / (maxX - minX || 1);
+        const scaleY = (height - padding * 2) / (maxY - minY || 1);
+        
+        const drawPoints = (pts: number[][], color: string) => {
+            ctx.fillStyle = color;
+            pts.forEach(([x, y]) => {
+                const cx = padding + (x - minX) * scaleX;
+                const cy = padding + (y - minY) * scaleY;
+                ctx.beginPath();
+                ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        };
+        
+        drawPoints(data.reference_points || [], '#4ade80');
+        drawPoints(data.current_points || [], '#f97316');
+    }, [data]);
+    
+    return <canvas ref={canvasRef} width={800} height={300} className="w-full h-[300px] rounded-xl bg-black/20" />;
+}
+
+
+
 // ─── Primitives ───────────────────────────────────────────────────────────────
 const Badge = ({ label, variant = "neutral" }: { label: string; variant?: string }) => {
     const cls = variant === "critical" ? "bg-red-500/10 text-red-400 border-red-500/30"
@@ -171,6 +216,7 @@ export default function ObservabilityModule({ state, setState, onAction }: any) 
     const [modelId, setModelId] = useState(state.modelId || "");
     const [overview, setOverview] = useState<any>(null);
     const [driftReport, setDriftReport] = useState<any>(null);
+    const [embeddingReport, setEmbeddingReport] = useState<any>(null);
     const [perfTimeline, setPerfTimeline] = useState<any[]>([]);
     const [selectedFeature, setSelectedFeature] = useState<string | null>(null);
     const [feedData, setFeedData] = useState<any[]>([]);
@@ -206,14 +252,16 @@ export default function ObservabilityModule({ state, setState, onAction }: any) 
         if (!modelId) return;
         setLoading(true);
         try {
-            const [ov, dr, pt] = await Promise.allSettled([
+            const [ov, dr, pt, er] = await Promise.allSettled([
                 apiFetch(`/api/v1/observe/${modelId}/overview`).then(r => r.json()),
                 apiFetch(`/api/v1/observe/drift/${modelId}/report`).then(r => r.json()),
                 apiFetch(`/api/v1/observe/performance/${modelId}/timeline?limit=24`).then(r => r.json()),
+                apiFetch(`/api/v1/drift/${modelId}/embedding-report`).then(r => r.json())
             ]);
             if (ov.status === "fulfilled") setOverview(ov.value);
             if (dr.status === "fulfilled") setDriftReport(dr.value);
             if (pt.status === "fulfilled") setPerfTimeline(pt.value?.timeline || []);
+            if (er.status === "fulfilled" && !er.value.detail) setEmbeddingReport(er.value); else setEmbeddingReport(null);
         } finally {
             setLoading(false);
         }
@@ -413,6 +461,18 @@ export default function ObservabilityModule({ state, setState, onAction }: any) 
                             </button>
                         </div>
                     </div>
+
+                    {embeddingReport && embeddingReport.umap_snapshot && (
+                        <div className="bg-[#0E1014] border border-white/[0.06] rounded-2xl p-5 mb-6">
+                            <h3 className="text-sm font-bold text-white mb-2">Embedding Drift UMAP</h3>
+                            <div className="flex justify-between items-center mb-4 text-xs font-mono">
+                                <span className="text-emerald-400">Baseline</span>
+                                <span className="text-slate-400">cosine: {embeddingReport.cosine_drift?.toFixed(4)} | mmd: {embeddingReport.mmd_score?.toFixed(4)}</span>
+                                <span className="text-orange-400">Current</span>
+                            </div>
+                            <UmapScatterPlot data={embeddingReport.umap_snapshot} />
+                        </div>
+                    )}
 
                     {driftReport?.feature_results?.length > 0 ? (
                         <FeatureDriftTable features={driftReport.feature_results} onSelect={setSelectedFeature} />
