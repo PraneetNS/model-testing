@@ -103,6 +103,9 @@ class APIKey(Base):
     label       = Column(String(255), nullable=False)
     scopes      = Column(PortableJSON, default=list)  # ["audit", "behavior", "monitor"]
     is_active   = Column(Boolean, default=True)
+    expires_at  = Column(DateTime, nullable=True)
+    rate_limit_rpm = Column(Integer, default=120)
+    request_count = Column(BigInteger, default=0)
     created_at  = Column(DateTime, default=utcnow)
     last_used   = Column(DateTime, nullable=True)
 
@@ -236,12 +239,14 @@ class AuditLog(Base):
     __tablename__ = "audit_logs"
     id          = Column(UUID(), primary_key=True, default=uuid.uuid4)
     org_id      = Column(UUID(), ForeignKey("organizations.id", ondelete="CASCADE"), index=True, nullable=True)
-    user_id     = Column(UUID(), ForeignKey("users.id"), nullable=True)
+    actor_key_id = Column(UUID(), ForeignKey("api_keys.id", ondelete="SET NULL"), nullable=True)
+    actor_ip    = Column(String(45), nullable=True)
     action      = Column(String(100), nullable=False, index=True)  # model.upload, scan.run, policy.update, etc.
     resource_type = Column(String(50), nullable=True)  # model, policy, project, etc.
     resource_id = Column(String(64), nullable=True)
+    payload_hash = Column(String(64), nullable=True)
+    result      = Column(String(20), nullable=True)
     details     = Column(PortableJSON, nullable=True)
-    ip_address  = Column(String(45), nullable=True)
     created_at  = Column(DateTime, default=utcnow)
 
 
@@ -1096,4 +1101,16 @@ class NotificationConfig(Base):
     
     def __repr__(self):
         return f"<NotificationConfig(model_id={self.model_id})>"
+
+class SecurityAlert(Base):
+    """Storage for detected injection attempts and security anomalies."""
+    __tablename__ = "alerts"
+    id          = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    timestamp   = Column(DateTime, default=utcnow, index=True)
+    alert_type  = Column(String(100), nullable=False) # injection_attempt
+    endpoint    = Column(String(255), nullable=True)
+    payload_hash = Column(String(64), nullable=True)
+    ip          = Column(String(45), nullable=True)
+    key_id      = Column(UUID(), ForeignKey("api_keys.id", ondelete="SET NULL"), nullable=True)
+    details     = Column(PortableJSON, nullable=True)
 

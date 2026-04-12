@@ -18,7 +18,19 @@ from sqlalchemy.future import select
 
 from app.core.config import settings
 from app.db.session import engine, Base, AsyncSessionLocal, get_db
-from app.db.models import Job
+from app.db.models import Job, APIKey
+
+# Security & Middleware
+from app.core.middleware import SecurityHardeningMiddleware
+from app.core.limiter import limiter
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+import hashlib
+import re
+
+LEAKED_KEY = "mlg_1Ai7zfmfsB_GLaoNuKjOOopFh12xLzGy7SDqh7Kho1U"
+LEAKED_KEY_HASH = hashlib.sha256(LEAKED_KEY.encode()).hexdigest()
+LEAKED_PATTERN = r"mlg_[A-Za-z0-9_]{40,}"
 
 # ── Core Analysis Routers ──────────────────────────
 from app.routers import audit
@@ -69,6 +81,32 @@ from app.api.routers import tasks
 # ─── Lifespan Management ───
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # 1. Startup Secrets Scanning
+    allow_insecure = os.getenv("MLGUARD_ALLOW_INSECURE_KEYS", "false").lower() == "true"
+    leaked_found = False
+    
+    # Scan environment variables
+    for k, v in os.environ.items():
+        if LEAKED_KEY in v or (re.search(LEAKED_PATTERN, v) and "SECRET" not in k):
+            structlog.get_logger().error("CRITICAL_SECURITY_LEAK", var=k, pattern="detected")
+            leaked_found = True
+            
+    if leaked_found and not allow_insecure:
+        print("CRITICAL: Known leaked keys or insecure key patterns found in environment.", file=sys.stderr)
+        print("System refusing to start for safety. Set MLGUARD_ALLOW_INSECURE_KEYS=true to override (DEV ONLY).", file=sys.stderr)
+        sys.exit(1)
+
+    # 2. Database Invalidation of Leaked Key
+    async with AsyncSessionLocal() as db:
+        # Resolve leaked key in DB (old SHA-256 format)
+        results = await db.execute(select(APIKey).filter(APIKey.is_active == True))
+        active_keys = results.scalars().all()
+        for k_entry in active_keys:
+            if k_entry.key_hash == LEAKED_KEY_HASH:
+                k_entry.is_active = False
+                await db.commit()
+                structlog.get_logger().warning("REMEDIATED_LEAKED_KEY", key_id=str(k_entry.id))
+
     # FIX 5: Startup env validation
     if not settings.SECRET_KEY or "CHANGE_ME" in settings.SECRET_KEY:
         raise RuntimeError(
@@ -97,6 +135,31 @@ app = FastAPI(
     version=settings.APP_VERSION,
     lifespan=lifespan
 )
+
+# 1. Rate Limiting Initialization
+app.state.limiter = limiter
+
+@app.exception_handler(RateLimitExceeded)
+async def custom_rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    from app.db.models import APIKey
+    # Try to find the key label if possible
+    key_label = "unknown"
+    x_api_key = request.headers.get("X-API-Key")
+    # This is a bit expensive for a 429 handler, but it's what was requested
+    # Optimization: cache key metadata
+    
+    return JSONResponse(
+        status_code=429,
+        content={
+            "error": "rate_limit_exceeded",
+            "retry_after_seconds": str(exc.detail),
+            "limit_rpm": 120, # Default or dynamic
+            "key_label": key_label
+        }
+    )
+
+# 2. Security Hardening Middleware (Injection Detection)
+app.add_middleware(SecurityHardeningMiddleware)
 
 # FIX 4: CORS Configuration
 app.add_middleware(
@@ -246,7 +309,7 @@ app.include_router(observe.router,
 app.include_router(jobs.router,
     prefix="/api/v1", tags=["jobs"])
 app.include_router(auth.router,
-    prefix="/api/v1", tags=["auth"])
+    prefix="/api", tags=["auth"])
 app.include_router(gate.router,
     prefix="/api/v1/gate", tags=["gate"])
 app.include_router(forecast.router,

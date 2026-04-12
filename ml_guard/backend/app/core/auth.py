@@ -49,43 +49,68 @@ async def get_auth_context(
 ) -> AuthContext:
     """
     Resolve API credentials from the X-API-Key header.
-    Validates the key against the SHA-256 hash in the database.
+    Validates the key using bcrypt hash comparison.
     """
     if not x_api_key:
-        # Check for fallback org for local dev if desired, but here we enforce key
         raise HTTPException(
             status_code=401,
             detail="X-API-Key header required for access to protected resources."
         )
     
     from app.db.models import APIKey, utcnow
+    from app.core.security import verify_password
     
-    # Hash the provided raw key for comparison
-    key_hash = hashlib.sha256(x_api_key.encode()).hexdigest()
+    # We can't query by hash directly with bcrypt as easily as SHA-256 for a single lookup 
+    # unless we use indices which bcrypt doesn't support well for searching.
+    # However, usually we have a label or we prefix the key.
+    # The current key format is 'mlg_<32_bytes_urlsafe>'.
+    # For performance, usually one would store a 'prefix' or 'id' part of the key.
+    # Since we don't have that yet, we have to fetch all active keys or find another way.
+    # TO OPTIMIZE: Store a public component (e.g. mlg_abc123_xyz...) where 'abc123' is public.
     
-    # Lookup active key
-    api_key = db.query(APIKey).filter(
-        APIKey.key_hash == key_hash,
-        APIKey.is_active == True
-    ).first()
+    # For now, let's fetch active keys and compare. This is suboptimal.
+    # BETTER: Let's assume most keys are new. 
     
-    if not api_key:
-        logger.warning("auth_failed_invalid_key", hash=key_hash[:16])
+    results = await db.execute(select(APIKey).filter(APIKey.is_active == True))
+    api_keys = results.scalars().all()
+    
+    found_key = None
+    for key_record in api_keys:
+        # Check if it looks like a bcrypt hash (starts with $2b$ or $2a$)
+        if key_record.key_hash.startswith("$2") and verify_password(x_api_key, key_record.key_hash):
+            found_key = key_record
+            break
+        # Fallback for old SHA-256 keys (migration period)
+        elif not key_record.key_hash.startswith("$2"):
+            import hashlib
+            old_hash = hashlib.sha256(x_api_key.encode()).hexdigest()
+            if old_hash == key_record.key_hash:
+                found_key = key_record
+                break
+    
+    if not found_key:
+        logger.warning("auth_failed_invalid_key")
         raise HTTPException(
             status_code=401,
-            detail="Invalid or inactive API key. Please check your credentials."
+            detail="Invalid or inactive API key."
         )
+
+    # Check expiry
+    if found_key.expires_at and found_key.expires_at < utcnow():
+        raise HTTPException(status_code=401, detail="API key expired.")
     
-    # Update last_used for auditing
-    api_key.last_used = utcnow()
+    # Update last_used and request_count
+    found_key.last_used = utcnow()
+    if hasattr(found_key, 'request_count'):
+        found_key.request_count += 1
+    
     await db.commit()
     
-    # Return context. Note: API keys currently act as org-level admins.
     return AuthContext(
-        user_id=None, # API Key auth is typically system/org level
-        org_id=api_key.org_id,
-        role="admin", # Elevated role for seeded dev key
-        scopes=api_key.scopes or []
+        user_id=None,
+        org_id=found_key.org_id,
+        role="admin" if "admin" in (found_key.scopes or []) else "viewer",
+        scopes=found_key.scopes or []
     )
 
 def require_role(role: str = "viewer"):

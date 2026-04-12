@@ -12,7 +12,39 @@ from app.db.session import get_db
 from app.db.models import (
     Model, ModelVersion, Deployment, Environment, AuditLog, utcnow
 )
-from app.core.auth import AuthContext, require_role, log_action
+from pydantic import BaseModel, Field, field_validator
+import re
+
+class ModelRegisterSchema(BaseModel):
+    model_name: str = Field(..., min_length=1, max_length=128)
+    description: Optional[str] = ""
+    owner: Optional[str] = ""
+
+    @field_validator("model_name")
+    @classmethod
+    def validate_filename(cls, v: str) -> str:
+        if not re.match(r"^[a-zA-Z0-9_\-\.]{1,128}$", v):
+            raise ValueError("model_name must match [a-zA-Z0-9_\-\.]{1,128}")
+        if any(char in v for char in ";&|><$()"):
+            raise ValueError("Shell metacharacters not allowed in model_name")
+        return v
+
+class ModelVersionSchema(BaseModel):
+    model_id: str
+    framework: Optional[str] = ""
+    artifact_url: Optional[str] = ""
+    parameters_count: Optional[int] = None
+    training_dataset: Optional[str] = ""
+    governance_score: Optional[float] = None
+    risk_class: Optional[str] = None
+    description: Optional[str] = ""
+
+    @field_validator("artifact_url")
+    @classmethod
+    def validate_url(cls, v: str) -> str:
+        if v and any(char in v for char in ";&|><$()"):
+            raise ValueError("Shell metacharacters not allowed in artifact_url")
+        return v
 
 router = APIRouter()
 
@@ -22,18 +54,17 @@ router = APIRouter()
 # ═══════════════════════════════════════════════
 @router.post("/models/register")
 async def register_model(
-    model_name: str,
-    description: str = "",
-    owner: str = "",
+    data: ModelRegisterSchema,
     db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("ml_engineer")),
 ):
     """Register a new model in the registry."""
     # Check if already exists in org
-    existing = db.query(Model).filter(
-        Model.name == model_name,
-        Model.project_id.isnot(None),
-    ).first()
+    existing = (await db.execute(select(Model).filter(
+        Model.name == data.model_name,
+        Model.project_id.isnot(None)
+    ))).scalars().first()
+    
     if existing:
         return {
             "model_id": str(existing.id),
@@ -42,15 +73,15 @@ async def register_model(
         }
 
     model = Model(
-        name=model_name,
-        provider=owner or "ML Guard Registry",
-        metadata_json={"description": description, "owner": owner, "registered_via": "api"},
+        name=data.model_name,
+        provider=data.owner or "ML Guard Registry",
+        metadata_json={"description": data.description, "owner": data.owner, "registered_via": "api"},
         created_by=auth.user_id,
     )
     db.add(model)
     await db.commit()
     await db.refresh(model)
-    log_action(db, auth, "model.register", "model", str(model.id), {"name": model_name})
+    await log_action(db, auth, "model.register", "model", str(model.id), {"name": data.model_name})
 
     return {
         "model_id": str(model.id),
@@ -65,49 +96,42 @@ async def register_model(
 # ═══════════════════════════════════════════════
 @router.post("/models/version")
 async def create_version(
-    model_id: str,
-    framework: str = "",
-    artifact_url: str = "",
-    parameters_count: int = None,
-    training_dataset: str = "",
-    governance_score: float = None,
-    risk_class: str = None,
-    description: str = "",
+    data: ModelVersionSchema,
     db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("ml_engineer")),
 ):
     """Create a new version for an existing model."""
-    model = db.get(Model, model_id)
+    model = (await db.get(Model, data.model_id))
     if not model:
         raise HTTPException(404, "Model not found.")
 
     # Auto-increment version number
-    max_v = db.query(func.max(ModelVersion.version_number)).filter(
-        ModelVersion.model_id == model_id
-    ).scalar() or 0
+    max_v = (await db.execute(select(func.max(ModelVersion.version_number)).filter(
+        ModelVersion.model_id == data.model_id
+    ))).scalar() or 0
 
     version = ModelVersion(
-        model_id=model_id,
+        model_id=data.model_id,
         version_number=max_v + 1,
-        framework=framework,
-        artifact_url=artifact_url,
-        parameters_count=parameters_count,
-        training_dataset=training_dataset,
-        governance_score=governance_score,
-        risk_class=risk_class,
-        description=description,
+        framework=data.framework,
+        artifact_url=data.artifact_url,
+        parameters_count=data.parameters_count,
+        training_dataset=data.training_dataset,
+        governance_score=data.governance_score,
+        risk_class=data.risk_class,
+        description=data.description,
         created_by=auth.user_id,
     )
     db.add(version)
     await db.commit()
     await db.refresh(version)
-    log_action(db, auth, "model.version", "model_version", str(version.id), {
-        "model_id": model_id, "version": max_v + 1
+    await log_action(db, auth, "model.version", "model_version", str(version.id), {
+        "model_id": data.model_id, "version": max_v + 1
     })
 
     return {
         "version_id": str(version.id),
-        "model_id": model_id,
+        "model_id": data.model_id,
         "version_number": version.version_number,
         "status": "created",
     }
