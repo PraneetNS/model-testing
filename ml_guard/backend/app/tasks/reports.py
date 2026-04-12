@@ -81,7 +81,6 @@ async def generate_governance_report(model_id: str):
         minio_dest = f"reports/{model_id}/{cert_hash}.pdf"
         s3_url = loop.run_until_complete(upload_to_minio(tmp_path, minio_dest))
 
-        # 6. Persist to DB
         new_report = ReportCard(
             model_id=model_id,
             cert_hash=cert_hash,
@@ -93,6 +92,33 @@ async def generate_governance_report(model_id: str):
         )
         db.add(new_report)
         await db.commit()
+
+        # 7. Dispath Outbound Notifications (Slack/Teams)
+        try:
+            from app.tasks.notifications import dispatch_alert
+            
+            # Check for score decay (drop > 5 points)
+            if parent_score_data and parent_score_data["score"] - score > 5:
+                dispatch_alert.delay(model_id, {
+                    "severity": "SCORE_DECAY",
+                    "old_score": parent_score_data["score"],
+                    "new_score": score,
+                    "delta": parent_score_data["score"] - score
+                })
+            
+            # General alert for FAILED or CONDITIONAL audit
+            sev_map = {"FAILED": "CRITICAL", "CONDITIONAL": "HIGH", "CERTIFIED": "INFO"}
+            dispatch_alert.delay(model_id, {
+                "severity": sev_map.get(verdict, "INFO"),
+                "breach_type": "Governance Audit",
+                "current_score": score,
+                "threshold": 85.0 if verdict == "CERTIFIED" else 60.0,
+                "verdict": verdict,
+                "dashboard_url": "http://localhost:3000"
+            })
+        except Exception as n_err:
+            logger.warning("Notification dispatch failed", model_id=model_id, error=str(n_err))
+
 
         # Cleanup
         if os.path.exists(tmp_path):

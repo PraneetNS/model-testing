@@ -282,9 +282,11 @@ app.include_router(contracts.router,
 
 from app.api.routers import lineage
 from app.routers import plugins
+from app.routers import notifications
 app.include_router(lineage.router)
 app.include_router(tasks.router)
 app.include_router(plugins.router, prefix="/api/plugins", tags=["plugins"])
+app.include_router(notifications.router, prefix="/api/v1", tags=["notifications"])
 
 if __name__ == "__main__":
     import uvicorn

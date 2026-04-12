@@ -155,6 +155,20 @@ async def evaluate_alerts(scan_id: str, db: AsyncSession = Depends(get_db)):
                 except:
                     pass
 
+            # ML Guard Outbound Plugins (Slack/Teams)
+            try:
+                from app.tasks.notifications import dispatch_alert
+                dispatch_alert.delay(str(scan.model_id), {
+                    "severity": event.severity,
+                    "breach_type": rule.name,
+                    "current_score": actual,
+                    "threshold": threshold,
+                    "verdict": "FAILED" if event.severity == "CRITICAL" else "WARNING",
+                    "dashboard_url": "http://localhost:3000"
+                })
+            except Exception as e:
+                print(f"Notification dispatch failed: {str(e)}")
+
     await db.commit()
     return {"scan_id": str(scan.id), "alerts_triggered": len(triggered), "details": triggered}
 

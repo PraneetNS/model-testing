@@ -1080,3 +1080,20 @@ class RagTrace(Base):
 
     def __repr__(self):
         return f"<RagTrace(id={self.id}, model_id={self.model_id}, risk={self.hallucination_risk})>"
+
+class NotificationConfig(Base):
+    """Configuration for outbound notifications (Slack/Teams)."""
+    __tablename__ = "notification_configs"
+    
+    id                  = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    model_id            = Column(UUID(), ForeignKey("models.id", ondelete="CASCADE"), index=True, nullable=False, unique=True)
+    slack_webhook_url   = Column(String(512), nullable=True)
+    slack_channel       = Column(String(100), nullable=True)
+    teams_webhook_url   = Column(String(512), nullable=True)
+    # notify_on: ["CRITICAL", "HIGH", "PREDICTIVE_BREACH", "SCORE_DECAY"]
+    notify_on           = Column(PortableJSON, default=list) 
+    created_at          = Column(DateTime, default=utcnow)
+    
+    def __repr__(self):
+        return f"<NotificationConfig(model_id={self.model_id})>"
+
