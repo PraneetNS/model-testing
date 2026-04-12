@@ -29,6 +29,7 @@ from app.routers import drift
 from app.routers import performance
 from app.routers import fairness
 from app.routers import llm_eval
+from app.routers import rag_eval
 from app.routers import governance
 
 # ── Enterprise Platform Routers ────────────────────
@@ -220,6 +221,8 @@ app.include_router(llm_eval.router,
     prefix="/api/v1", tags=["llm"])
 app.include_router(governance.router,
     prefix="/api/v1", tags=["governance"])
+app.include_router(rag_eval.router,
+    prefix="/api/v1", tags=["rag_eval"])
 
 # ── Enterprise Platform ────────────────────────────
 app.include_router(enterprise.router,

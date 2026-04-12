@@ -856,6 +856,201 @@ class EmbeddingBatch(Base):
     __tablename__ = "embedding_batches"
     
     id = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    """Store SHAP/LIME explainability results per scan."""
+    __tablename__ = "explainability_results"
+    id              = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    scan_id         = Column(UUID(), ForeignKey("scan_records.id", ondelete="CASCADE"), index=True, nullable=True)
+    model_id        = Column(UUID(), ForeignKey("models.id", ondelete="CASCADE"), index=True, nullable=False)
+    method          = Column(String(50), nullable=False)  # shap, lime, feature_importance
+    global_importance = Column(PortableJSON, nullable=True)  # {feature: importance, ...}
+    local_explanations = Column(PortableJSON, nullable=True)  # sample-level explanations
+    summary_metrics = Column(PortableJSON, nullable=True)  # interpretability score, etc.
+    created_at      = Column(DateTime, default=utcnow)
+
+class ReportCard(Base):
+    """
+    Certified Governance Report Card for an ML Model.
+    Acts as a professional certificate of compliance.
+    """
+    __tablename__ = "report_cards"
+
+    id = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    model_id = Column(UUID(), ForeignKey("models.id", ondelete="CASCADE"), nullable=False, index=True)
+    
+    # Audit Identification
+    cert_hash = Column(String(64), unique=True, nullable=False, index=True)
+    issued_at = Column(DateTime, default=utcnow)
+    
+    # High Level Results
+    overall_score = Column(Float, nullable=False)
+    verdict = Column(String(50), nullable=False) # CERTIFIED, CONDITIONAL, FAILED
+    
+    # Summary & Content
+    executive_summary = Column(Text, nullable=True)
+    metric_snapshots = Column(PortableJSON, nullable=False) # Snapshot of audit data used
+    
+    # Status & Revocation
+    is_revoked = Column(Boolean, default=False)
+    revocation_reason = Column(String, nullable=True)
+    revoked_at = Column(DateTime, nullable=True)
+    
+    # Storage Reference
+    pdf_path = Column(String, nullable=True) # MinIO path: reports/{model_id}/{cert_hash}.pdf
+
+    model = relationship("Model", backref="report_cards")
+
+    def __repr__(self):
+        return f"<ReportCard(id={self.id}, model_id={self.model_id}, hash={self.cert_hash})>"
+
+
+# ══════════════════════════════════════════════════════════
+# OBSERVABILITY LAYER — DRIFT + PERFORMANCE MODELS (v7.2)
+# ══════════════════════════════════════════════════════════
+
+class DriftReport(Base):
+    """
+    Per-feature drift analysis result. Generated hourly by Celery beat.
+    Captures KS, PSI, chi2, and Wasserstein metrics per feature.
+    """
+    __tablename__ = "drift_reports"
+
+    __table_args__ = (
+        Index("ix_driftreport_model_ts", "model_id", "created_at"),
+    )
+
+    id                       = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    model_id                 = Column(String(255), nullable=False, index=True)
+    created_at               = Column(DateTime, default=utcnow, nullable=False, index=True)
+    reference_window_start   = Column(DateTime, nullable=True)
+    reference_window_end     = Column(DateTime, nullable=True)
+    current_window_start     = Column(DateTime, nullable=True)
+    current_window_end       = Column(DateTime, nullable=True)
+    feature_results          = Column(PortableJSON, nullable=False)   # list of per-feature result dicts
+    overall_drift_score      = Column(Float, nullable=False, default=0.0)
+    drift_detected           = Column(Boolean, default=False)
+    method                   = Column(String(50), default="ks")       # psi | ks | chi2 | wasserstein
+    sample_count             = Column(Integer, nullable=True)
+    alert_triggered          = Column(Boolean, default=False)
+
+    def __repr__(self):
+        return f"<DriftReport(id={self.id}, model_id={self.model_id}, drift={self.drift_detected})>"
+
+
+class PerformanceSnapshot(Base):
+    """
+    Live model performance metrics computed from labeled PredictionLogs.
+    Captures classification or regression metrics and computes degradation delta.
+    """
+    __tablename__ = "performance_snapshots"
+
+    __table_args__ = (
+        Index("ix_perfsnapshot_model_ts", "model_id", "computed_at"),
+    )
+
+    id                   = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    model_id             = Column(String(255), nullable=False, index=True)
+    computed_at          = Column(DateTime, default=utcnow, nullable=False, index=True)
+    window_start         = Column(DateTime, nullable=True)
+    window_end           = Column(DateTime, nullable=True)
+    task_type            = Column(String(50), default="classification")  # classification | regression | ranking
+    metrics              = Column(PortableJSON, nullable=False)           # computed metrics dict
+    baseline_metrics     = Column(PortableJSON, nullable=True)            # baseline for delta computation
+    degradation_report   = Column(PortableJSON, nullable=True)            # per-metric delta/alert
+    sample_count         = Column(Integer, nullable=True)
+    labeled_count        = Column(Integer, nullable=True)
+    label_coverage_pct   = Column(Float, nullable=True)
+
+    def __repr__(self):
+        return f"<PerformanceSnapshot(id={self.id}, model_id={self.model_id}, computed_at={self.computed_at})>"
+
+
+# ══════════════════════════════════════════════════════════
+# MODEL BEHAVIOR CONTRACT SYSTEM
+# ══════════════════════════════════════════════════════════
+
+class ModelContract(Base):
+    """
+    A behavioral contract for an ML model.
+    Defines promises the model must keep on every prediction.
+    Breaches trigger alerts and governance score penalties.
+
+    Promise types: output | latency | distribution | feature_range | fairness
+    Operators:     lte | gte | lt | gt | eq | neq
+    """
+    __tablename__ = "model_contracts"
+
+    id          = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    model_id    = Column(String(255), nullable=False, index=True)
+    name        = Column(String(255), nullable=False)
+    version     = Column(String(50), default="1.0")
+    description = Column(Text, nullable=True)
+    promises    = Column(PortableJSON, nullable=False)  # list[PromiseDict]
+    is_active   = Column(Boolean, default=True)
+    breach_grace_period_minutes = Column(Integer, default=5)
+    breach_window_minutes       = Column(Integer, default=60)
+    created_at  = Column(DateTime, default=utcnow)
+    created_by  = Column(UUID(), ForeignKey("users.id"), nullable=True)
+
+    __table_args__ = (
+        Index("ix_contract_model_active", "model_id", "is_active"),
+    )
+
+    breaches = relationship(
+        "ContractBreach",
+        back_populates="contract",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<ModelContract(id={self.id}, model_id={self.model_id!r}, "
+            f"name={self.name!r}, active={self.is_active})>"
+        )
+
+
+class ContractBreach(Base):
+    """
+    Records every time a model promise is violated.
+    Linked to the specific prediction that caused the breach.
+    """
+    __tablename__ = "contract_breaches"
+
+    id                = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    contract_id       = Column(
+        UUID(),
+        ForeignKey("model_contracts.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    model_id          = Column(String(255), nullable=False, index=True)
+    promise_name      = Column(String(255), nullable=False)
+    promise_type      = Column(String(50), nullable=False)
+    expected          = Column(String(255), nullable=True)
+    actual            = Column(String(255), nullable=True)
+    prediction_log_id = Column(UUID(), nullable=True)
+    severity          = Column(String(20), default="HIGH")  # LOW/MEDIUM/HIGH/CRITICAL
+    resolved          = Column(Boolean, default=False)
+    created_at        = Column(DateTime, default=utcnow)
+
+    __table_args__ = (
+        Index("ix_breach_model_ts", "model_id", "created_at"),
+    )
+
+    contract = relationship("ModelContract", back_populates="breaches")
+
+    def __repr__(self) -> str:
+        return (
+            f"<ContractBreach(id={self.id}, model_id={self.model_id!r}, "
+            f"promise={self.promise_name!r}, severity={self.severity})>"
+        )
+
+
+class EmbeddingBatch(Base):
+    """Stores batches of embeddings for model drift detection."""
+    __tablename__ = "embedding_batches"
+    
+    id = Column(UUID(), primary_key=True, default=uuid.uuid4)
     model_id = Column(String(255), nullable=False, index=True)
     batch_id = Column(String(255), nullable=False, index=True)
     embeddings = Column(PortableJSON, nullable=False)
@@ -863,3 +1058,25 @@ class EmbeddingBatch(Base):
 
     def __repr__(self):
         return f"<EmbeddingBatch(id={self.id}, model_id={self.model_id}, batch_id={self.batch_id})>"
+
+class RagTrace(Base):
+    """Stores RAG evaluation traces."""
+    __tablename__ = "rag_traces"
+    
+    id = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    model_id = Column(String(255), nullable=False, index=True)
+    query = Column(Text, nullable=False)
+    answer = Column(Text, nullable=False)
+    retrieved_chunks = Column(PortableJSON, nullable=False) # list of str
+    retrieved_doc_ids = Column(PortableJSON, nullable=False) # list of str
+    latency_ms = Column(Float, nullable=True)
+    
+    # Precomputed metrics to save time
+    context_relevance = Column(Float, nullable=True)
+    grounding_fidelity = Column(Float, nullable=True)
+    hallucination_risk = Column(String(50), nullable=True)
+    
+    timestamp = Column(DateTime, default=utcnow, index=True)
+
+    def __repr__(self):
+        return f"<RagTrace(id={self.id}, model_id={self.model_id}, risk={self.hallucination_risk})>"

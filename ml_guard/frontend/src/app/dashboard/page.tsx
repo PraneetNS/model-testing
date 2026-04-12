@@ -9,6 +9,7 @@ import {
     Search, ShieldAlert, MonitorCheck
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip as ReTooltip, ResponsiveContainer } from "recharts";
 
 // Lifecycle Modules
 import ModelRegistryPage from "./modules/RegistryModule";
@@ -1557,7 +1558,7 @@ function FairnessAnalysisPage({ state, setState, onAction }: any) {
 // MODULE 8 — LLM GOVERNANCE
 // ═══════════════════════════════════════════════
 function LLMGovernancePage({ state, setState, onAction }: any) {
-    const { prompt, response, additionalResponses, referenceFacts, modelName, results, history, loading, error } = state;
+    const { prompt, response, additionalResponses, referenceFacts, retrievedChunks, modelName, results, ragReport, history, loading, error } = state;
     const setLState = (chunk: any) => setState((prev: any) => {
         const next = { ...prev };
         Object.keys(chunk).forEach(k => { next[k] = typeof chunk[k] === 'function' ? chunk[k](prev[k]) : chunk[k]; });
@@ -1568,8 +1569,8 @@ function LLMGovernancePage({ state, setState, onAction }: any) {
         if (!prompt.trim() || !response.trim()) { setLState({ error: "Provide both prompt and response." }); return; }
         setLState({ loading: true, error: null, results: null });
         const body: any = { prompt, response, model_name: modelName };
-        if (additionalResponses.trim()) body.additional_responses = additionalResponses.split("\n---\n").filter(Boolean);
-        if (referenceFacts.trim()) body.reference_facts = referenceFacts.split("\n").filter(Boolean);
+        if (additionalResponses?.trim()) body.additional_responses = additionalResponses.split("\n---\n").filter(Boolean);
+        if (referenceFacts?.trim()) body.reference_facts = referenceFacts.split("\n").filter(Boolean);
         try {
             const r = await fetch(`${API_BASE}/api/v1/llm/evaluate`, {
                 method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
@@ -1577,16 +1578,35 @@ function LLMGovernancePage({ state, setState, onAction }: any) {
             const d = await r.json();
             if (!r.ok) throw new Error(d.detail || "LLM evaluation failed.");
             setLState({ results: d });
+
+            // Also log RAG if chunks provided
+            if (retrievedChunks?.trim()) {
+                const ragChunks = retrievedChunks.split("\n---\n").filter(Boolean);
+                await fetch(`${API_BASE}/api/v1/rag-eval/${modelName || 'default'}/log`, {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ query: prompt, answer: response, retrieved_chunks: ragChunks, retrieved_doc_ids: [] })
+                });
+            }
+
             onAction();
-            // Refresh history
+            fetchRag();
             apiFetch(`/api/v1/llm/history`).then(r => r.json()).then(h => setLState({ history: h })).catch(() => { });
         } catch (e: any) { setLState({ error: e.message }); }
         finally { setLState({ loading: false }); }
     };
 
+    const fetchRag = () => {
+        if (!modelName) return;
+        apiFetch(`/api/v1/rag-eval/${modelName}/report`)
+            .then(r => r.json())
+            .then(d => setLState({ ragReport: d.error ? null : d }))
+            .catch(() => setLState({ ragReport: null }));
+    };
+
     useEffect(() => {
         apiFetch(`/api/v1/llm/history`).then(r => r.json()).then(h => setLState({ history: h })).catch(() => { });
-    }, []);
+        fetchRag();
+    }, [modelName]);
 
     const ev = results?.evaluation;
     const riskColor = ev?.llm_risk_level === "HIGH" ? "text-red-400" : ev?.llm_risk_level === "MEDIUM" ? "text-amber-400" : "text-emerald-400";
@@ -1601,27 +1621,27 @@ function LLMGovernancePage({ state, setState, onAction }: any) {
                         className="w-full bg-black/40 border border-white/5 rounded-lg px-3 py-2 text-sm text-white font-bold" />
                 </Card>
                 <Card className="p-4 space-y-2">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Prompt</p>
-                    <textarea value={prompt} onChange={(e: any) => setLState({ prompt: e.target.value })} rows={4}
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Prompt / Query</p>
+                    <textarea value={prompt} onChange={(e: any) => setLState({ prompt: e.target.value })} rows={3}
                         placeholder="Enter the prompt sent to the LLM..."
                         className="w-full bg-black/40 border border-white/5 rounded-lg px-3 py-2 text-sm text-white resize-none" />
                 </Card>
                 <Card className="p-4 space-y-2">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Response</p>
-                    <textarea value={response} onChange={(e: any) => setLState({ response: e.target.value })} rows={4}
-                        placeholder="Enter the LLM response to evaluate..."
-                        className="w-full bg-black/40 border border-white/5 rounded-lg px-3 py-2 text-sm text-white resize-none" />
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Retrieved Chunks (Separate by ---)</p>
+                    <textarea value={retrievedChunks} onChange={(e: any) => setLState({ retrievedChunks: e.target.value })} rows={3}
+                        placeholder="Retrieved context chunks..."
+                        className="w-full bg-black/40 border border-white/5 rounded-lg px-3 py-2 text-xs text-white resize-none" />
                 </Card>
                 <Card className="p-4 space-y-2">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Reference Facts (optional, one per line)</p>
-                    <textarea value={referenceFacts} onChange={(e: any) => setLState({ referenceFacts: e.target.value })} rows={2}
-                        placeholder="Known facts for hallucination detection..."
-                        className="w-full bg-black/40 border border-white/5 rounded-lg px-3 py-2 text-xs text-white resize-none" />
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">LLM Answer</p>
+                    <textarea value={response} onChange={(e: any) => setLState({ response: e.target.value })} rows={3}
+                        placeholder="Enter the LLM response to evaluate..."
+                        className="w-full bg-black/40 border border-white/5 rounded-lg px-3 py-2 text-sm text-white resize-none" />
                 </Card>
                 <ErrBanner msg={error} />
                 <button onClick={run} disabled={loading}
                     className="w-full bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-black font-black py-4 rounded-xl text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-lg shadow-cyan-500/10">
-                    {loading ? <><Loader2 className="w-4 h-4 animate-spin" />Evaluating...</> : <><Brain className="w-4 h-4" />Evaluate LLM Safety</>}
+                    {loading ? <><Loader2 className="w-4 h-4 animate-spin" />Evaluating...</> : <><Brain className="w-4 h-4" />Evaluate Guardrails & RAG</>}
                 </button>
 
                 {/* History sidebar */}
@@ -1732,12 +1752,47 @@ function LLMGovernancePage({ state, setState, onAction }: any) {
                         )}
                     </div>
                 )}
-                {!loading && !results && (
+                {!loading && !results && !ragReport && (
                     <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center gap-4">
                         <Brain className="w-14 h-14 text-slate-800" />
                         <p className="text-sm font-black uppercase text-slate-700 tracking-widest">No LLM Evaluation Yet</p>
                         <p className="text-xs text-slate-600 max-w-md">Enter a prompt and response to evaluate for injection attacks, toxicity, hallucination risk, and response stability.</p>
                     </div>
+                )}
+
+                {!loading && ragReport && (
+                    <Section title="RAG System Observability">
+                        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+                            <Card className="p-4 border border-white/5 bg-[#0E1014]">
+                                <p className="text-[9px] uppercase font-black tracking-widest text-slate-500 mb-1">Context Relevance</p>
+                                <p className="text-2xl font-black text-white">{(ragReport.avg_context_relevance * 100 || 0).toFixed(1)}%</p>
+                            </Card>
+                            <Card className="p-4 border border-white/5 bg-[#0E1014]">
+                                <p className="text-[9px] uppercase font-black tracking-widest text-slate-500 mb-1">Grounding Fidelity</p>
+                                <p className="text-2xl font-black text-emerald-400">{(ragReport.avg_grounding_fidelity * 100 || 0).toFixed(1)}%</p>
+                            </Card>
+                            <Card className="p-4 border border-white/5 bg-[#0E1014]">
+                                <p className="text-[9px] uppercase font-black tracking-widest text-slate-500 mb-1">Retrieval Hit Rate</p>
+                                <p className="text-2xl font-black text-cyan-400">{(ragReport.retrieval_hit_rate * 100 || 0).toFixed(1)}%</p>
+                            </Card>
+                            <Card className="p-4 border border-white/5 bg-[#0E1014]">
+                                <p className="text-[9px] uppercase font-black tracking-widest text-slate-500 mb-1">High Risk Ratio</p>
+                                <p className="text-2xl font-black text-red-400">{((ragReport.hallucination_risk_distribution?.high || 0) * 100).toFixed(1)}%</p>
+                            </Card>
+                        </div>
+                        <Card className="p-5 border border-white/5 h-[300px] bg-[#0E1014]">
+                            <p className="text-[10px] font-black uppercase text-slate-400 mb-4 tracking-widest">Grounding Fidelity Time-Series</p>
+                            <ResponsiveContainer width="100%" height="85%">
+                                <LineChart data={ragReport.time_series || []}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                                    <XAxis dataKey="time" stroke="#475569" tick={{fill: '#475569', fontSize: 10}} tickFormatter={(v) => new Date(v).toLocaleTimeString()} />
+                                    <YAxis stroke="#475569" tick={{fill: '#475569', fontSize: 10}} domain={[0, 1]} />
+                                    <ReTooltip contentStyle={{backgroundColor: '#0E1014', borderColor: 'rgba(255,255,255,0.1)'}} />
+                                    <Line type="stepAfter" dataKey="grounding_fidelity" stroke="#10b981" strokeWidth={2} dot={{fill: '#10b981', r: 3}} activeDot={{r: 5}} />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </Card>
+                    </Section>
                 )}
             </div>
         </div>
