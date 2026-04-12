@@ -48,6 +48,24 @@ A dedicated suite tailored specifically to Large Language Model governance.
 - **Adversarial Resiliency**: Active jailbreak vector detection and prompt-injection mitigations.
 - **PII Leakage Scanning**: Guarantees generative assets do not exfiltrate sensitive data.
 
+### 7. RAG System Observability (New)
+Advanced monitoring for Retrieval-Augmented Generation (RAG) pipelines.
+- **Grounding Fidelity**: Quantifies how well model answers are supported by retrieved context.
+- **Context Relevance**: Mathematical assessment of the relevance of retrieved chunks to the user query.
+- **Retrieval Hit Rate**: Performance tracking for vector databases and retrieval indices.
+- **Observability Dashboard**: Time-series visualization of RAG performance and hallucination ratios.
+
+### 8. Embedding Drift Detection (New)
+Go beyond tabular statistics with multi-dimensional vector drift analysis.
+- **Cosine Drift & MMD**: Measures distribution distance between reference and production embeddings.
+- **UMAP Visualization**: Automatic 2D projection of embedding clusters to visualize semantic shift.
+
+### 9. Regulatory Compliance Layer (New)
+Map technical metrics directly to legal and regulatory frameworks.
+- **EU AI Act Support**: Automated mapping to Articles 9, 10, 13, 15, and 72 for compliance reporting.
+- **NIST AI RMF Mapping**: Technical verification against GOVERN, MAP, MEASURE, and MANAGE controls.
+- **Compliance Scoring**: Automated "Pass/Fail" status based on technical governance thresholds.
+
 ---
 
 ## 🏗️ System Architecture
@@ -59,22 +77,41 @@ ML Guard operates on an asynchronous microservices architecture meant to run at 
 - **Asynchronous Workers**: Redis-backed **Celery** tasks specifically tasked to compute heavy algorithms (Fairness/Drift computations) outside of the HTTP cycle.
 - **Dashboard (`ml_guard/frontend`)**: A blazing fast **Next.js 14** application styled with Tailwind and Shadcn UI.
 - **Data & Artifact Layer**: S3-compatible generic storage (MinIO interface ready).
+- **Outbound Plugins (`ml_guard/plugins`)**: Modular system for Slack, Teams, MLflow, and Weights & Biases integration.
 
 ---
 
 ## 📖 Module Catalog
 
-The backend exposes a highly separated Domain Driven structure comprising 16 top-level routers:
+The backend exposes a highly separated Domain Driven structure comprising over 20 top-level routers:
 
 - `audit.py` - Initiates multipart scanning and metadata extraction for uploaded models.
 - `gate.py` - The fast, synchronous execution path for CI pipeline verdicts.
 - `governance.py` - Retrieves complex scoring distributions across the platform.
 - `contracts.py` - Evaluates strict behavioral constraints and prediction bounds.
+- `rag_eval.py` - (NEW) Evaluation metrics and trace logging for RAG systems.
+- `compliance.py` - (NEW) Mapping layer for EU AI Act and NIST AI RMF standards.
+- `plugins.py` - (NEW) Integration hub for MLflow, W&B, and notification dispatch.
 - `report.py` & `history.py` - Historical audit trails and PDF certificate generation.
 - `sentinel.py` / `alerts.py` - Streaming prediction bounds check and notification systems.
-- `policies.py` - Configurable enterprise-wide compliance limits.
+- `notifications.py` - (NEW) Config hub for Slack and Microsoft Teams outbound alerts.
 - `drift.py`, `performance.py`, `fairness.py`, `llm_eval.py` - Granular sub-domain analysis endpoints.
-- `ingest.py` & `auth.py` - Security and high-volume payload consumption.
+
+---
+
+## 🔌 Ecosystem Integrations
+
+ML Guard now supports first-class integration with standard ML tools:
+
+### Experiment Tracking
+Sync metrics from your existing tools to maintain a single source of truth for governance.
+- **MLflow**: Pull run metrics directly into ML Guard's performance snapshots.
+- **Weights & Biases**: Auto-sync model summary statistics via the W&B API.
+
+### Outbound Notifications
+Receive real-time breach alerts where your team lives.
+- **Slack (Block Kit)**: Rich visual alerts with model performance cards.
+- **Microsoft Teams (Adaptive Cards)**: Professional, interactive cards for production monitoring.
 
 ---
 
@@ -95,13 +132,13 @@ python -m venv venv
 # On Mac/Linux: source venv/bin/activate
 
 pip install -r requirements.txt
-pip install celery redis
+pip install celery redis mlflow wandb httpx
 ```
 
 Set up your `.env` file (you can copy `.env.example`):
 ```ini
 SECRET_KEY=your_secure_hash
-DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/mlguard
+DATABASE_URL=sqlite:///./ml_guard.db # Or PostgreSQL for production
 # Redis connection for Celery
 REDIS_URL=redis://localhost:6379/0
 ```
