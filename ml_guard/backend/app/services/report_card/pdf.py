@@ -133,6 +133,57 @@ class PDFGenerator:
         self.elements.append(Paragraph("________________________________", self.styles['Normal']))
         self.elements.append(Paragraph("ML GUARD Governance Autopilot Framework", self.styles['Normal']))
         
+        # --- Page 4: Regulatory Compliance (Appendix) ---
+        include_compliance = report_data.get('include_compliance', True) # Optionally included, default True
+        if include_compliance:
+            self.elements.append(PageBreak())
+            self.elements.append(Paragraph("Appendix: Regulatory Compliance", self.styles['Heading2']))
+            self.elements.append(Spacer(1, 0.2*inch))
+            
+            import os
+            import sys
+            _repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../../"))
+            if _repo_root not in sys.path:
+                sys.path.append(_repo_root)
+            from ml_guard.core.compliance import evaluate_compliance
+            
+            comp_results = evaluate_compliance(report_data.get('metric_snapshots', {}))
+            
+            comp_data = [["Control", "Status", "Evidence", "Gap"]]
+            for r in comp_results:
+                status_text = r['status'].upper()
+                # Wrap text slightly
+                ev = r['evidence'][:40] + "..." if len(r['evidence']) > 40 else r['evidence']
+                gap = (r['gap'][:40] + "...") if r['gap'] and len(r['gap']) > 40 else (r['gap'] or "-")
+                comp_data.append([
+                    r['control'],
+                    status_text,
+                    Paragraph(ev, self.styles['Normal']),
+                    Paragraph(gap, self.styles['Normal'])
+                ])
+                
+            table2 = Table(comp_data, colWidths=[1.5*inch, 1*inch, 2.5*inch, 2.5*inch])
+            
+            styles_list = [
+                ('BACKGROUND', (0,0), (-1,0), colors.whitesmoke),
+                ('TEXTCOLOR', (0,0), (-1,0), colors.black),
+                ('GRID', (0,0), (-1,-1), 1, colors.lightgrey),
+                ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+                ('VALIGN', (0,0), (-1,-1), 'MIDDLE')
+            ]
+            for row_idx, r in enumerate(comp_results, start=1):
+                if r['status'] == 'pass':
+                    bg_color = colors.lightgreen
+                elif r['status'] == 'fail':
+                    bg_color = colors.lightcoral
+                else:
+                    bg_color = colors.navajowhite # amber
+                    
+                styles_list.append(('BACKGROUND', (0, row_idx), (-1, row_idx), bg_color))
+            
+            table2.setStyle(TableStyle(styles_list))
+            self.elements.append(table2)
+
         # Build document
         self.doc.build(self.elements)
         logger.info("PDF Report Generated Successfully", path=self.output_path)

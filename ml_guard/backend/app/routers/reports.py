@@ -95,3 +95,27 @@ async def download_report_pdf(cert_hash: str, db: AsyncSession = Depends(get_db)
         raise HTTPException(status_code=404, detail="Certificate not found")
         
     return {"download_url": f"https://minio.mlguard.io/{report.pdf_path}", "cert_hash": cert_hash}
+
+import sys
+import os
+_repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../"))
+if _repo_root not in sys.path:
+    sys.path.append(_repo_root)
+from ml_guard.core.compliance import evaluate_compliance
+
+@router.get("/{model_id}/compliance")
+async def get_compliance_report(model_id: str, framework: str = "all", db: AsyncSession = Depends(get_db)):
+    report = (await db.execute(select(ReportCard).filter(ReportCard.model_id == model_id).order_by(ReportCard.issued_at.desc()).limit(1))).scalars().first()
+    
+    if not report:
+        # Fallback to an empty dict if no report card, just to return the schema
+        metrics = {}
+    else:
+        metrics = report.metric_snapshots
+        
+    all_results = evaluate_compliance(metrics)
+    
+    if framework != "all":
+        all_results = [r for r in all_results if r["framework"] == framework.lower()]
+        
+    return {"results": all_results}
