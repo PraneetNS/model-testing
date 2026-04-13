@@ -1143,3 +1143,33 @@ class Sandbox(Base):
     expires_at      = Column(DateTime)
     created_at      = Column(DateTime, default=utcnow)
 
+class Agent(Base):
+    """Registered agentic AI systems monitored by ML Guard."""
+    __tablename__ = "agents"
+    id              = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    name            = Column(String(255), nullable=False)
+    allowed_tools   = Column(PortableJSON, default=list) # List[str]
+    sensitive_topics = Column(PortableJSON, default=list) # List[str]
+    step_sla_ms     = Column(Integer, default=5000)
+    owner_key_id    = Column(UUID(), ForeignKey("api_keys.id", ondelete="SET NULL"), nullable=True)
+    created_at      = Column(DateTime, default=utcnow)
+
+class AgentTrace(Base):
+    """Execution traces for autonomous agents."""
+    __tablename__ = "agent_traces"
+    id              = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    agent_id        = Column(UUID(), ForeignKey("agents.id", ondelete="CASCADE"), index=True, nullable=False)
+    session_id      = Column(String(128), index=True, nullable=False)
+    trace_index     = Column(Integer, nullable=False)
+    timestamp       = Column(DateTime, default=utcnow)
+    step_type       = Column(String(50)) # tool_call, llm_call, decision, output
+    input_summary   = Column(String(64)) # SHA-256 hash
+    output_summary  = Column(String(64)) # SHA-256 hash
+    tool_name       = Column(String(255), nullable=True)
+    latency_ms      = Column(Integer)
+    policy_violations = Column(PortableJSON, default=list)
+    risk_score      = Column(Integer, default=0)
+    flagged         = Column(Boolean, default=False)
+    
+    agent           = relationship("Agent", backref="traces")
+

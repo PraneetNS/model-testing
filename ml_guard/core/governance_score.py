@@ -57,12 +57,33 @@ def compute_fairness_subscore(fairness_subscore: Optional[float] = None) -> floa
     return float(np.clip(fairness_subscore, 0.0, 1.0))
 
 
+def compute_agent_behavior_subscore(agent_violations: Optional[List[Dict]] = None) -> float:
+    """
+    Sa = Agent Behavioral Risk subscore.
+    Score = 100 - (CRITICAL_violations * 20) - (HIGH_violations * 8) - (LOW_violations * 2), floored at 0.
+    Normalized to [0, 1].
+    """
+    if agent_violations is None:
+        return 1.0
+    
+    penalty_sum = 0
+    for v in agent_violations:
+        sev = v.get("severity", "LOW") if isinstance(v, dict) else getattr(v, "severity", "LOW")
+        if sev == "CRITICAL": penalty_sum += 20
+        elif sev == "HIGH": penalty_sum += 8
+        elif sev == "LOW": penalty_sum += 2
+    
+    raw_score = max(0, 100 - penalty_sum)
+    return float(raw_score / 100.0)
+
+
 def compute_governance_score(
     drift_report: dict = None,
     overfitting_gap: dict = None,
     brier_score: float = None,
     stability_score: float = None,
     fairness_subscore: float = None,
+    agent_violations: list = None,
     weights: dict = None,
 ) -> dict:
     """
@@ -77,7 +98,16 @@ def compute_governance_score(
     for full backward compatibility.
     """
     if weights is None:
-        if fairness_subscore is not None:
+        if agent_violations is not None:
+            # 6-weight system including Agent Behavioral Risk (15%)
+            weights = {
+                "drift": 0.17, "overfitting": 0.17, "calibration": 0.17,
+                "robustness": 0.17, "fairness": 0.17, "agent": 0.15
+            }
+            # Adjust to exactly 1.0
+            diff = 1.0 - sum(weights.values())
+            weights["drift"] += diff
+        elif fairness_subscore is not None:
             weights = {
                 "drift": 0.20, "overfitting": 0.20, "calibration": 0.20,
                 "robustness": 0.20, "fairness": 0.15,
@@ -94,13 +124,15 @@ def compute_governance_score(
     Sc = compute_calibration_subscore(brier_score)
     Sr = compute_robustness_subscore(stability_score)
     Sf = compute_fairness_subscore(fairness_subscore)
+    Sa = compute_agent_behavior_subscore(agent_violations)
 
     gov_score = (
         weights.get("drift", 0)       * Sd +
         weights.get("overfitting", 0) * So +
         weights.get("calibration", 0) * Sc +
         weights.get("robustness", 0)  * Sr +
-        weights.get("fairness", 0)    * Sf
+        weights.get("fairness", 0)    * Sf +
+        weights.get("agent", 0)       * Sa
     ) * 100.0
 
     gov_score = float(np.clip(gov_score, 0, 100))
@@ -114,6 +146,8 @@ def compute_governance_score(
     }
     if fairness_subscore is not None:
         component_scores["fairness_score"] = round(Sf * 100, 2)
+    if agent_violations is not None:
+        component_scores["agent_score"] = round(Sa * 100, 2)
 
     return {
         "governance_score": round(gov_score, 2),

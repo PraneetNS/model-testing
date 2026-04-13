@@ -66,6 +66,7 @@ from app.routers import advisory
 from app.routers import monitoring
 from app.api.v1.endpoints import aibom as aibom_api
 from app.api.v1.endpoints import sandbox as sandbox_api
+from app.api.v1.endpoints import agent_eval as agent_eval_api
 
 # ── Lifecycle Extension Routers ────────────────────
 from app.routers import model_registry
@@ -330,6 +331,8 @@ app.include_router(aibom_api.router,
     prefix="/api/v1", tags=["aibom"])
 app.include_router(sandbox_api.router,
     prefix="/api/v1", tags=["sandbox"])
+app.include_router(agent_eval_api.router,
+    prefix="/api/v1", tags=["agent-eval"])
 
 # ── Lifecycle Extensions ───────────────────────────
 app.include_router(model_registry.router,
