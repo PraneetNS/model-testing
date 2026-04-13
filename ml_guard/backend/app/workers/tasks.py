@@ -13,6 +13,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../")))
 from app.db.models import Job, PreflightResult, DriftResult, PerformanceResult, FairnessResult, LLMResult, GovernanceResult, ExplainabilityResult, Model as ModelRecord
 from ml_guard.core import MLEvaluator, Constraint, compute_accuracy, compute_f1, ONNXModelWrapper
+from ml_guard.core.aibom import generate_aibom
 import onnxruntime as ort
 
 logger = logging.getLogger(__name__)
@@ -465,6 +466,49 @@ async def run_governance_audit_task(
 
         results = {"checks_run": checks}
         
+        # --- AIBOM Integration ---
+        try:
+            import importlib
+            metadata = {
+                "model_id": model_id,
+                "model_name": (await db.get(ModelRecord, model_id)).name if model_id else "unknown",
+                "framework": type(model_obj).__module__.split(".")[0],
+                "framework_version": "unknown",
+                "hf_model_id": None
+            }
+            try:
+                metadata["framework_version"] = importlib.metadata.version(metadata["framework"])
+            except: pass
+            
+            aibom_data = generate_aibom(model_path, [train_path, val_path], metadata)
+            results["aibom"] = aibom_data
+            
+            from app.db.models import AIBOM, SecurityAlert
+            aibom_rec = AIBOM(
+                model_id=model_id,
+                base_model=aibom_data["base_model"],
+                training_datasets=aibom_data["training_datasets"],
+                dependencies=aibom_data["dependencies"],
+                training_framework=aibom_data["training_framework"],
+                aibom_hash=aibom_data["aibom_hash"],
+                schema_version=aibom_data["schema_version"]
+            )
+            db.add(aibom_rec)
+            
+            for cve in aibom_data.get("cve_alerts", []):
+                alert = SecurityAlert(
+                    alert_type="supply_chain_cve",
+                    details={
+                        "cve_id": cve["cve_id"],
+                        "package": cve["package"],
+                        "severity": "HIGH",
+                        "version": cve["version"]
+                    }
+                )
+                db.add(alert)
+        except Exception as e:
+            logger.error(f"AIBOM generation failed in audit pipeline: {e}")
+
         # 3. Metrics (Sync logic from router)
         train_preds = model_obj.predict(X_train.values)
         val_preds = model_obj.predict(X_val.values)
@@ -530,4 +574,62 @@ async def run_governance_audit_task(
                     logger.info("Cleaned up temp task file: %s", p)
             except:
                 pass
+        db.close()
+
+@celery_app.task(name="generate_aibom_task", bind=True)
+async def generate_aibom_task(self, model_id: str, model_b64: str, dataset_b64s: list, metadata: dict):
+    db = SessionLocal()
+    import base64
+    tmp_files = []
+    try:
+        # Reconstruct model
+        m_suffix = ".onnx" if metadata.get("model_filename", "").endswith(".onnx") else ".pkl"
+        m_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=m_suffix)
+        m_tmp.write(base64.b64decode(model_b64))
+        m_tmp.close()
+        tmp_files.append(m_tmp.name)
+        
+        # Reconstruct datasets
+        d_paths = []
+        for i, d_b64 in enumerate(dataset_b64s):
+            d_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".csv")
+            d_tmp.write(base64.b64decode(d_b64))
+            d_tmp.close()
+            d_paths.append(d_tmp.name)
+            tmp_files.append(d_tmp.name)
+            
+        aibom_data = generate_aibom(m_tmp.name, d_paths, metadata)
+        
+        from app.db.models import AIBOM, SecurityAlert
+        aibom_rec = AIBOM(
+            model_id=model_id,
+            base_model=aibom_data["base_model"],
+            training_datasets=aibom_data["training_datasets"],
+            dependencies=aibom_data["dependencies"],
+            training_framework=aibom_data["training_framework"],
+            aibom_hash=aibom_data["aibom_hash"],
+            schema_version=aibom_data["schema_version"]
+        )
+        db.add(aibom_rec)
+        
+        for cve in aibom_data.get("cve_alerts", []):
+            alert = SecurityAlert(
+                alert_type="supply_chain_cve",
+                details={
+                    "cve_id": cve["cve_id"],
+                    "package": cve["package"],
+                    "severity": "HIGH",
+                    "version": cve["version"]
+                }
+            )
+            db.add(alert)
+            
+        await db.commit()
+        return {"status": "success", "aibom_hash": aibom_data["aibom_hash"]}
+    except Exception as e:
+        logger.error(f"AIBOM generation failed: {e}")
+        return {"status": "error", "message": str(e)}
+    finally:
+        for p in tmp_files:
+            if os.path.exists(p): os.remove(p)
         db.close()

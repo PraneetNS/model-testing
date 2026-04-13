@@ -64,6 +64,7 @@ from app.routers import red_team
 from app.routers import streaming
 from app.routers import advisory
 from app.routers import monitoring
+from app.api.v1.endpoints import aibom as aibom_api
 
 # ── Lifecycle Extension Routers ────────────────────
 from app.routers import model_registry
@@ -324,6 +325,8 @@ app.include_router(advisory.router,
     prefix="/api/v1", tags=["advisory"])
 app.include_router(monitoring.router,
     prefix="/api/v1", tags=["monitoring"])
+app.include_router(aibom_api.router,
+    prefix="/api/v1", tags=["aibom"])
 
 # ── Lifecycle Extensions ───────────────────────────
 app.include_router(model_registry.router,

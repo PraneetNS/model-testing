@@ -1114,3 +1114,22 @@ class SecurityAlert(Base):
     key_id      = Column(UUID(), ForeignKey("api_keys.id", ondelete="SET NULL"), nullable=True)
     details     = Column(PortableJSON, nullable=True)
 
+
+class AIBOM(Base):
+    """AI Bill of Materials (AIBOM) — a cryptographically verifiable manifest of everything a model depends on."""
+    __tablename__ = "aibom"
+    id               = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    model_id         = Column(UUID(), ForeignKey("models.id", ondelete="CASCADE"), index=True, nullable=False)
+    generated_at     = Column(DateTime, default=utcnow)
+    schema_version   = Column(String(10), default="1.0")
+    base_model       = Column(PortableJSON, nullable=False)
+    training_datasets = Column(PortableJSON, nullable=False)
+    dependencies     = Column(PortableJSON, nullable=False)
+    training_framework = Column(PortableJSON, nullable=False)
+    aibom_hash       = Column(String(64), nullable=False, index=True)
+
+    model = relationship("Model", backref=backref("aiboms", cascade="all, delete-orphan", order_by=generated_at.desc()))
+
+    def __repr__(self):
+        return f"<AIBOM(model_id={self.model_id}, hash={self.aibom_hash})>"
+

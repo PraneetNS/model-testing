@@ -127,6 +127,22 @@ class PDFGenerator:
         self.elements.append(Spacer(1, 0.2*inch))
         self.elements.append(Paragraph(report_data.get('executive_summary', ''), self.styles['Normal']))
         
+        # --- Supply Chain Integrity (AIBOM) ---
+        aibom_data = report_data.get('metric_snapshots', {}).get('aibom')
+        if aibom_data:
+            aibom_hash = aibom_data.get('aibom_hash')
+            if aibom_hash:
+                self.elements.append(Spacer(1, 0.5*inch))
+                self.elements.append(Paragraph("Supply Chain Integrity (AIBOM)", self.styles['Heading3']))
+                self.elements.append(Spacer(1, 0.1*inch))
+                self.elements.append(Paragraph(f"This model is cryptographically verified by an AI Bill of Materials (AIBOM).", self.styles['Normal']))
+                self.elements.append(Paragraph(f"<b>AIBOM Manifest Hash:</b> {aibom_hash}", self.styles['Normal']))
+                
+                cve_alerts = aibom_data.get('cve_alerts', [])
+                if cve_alerts:
+                    alert_style = ParagraphStyle('AIBOMAlert', parent=self.styles['Normal'], textColor=colors.red)
+                    self.elements.append(Paragraph(f"⚠️ Warning: {len(cve_alerts)} dependency vulnerabilities detected in supply chain scan.", alert_style))
+
         self.elements.append(Spacer(1, 1*inch))
         self.elements.append(Paragraph("Authorized Compliance Signature:", self.styles['Normal']))
         self.elements.append(Spacer(1, 0.3*inch))
