@@ -633,3 +633,38 @@ async def generate_aibom_task(self, model_id: str, model_b64: str, dataset_b64s:
         for p in tmp_files:
             if os.path.exists(p): os.remove(p)
         db.close()
+
+@celery_app.task(name="cleanup_expired_sandboxes")
+async def cleanup_expired_sandboxes():
+    from app.db.session import SessionLocal
+    from app.db.models import Sandbox
+    from sqlalchemy.future import select
+    from datetime import datetime
+    import docker
+    
+    db = SessionLocal()
+    try:
+        now = datetime.utcnow()
+        result = await db.execute(select(Sandbox).filter(Sandbox.expires_at <= now))
+        expired = result.scalars().all()
+        
+        try:
+            client = docker.from_env()
+        except:
+            client = None
+
+        for sandbox in expired:
+            if client:
+                try:
+                    container = client.containers.get(sandbox.container_id)
+                    container.stop()
+                    container.remove()
+                except:
+                    pass
+            await db.delete(sandbox)
+        
+        await db.commit()
+    except Exception as e:
+        logger.error(f"Sandbox cleanup failed: {e}")
+    finally:
+        db.close()

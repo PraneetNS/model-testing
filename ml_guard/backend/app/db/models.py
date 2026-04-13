@@ -1133,3 +1133,13 @@ class AIBOM(Base):
     def __repr__(self):
         return f"<AIBOM(model_id={self.model_id}, hash={self.aibom_hash})>"
 
+class Sandbox(Base):
+    """Active Docker sandboxes for red-teaming."""
+    __tablename__ = "sandboxes"
+    id              = Column(String(50), primary_key=True)
+    model_id        = Column(UUID(), ForeignKey("models.id", ondelete="CASCADE"))
+    container_id    = Column(String(128))
+    port            = Column(Integer)
+    expires_at      = Column(DateTime)
+    created_at      = Column(DateTime, default=utcnow)
+
