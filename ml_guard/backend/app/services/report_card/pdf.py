@@ -50,6 +50,45 @@ class PDFGenerator:
         d.add(String(100, 70, "Gov Score", textAnchor="middle", fontSize=10, fillColor=colors.grey))
         return d
 
+    def _add_insurance_section(self, insurance_data: dict):
+        """Adds an actuarial risk profile section for insurance brokers."""
+        if not HAS_REPORTLAB or not insurance_data:
+            return
+
+        self.elements.append(Paragraph("AI Liability Insurance Actuarial Audit", self.styles['Heading2']))
+        self.elements.append(Spacer(1, 0.2*inch))
+        self.elements.append(Paragraph(f"<b>Actuarial Tier:</b> {insurance_data.get('tier', 'Standard').upper()}", self.styles['Normal']))
+        self.elements.append(Paragraph(f"<b>ML Guard Insurance Score:</b> {insurance_data.get('total_score', 0)} / 1000", self.styles['Normal']))
+        self.elements.append(Spacer(1, 0.1*inch))
+        
+        # Premium Estimate
+        premium = insurance_data.get('estimated_annual_premium_usd_range', {})
+        self.elements.append(Paragraph(f"<b>Estimated Annual Premium:</b> ${premium.get('min', 0):,} - ${premium.get('max', 0):,} USD", self.styles['Normal']))
+        self.elements.append(Spacer(1, 0.2*inch))
+
+        # Risk Breakdown Table
+        dim_data = [["Dimension", "Score (max)"]]
+        for dim, score in insurance_data.get('dimension_scores', {}).items():
+            dim_data.append([dim.replace('_', ' ').capitalize(), f"{score}"])
+        
+        dim_table = Table(dim_data, colWidths=[3*inch, 2*inch])
+        dim_table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.whitesmoke),
+            ('INNERGRID', (0,0), (-1,-1), 0.5, colors.grey),
+            ('BOX', (0,0), (-1,-1), 1, colors.black),
+        ]))
+        self.elements.append(dim_table)
+        self.elements.append(Spacer(1, 0.3*inch))
+        
+        # Risk Factors
+        factors = insurance_data.get('risk_factors', [])
+        if factors:
+            self.elements.append(Paragraph("<b>Primary Actuarial Risk Factors:</b>", self.styles['Normal']))
+            for f in factors[:3]:
+                self.elements.append(Paragraph(f"• {f['factor']}: {f['recommendation']}", self.styles['Normal']))
+
+        self.elements.append(PageBreak())
+
     def generate(self, report_data: dict):
         """
         Assemble the 3-page PDF document.
@@ -142,6 +181,12 @@ class PDFGenerator:
                 if cve_alerts:
                     alert_style = ParagraphStyle('AIBOMAlert', parent=self.styles['Normal'], textColor=colors.red)
                     self.elements.append(Paragraph(f"⚠️ Warning: {len(cve_alerts)} dependency vulnerabilities detected in supply chain scan.", alert_style))
+
+        # --- AI Liability Insurance ---
+        insurance_data = report_data.get('insurance_report')
+        if insurance_data:
+            self.elements.append(PageBreak())
+            self._add_insurance_section(insurance_data)
 
         self.elements.append(Spacer(1, 1*inch))
         self.elements.append(Paragraph("Authorized Compliance Signature:", self.styles['Normal']))
