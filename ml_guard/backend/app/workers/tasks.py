@@ -668,3 +668,70 @@ async def cleanup_expired_sandboxes():
         logger.error(f"Sandbox cleanup failed: {e}")
     finally:
         db.close()
+
+@celery_app.task(name="run_red_team_task")
+async def run_red_team_task(model_id: str, profile: str = "standard"):
+    from app.db.session import SessionLocal
+    from app.db.models import RedTeamSchedule, RedTeamRun, SecurityAlert, Model as ModelRecord
+    from ml_guard.sandbox.sandbox_runner import ModelSandbox
+    from ml_guard.core.red_team_scheduler import run_red_team_profile
+    from sqlalchemy.future import select
+    from datetime import datetime
+    import os
+    
+    db = SessionLocal()
+    handle = None
+    try:
+        # 1. Setup Sandbox
+        # (In production, load from model.artifact_url)
+        model_path = f"tmp_model_{model_id}.pkl"
+        if not os.path.exists(model_path):
+            model_path = "test_model.pkl" # Fallback simulation
+            
+        sandbox_mgr = ModelSandbox()
+        handle = sandbox_mgr.create_sandbox(model_path)
+        if not handle:
+            return
+            
+        # 2. Run profile
+        results = run_red_team_profile(profile, handle, {"model_id": model_id})
+        
+        # 3. Detect regressions
+        result = await db.execute(select(RedTeamSchedule).filter(RedTeamSchedule.model_id == model_id))
+        sched = result.scalars().first()
+        is_regression = False
+        
+        if sched and results["robustness_score"] < (sched.baseline_robustness_score - 5):
+            is_regression = True
+            alert = SecurityAlert(
+                alert_type="adversarial_regression",
+                details={
+                    "old_score": sched.baseline_robustness_score,
+                    "new_score": results["robustness_score"],
+                    "profile": profile,
+                    "model_id": str(model_id)
+                }
+            )
+            db.add(alert)
+            
+        # 4. Save
+        run_history = RedTeamRun(
+            model_id=model_id,
+            profile=profile,
+            robustness_score=results["robustness_score"],
+            attack_results=results["attack_results"],
+            regressions_detected=is_regression
+        )
+        db.add(run_history)
+        
+        if sched:
+            sched.last_run_at = datetime.utcnow()
+            
+        await db.commit()
+    except Exception as e:
+        logger.error(f"Red Team task failed for {model_id}: {e}")
+    finally:
+        if handle:
+            try: handle.shutdown()
+            except: pass
+        db.close()

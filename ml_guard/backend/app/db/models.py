@@ -1173,3 +1173,25 @@ class AgentTrace(Base):
     
     agent           = relationship("Agent", backref="traces")
 
+class RedTeamSchedule(Base):
+    """Dynamic scheduler for continuous adversarial penetration testing."""
+    __tablename__ = "red_team_schedules"
+    model_id        = Column(UUID(), ForeignKey("models.id", ondelete="CASCADE"), primary_key=True)
+    schedule_cron   = Column(String(100), default="0 2 * * *") # Daily at 2AM
+    attack_profile  = Column(String(20), default="standard") # quick, standard, exhaustive
+    notification_on_regression = Column(Boolean, default=True)
+    baseline_robustness_score = Column(Float, default=100.0)
+    enabled         = Column(Boolean, default=True)
+    last_run_at     = Column(DateTime, nullable=True)
+
+class RedTeamRun(Base):
+    """Execution history of scheduled or manual red team runs."""
+    __tablename__ = "red_team_runs"
+    id              = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    model_id        = Column(UUID(), ForeignKey("models.id", ondelete="CASCADE"), index=True)
+    run_at          = Column(DateTime, default=utcnow)
+    profile         = Column(String(20))
+    robustness_score = Column(Float)
+    attack_results  = Column(PortableJSON) # Details per attack
+    regressions_detected = Column(Boolean, default=False)
+
