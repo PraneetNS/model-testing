@@ -286,48 +286,12 @@ async def run_audit(
     except Exception as ds_err:
         logger.error(f"Failed to auto-register datasets: {ds_err}")
 
-    # --- Try Celery with Worker Detection ---
-    celery_ok = False
-    try:
-        from app.workers.tasks import run_governance_audit_task
-        from app.core.celery_app import celery_app
-        
-        # Quick check if any workers are actually listening
-        # We use a 1-second timeout to avoid blocking the request
-        inspector = celery_app.control.inspect(timeout=1.0)
-        active_workers = inspector.active()
-        
-        if active_workers and len(active_workers) > 0:
-            run_governance_audit_task.delay(
-                job_id=job_id, model_id=str(model.id), checks=selected,
-                model_b64=base64.b64encode(m_bytes).decode(),
-                train_b64=base64.b64encode(t_bytes).decode(),
-                val_b64=base64.b64encode(v_bytes).decode(),
-                model_filename=model_file.filename,
-                train_filename=(train_file.filename if (train_file and train_file.filename) else (train_dataset_url or "train.csv")),
-                val_filename=(val_file.filename if (val_file and val_file.filename) else (val_dataset_url or "val.csv")),
-                label_col=label_col,
-                user_id=auth.user_id if hasattr(auth, "user_id") else None,
-                org_id=auth.org_id if hasattr(auth, "org_id") else None,
-                policy_override=policy_override,
-            )
-            celery_ok = True
-        else:
-            logger.warning("No Celery workers detected. Falling back to synchronous execution.")
-            celery_ok = False
-    except Exception as e:
-        logger.error(f"Celery dispatch failed: {e}")
-        celery_ok = False
+    # --- Always run audit inline (no Celery dependency) ---
+    # Celery worker is not guaranteed to be running in dev; inline is reliable and
+    # returns results immediately without any polling round-trips.
+    logger.info("Running governance audit inline for job_id=%s", job_id)
 
-    if celery_ok:
-        return {
-            "status": "pending", "job_id": job_id,
-            "submission_token": submission_token,
-            "poll_url": f"/api/v1/gate/result/{submission_token}",
-            "message": "Governance audit dispatched to worker.",
-        }
-
-    # --- Inline fallback: run audit synchronously within request ---
+    # --- Inline: run audit synchronously within request ---
     tmp_files = []
     try:
         def _write_tmp(data: bytes, suffix: str) -> str:
