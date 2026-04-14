@@ -13,25 +13,35 @@ from app.db.models import (
     Dataset, DatasetVersion, LineageLink, ModelVersion, Model, utcnow
 )
 from app.core.auth import AuthContext, require_role, log_action
+from pydantic import BaseModel
 
 router = APIRouter()
 
+
+class DatasetRegisterSchema(BaseModel):
+    dataset_name: str
+    model_id: str
+    dataset_type: str = "training"
+    row_count: int = 0
+    schema_info: str = ""
 
 # ═══════════════════════════════════════════════
 # REGISTER DATASET
 # ═══════════════════════════════════════════════
 @router.post("/datasets/register")
 async def register_dataset(
-    dataset_name: str,
-    model_id: str,
-    dataset_type: str = "training",
-    row_count: int = 0,
-    schema_info: str = "",
+    data: DatasetRegisterSchema,
     db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("ml_engineer")),
 ):
     """Register a new dataset in the lineage store."""
-    model = db.get(Model, model_id)
+    dataset_name = data.dataset_name
+    model_id = data.model_id
+    dataset_type = data.dataset_type
+    row_count = data.row_count
+    schema_info = data.schema_info
+
+    model = await db.get(Model, model_id)
     if not model:
         raise HTTPException(404, "Model not found.")
 
@@ -47,7 +57,7 @@ async def register_dataset(
     db.add(dataset)
     await db.commit()
     await db.refresh(dataset)
-    log_action(db, auth, "dataset.register", "dataset", str(dataset.id), {"name": dataset_name})
+    await log_action(db, auth, "dataset.register", "dataset", str(dataset.id), {"name": dataset_name})
 
     return {
         "dataset_id": str(dataset.id),
@@ -71,13 +81,14 @@ async def create_dataset_version(
     auth: AuthContext = Depends(require_role("ml_engineer")),
 ):
     """Create a new versioned snapshot of a dataset."""
-    dataset = db.get(Dataset, dataset_id)
+    dataset = await db.get(Dataset, dataset_id)
     if not dataset:
         raise HTTPException(404, "Dataset not found.")
 
-    max_v = db.query(func.max(DatasetVersion.version_number)).filter(
+    res = await db.execute(select(func.max(DatasetVersion.version_number)).filter(
         DatasetVersion.dataset_id == dataset_id
-    ).scalar() or 0
+    ))
+    max_v = res.scalar() or 0
 
     version = DatasetVersion(
         dataset_id=dataset_id,
@@ -91,7 +102,7 @@ async def create_dataset_version(
     db.add(version)
     await db.commit()
     await db.refresh(version)
-    log_action(db, auth, "dataset.version", "dataset_version", str(version.id), {
+    await log_action(db, auth, "dataset.version", "dataset_version", str(version.id), {
         "dataset_id": dataset_id, "version": max_v + 1
     })
 
@@ -115,15 +126,16 @@ async def list_datasets(
 ):
     """List all registered datasets."""
     offset = (page - 1) * per_page
-    total = db.query(func.count(Dataset.id)).scalar() or 0
+    total = (await db.execute(select(func.count(Dataset.id)))).scalar() or 0
     datasets = (await db.execute(select(Dataset).order_by(Dataset.created_at.desc()).offset(offset).limit(per_page))).scalars().all()
 
     items = []
     for d in datasets:
-        version_count = db.query(func.count(DatasetVersion.id)).filter(
-            DatasetVersion.dataset_id == d.id
-        ).scalar() or 0
-        model = db.get(Model, str(d.model_id))
+        version_count = (await db.execute(
+            select(func.count(DatasetVersion.id)).filter(DatasetVersion.dataset_id == d.id)
+        )).scalar() or 0
+        model_result = await db.execute(select(Model).filter(Model.id == str(d.model_id)))
+        model = model_result.scalar_one_or_none()
 
         name = (d.metadata_json or {}).get("name")
         if not name:
@@ -152,24 +164,24 @@ async def get_lineage(
     auth: AuthContext = Depends(require_role("viewer")),
 ):
     """Get full lineage for a dataset: versions and linked models."""
-    dataset = db.get(Dataset, dataset_id)
+    dataset = await db.get(Dataset, dataset_id)
     if not dataset:
         raise HTTPException(404, "Dataset not found.")
 
-    versions = db.query(DatasetVersion).filter(
-        DatasetVersion.dataset_id == dataset_id
-    ).order_by(DatasetVersion.version_number.desc()).all()
+    res = await db.execute(
+        select(DatasetVersion).filter(DatasetVersion.dataset_id == dataset_id).order_by(DatasetVersion.version_number.desc())
+    )
+    versions = res.scalars().all()
 
     lineage = []
     for v in versions:
-        links = db.query(LineageLink).filter(
-            LineageLink.dataset_version_id == v.id
-        ).all()
+        res = await db.execute(select(LineageLink).filter(LineageLink.dataset_version_id == v.id))
+        links = res.scalars().all()
         linked_models = []
         for link in links:
-            mv = db.get(ModelVersion, str(link.model_version_id))
+            mv = await db.get(ModelVersion, str(link.model_version_id))
             if mv:
-                model = db.get(Model, str(mv.model_id))
+                model = await db.get(Model, str(mv.model_id))
                 linked_models.append({
                     "model_name": model.name if model else "Unknown",
                     "model_version": mv.version_number,

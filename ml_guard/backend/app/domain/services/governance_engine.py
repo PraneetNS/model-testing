@@ -89,10 +89,12 @@ async def run_async_evaluation(
         # Regression Support - Fetch baseline if needed
         baseline_model = None
         if 'regression' in categories:
-            last_run = db.query(sql_models.TestRun)\
+            stmt = select(sql_models.TestRun)\
                 .filter(sql_models.TestRun.project_id == project_id)\
                 .filter(sql_models.TestRun.deployment_allowed == True)\
-                .order_by(sql_models.TestRun.created_at.desc()).first()
+                .order_by(sql_models.TestRun.created_at.desc())
+            res_baseline = await db.execute(stmt)
+            last_run = res_baseline.scalars().first()
             
             if last_run:
                 # In a real system, we'd load the binary from a registry
@@ -194,22 +196,25 @@ class GovernanceEngine:
     async def get_project_history(self, project_id: UUID) -> List[sql_models.TestRun]:
         return (await db.execute(select(sql_models.TestRun).filter(sql_models.TestRun.project_id == project_id).order_by(sql_models.TestRun.created_at.desc()))).scalars().all()
 
-    def get_drift_trends(self, project_id: UUID, feature_name: Optional[str] = None):
-        query = self.db.query(sql_models.DriftLog).join(sql_models.TestRun).filter(sql_models.TestRun.project_id == project_id)
+    async def get_drift_trends(self, project_id: UUID, feature_name: Optional[str] = None):
+        stmt = select(sql_models.DriftLog).join(sql_models.TestRun).filter(sql_models.TestRun.project_id == project_id)
         if feature_name:
-            query = query.filter(sql_models.DriftLog.feature_name == feature_name)
-        return query.order_by(sql_models.DriftLog.timestamp.asc()).all()
+            stmt = stmt.filter(sql_models.DriftLog.feature_name == feature_name)
+        result = await self.db.execute(stmt.order_by(sql_models.DriftLog.timestamp.asc()))
+        return result.scalars().all()
 
-    def check_persistent_drift(self, project_id: str, threshold: float = 0.2, window: int = 3) -> bool:
+    async def check_persistent_drift(self, project_id: str, threshold: float = 0.2, window: int = 3) -> bool:
         """
         FIREFLINK PHILOSOPHY: Automatic failure if drift persists.
         Returns True if PSI > threshold for 'window' consecutive runs.
         """
         # Get last 3 test runs for this project
-        last_runs = self.db.query(sql_models.TestRun)\
+        stmt = select(sql_models.TestRun)\
             .filter(sql_models.TestRun.project_id == project_id)\
             .order_by(sql_models.TestRun.created_at.desc())\
-            .limit(window).all()
+            .limit(window)
+        result = await self.db.execute(stmt)
+        last_runs = result.scalars().all()
         
         if len(last_runs) < window:
             return False
@@ -217,30 +222,33 @@ class GovernanceEngine:
         failure_count = 0
         for run in last_runs:
             # Check if any feature in this run had high PSI
-            high_drift = self.db.query(sql_models.DriftLog)\
+            stmt_drift = select(sql_models.DriftLog)\
                 .filter(sql_models.DriftLog.test_run_id == run.id)\
-                .filter(sql_models.DriftLog.metric_value > threshold).first()
+                .filter(sql_models.DriftLog.metric_value > threshold)
+            res_drift = await self.db.execute(stmt_drift)
+            high_drift = res_drift.scalars().first()
             if high_drift:
                 failure_count += 1
         
         return failure_count >= window
 
-    def evaluate_active_policy(self, metrics: dict, org_id: Optional[str] = None) -> dict:
+    async def evaluate_active_policy(self, metrics: dict, org_id: Optional[str] = None) -> dict:
         """
         Fetches the active PolicyRule for the given org (or global default)
         and evaluates the provided metrics against it.
         """
         from ml_guard.core.policy import evaluate_policy
+        from sqlalchemy import and_
 
         # 1. Fetch active policy rule
         # Use our new PolicyRule model
-        policy_rule = self.db.query(sql_models.PolicyRule)\
-            .filter(sql_models.PolicyRule.is_active == True)
+        stmt = select(sql_models.PolicyRule).filter(sql_models.PolicyRule.is_active == True)
         
         if org_id:
-            policy_rule = policy_rule.filter(sql_models.PolicyRule.org_id == org_id)
+            stmt = stmt.filter(sql_models.PolicyRule.org_id == org_id)
         
-        active_policy = policy_rule.order_by(sql_models.PolicyRule.created_at.desc()).first()
+        res = await self.db.execute(stmt.order_by(sql_models.PolicyRule.created_at.desc()))
+        active_policy = res.scalars().first()
 
         # 2. Extract rules_json or use default
         rules = active_policy.rules_json if active_policy else None

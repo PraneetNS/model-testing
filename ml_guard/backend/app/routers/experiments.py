@@ -158,19 +158,23 @@ async def list_experiments(
     auth: AuthContext = Depends(require_role("viewer")),
 ):
     """List experiments with optional filtering."""
-    q = db.query(Experiment)
+    count_stmt = select(func.count(Experiment.id))
+    stmt = select(Experiment)
     if model_id:
-        q = q.filter(Experiment.model_id == model_id)
+        count_stmt = count_stmt.filter(Experiment.model_id == model_id)
+        stmt = stmt.filter(Experiment.model_id == model_id)
     if status:
-        q = q.filter(Experiment.status == status)
+        count_stmt = count_stmt.filter(Experiment.status == status)
+        stmt = stmt.filter(Experiment.status == status)
 
-    total = q.count()
+    total = (await db.execute(count_stmt)).scalar() or 0
     offset = (page - 1) * per_page
-    experiments = q.order_by(Experiment.created_at.desc()).offset(offset).limit(per_page).all()
+    experiments = (await db.execute(stmt.order_by(Experiment.created_at.desc()).offset(offset).limit(per_page))).scalars().all()
 
     items = []
     for e in experiments:
-        model = db.get(Model, str(e.model_id))
+        model_result = await db.execute(select(Model).filter(Model.id == str(e.model_id)))
+        model = model_result.scalar_one_or_none()
         items.append({
             "experiment_id": str(e.id),
             "name": e.name,

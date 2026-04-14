@@ -86,6 +86,10 @@ from app.api.routers import tasks
 # ─── Lifespan Management ───
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # 0. Database Initialization
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
     # 1. Startup Secrets Scanning
     allow_insecure = os.getenv("MLGUARD_ALLOW_INSECURE_KEYS", "false").lower() == "true"
     leaked_found = False
@@ -118,10 +122,6 @@ async def lifespan(app: FastAPI):
             "STARTUP FAILED — SECRET_KEY not configured. "
             "Set it in your environment or .env file."
         )
-
-    # Database Initialization
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
 
     # Object Storage Initialization (Optional/Warning only)
     from app.services.storage_service import _get_s3_client, _ensure_bucket_exists
@@ -169,14 +169,10 @@ app.add_middleware(SecurityHardeningMiddleware)
 # FIX 4: CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=getattr(
-        settings, 
-        "ALLOWED_ORIGINS", 
-        ["http://localhost:3000"]
-    ),
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # FIX 2: Debug Traceback Gating
@@ -308,13 +304,15 @@ app.include_router(reports.router,
 app.include_router(ingest.router,
     prefix="/api/v1/ingest", tags=["ingest"])
 app.include_router(observe.router,
-    prefix="/api/v1", tags=["observe"])
+    prefix="/api/v1/observe", tags=["observe"])
+app.include_router(policies.router,
+    prefix="/api/v1", tags=["policies"])
 
 # ── Infrastructure ─────────────────────────────────
 app.include_router(jobs.router,
     prefix="/api/v1", tags=["jobs"])
 app.include_router(auth.router,
-    prefix="/api", tags=["auth"])
+    prefix="/api/v1", tags=["auth"])
 app.include_router(gate.router,
     prefix="/api/v1/gate", tags=["gate"])
 app.include_router(forecast.router,

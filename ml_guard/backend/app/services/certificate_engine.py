@@ -175,9 +175,12 @@ class CertificateEngine:
             import uuid
             from app.db.models import Model
             # Try direct UUID parse
+            from app.db.models import Model
+            # Try direct UUID parse
             model_fk = uuid.UUID(str(model_id))
             # Verify it exists
-            exists = db.query(Model.id).filter(Model.id == model_fk).scalar()
+            stmt = select(Model.id).filter(Model.id == model_fk)
+            exists = (await db.execute(stmt)).scalar()
             if not exists:
                 model_fk = None
         except (ValueError, Exception):
@@ -274,18 +277,16 @@ class CertificateEngine:
             model_id_str = str(card.model_id)
             issued_at = card.issued_at or datetime.utcnow()
 
-            high_drift_count = (
-                db.query(DriftReport)
-                .filter(
-                    DriftReport.model_id == model_id_str,
-                    DriftReport.created_at >= issued_at,
-                    DriftReport.drift_detected == True,
-                    DriftReport.alert_triggered == True,
-                )
-                .count()
+            from sqlalchemy import func
+            stmt = select(func.count(DriftReport.id)).filter(
+                DriftReport.model_id == model_id_str,
+                DriftReport.created_at >= issued_at,
+                DriftReport.drift_detected == True,
+                DriftReport.alert_triggered == True,
             )
+            high_drift_count = (await db.execute(stmt)).scalar_one()
             drift_events_since_issue = high_drift_count
-            still_compliant = high_drift_count == 0
+            still_compliant = (high_drift_count == 0)
         except Exception as e:
             logger.warning(f"drift_event_check_failed error={str(e)}")
 

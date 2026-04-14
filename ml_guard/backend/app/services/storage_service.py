@@ -39,10 +39,34 @@ def _get_s3_client():
         aws_secret_access_key=settings.MINIO_SECRET_KEY,
         region_name=settings.MINIO_REGION,
         config=BotoConfig(
-            retries={"max_attempts": MAX_RETRIES, "mode": "adaptive"},
+            retries={"max_attempts": 0, "mode": "adaptive"}, # No retries for connectivity check
             s3={"addressing_style": "path"},
+            connect_timeout=1,
+            read_timeout=1,
         ),
     )
+
+
+_STORAGE_MODE = None # 'minio' or 'local'
+LOCAL_STORAGE_DIR = os.path.join(os.getcwd(), ".minio_mock")
+
+def _get_storage_mode():
+    global _STORAGE_MODE
+    if _STORAGE_MODE is not None:
+        return _STORAGE_MODE
+    
+    try:
+        client = _get_s3_client()
+        client.head_bucket(Bucket=settings.MINIO_BUCKET)
+        _STORAGE_MODE = "minio"
+        logger.info("Storage mode: MinIO (Connected)")
+    except Exception:
+        _STORAGE_MODE = "local"
+        if not os.path.exists(LOCAL_STORAGE_DIR):
+            os.makedirs(LOCAL_STORAGE_DIR, exist_ok=True)
+        logger.warning(f"Storage mode: Local Fallback (MinIO unreachable). Data saved to {LOCAL_STORAGE_DIR}")
+    
+    return _STORAGE_MODE
 
 
 def _ensure_bucket_exists(client):
@@ -73,18 +97,30 @@ def upload_model(
     uid = model_id or str(uuid.uuid4())
     object_key = f"{MODELS_PREFIX}{uid}/{original_filename}"
 
-    if isinstance(file_input, bytes):
-        res = _upload_bytes(_get_s3_client(), object_key, file_input, content_type)
-        size = len(file_input)
+    if _get_storage_mode() == "local":
+        path = os.path.join(LOCAL_STORAGE_DIR, object_key.replace("/", os.sep))
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        data = file_input if isinstance(file_input, bytes) else file_input.read()
+        with open(path, "wb") as f:
+            f.write(data)
+        size = len(data)
+        provider = "local"
+        url = f"local://{object_key}"
     else:
-        res = upload_file_streaming(file_input, object_key, content_type)
-        size = res.get("size", 0)
+        if isinstance(file_input, bytes):
+            _upload_bytes(_get_s3_client(), object_key, file_input, content_type)
+            size = len(file_input)
+        else:
+            res = upload_file_streaming(file_input, object_key, content_type)
+            size = res.get("size", 0)
+        provider = "minio"
+        url = f"{settings.MINIO_ENDPOINT}/{settings.MINIO_BUCKET}/{object_key}"
 
     return {
         "object_key": object_key,
-        "url": f"{settings.MINIO_ENDPOINT}/{settings.MINIO_BUCKET}/{object_key}",
+        "url": url,
         "size": size,
-        "storage_provider": "minio",
+        "storage_provider": provider,
     }
 
 
@@ -99,23 +135,42 @@ def upload_dataset(
     uid = scan_id or str(uuid.uuid4())
     object_key = f"{DATASETS_PREFIX}{dataset_type}/{uid}/{original_filename}"
 
-    if isinstance(file_input, bytes):
-        res = _upload_bytes(_get_s3_client(), object_key, file_input, content_type)
-        size = len(file_input)
+    if _get_storage_mode() == "local":
+        path = os.path.join(LOCAL_STORAGE_DIR, object_key.replace("/", os.sep))
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        data = file_input if isinstance(file_input, bytes) else file_input.read()
+        with open(path, "wb") as f:
+            f.write(data)
+        size = len(data)
+        provider = "local"
+        url = f"local://{object_key}"
     else:
-        res = upload_file_streaming(file_input, object_key, content_type)
-        size = res.get("size", 0)
+        if isinstance(file_input, bytes):
+            _upload_bytes(_get_s3_client(), object_key, file_input, content_type)
+            size = len(file_input)
+        else:
+            res = upload_file_streaming(file_input, object_key, content_type)
+            size = res.get("size", 0)
+        provider = "minio"
+        url = f"{settings.MINIO_ENDPOINT}/{settings.MINIO_BUCKET}/{object_key}"
 
     return {
         "object_key": object_key,
-        "url": f"{settings.MINIO_ENDPOINT}/{settings.MINIO_BUCKET}/{object_key}",
+        "url": url,
         "size": size,
-        "storage_provider": "minio",
+        "storage_provider": provider,
     }
 
 
 def download_artifact(object_key: str) -> bytes:
     """Download an artifact from MinIO. Returns raw bytes."""
+    if _get_storage_mode() == "local":
+        path = os.path.join(LOCAL_STORAGE_DIR, object_key.replace("/", os.sep))
+        if os.path.exists(path):
+            with open(path, "rb") as f:
+                return f.read()
+        raise FileNotFoundError(f"Local artifact not found: {object_key}")
+        
     client = _get_s3_client()
     try:
         resp = client.get_object(
@@ -172,6 +227,13 @@ def download_from_url(url: str) -> bytes:
 
 def delete_artifact(object_key: str) -> bool:
     """Delete an artifact from MinIO."""
+    if _get_storage_mode() == "local":
+        path = os.path.join(LOCAL_STORAGE_DIR, object_key.replace("/", os.sep))
+        if os.path.exists(path):
+            os.remove(path)
+            return True
+        return False
+
     client = _get_s3_client()
     try:
         client.delete_object(
@@ -235,6 +297,13 @@ def upload_file_streaming(
 
 def check_storage_health() -> dict:
     """Health check for MinIO connectivity."""
+    mode = _get_storage_mode()
+    if mode == "local":
+        return {
+            "status": "connected",
+            "provider": "local_fallback",
+            "detail": f"MinIO unreachable. Files are being saved to {LOCAL_STORAGE_DIR}",
+        }
     try:
         client = _get_s3_client()
         _ensure_bucket_exists(client)

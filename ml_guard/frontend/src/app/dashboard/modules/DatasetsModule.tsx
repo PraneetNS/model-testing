@@ -60,8 +60,8 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     model_id: newDataset.model_id,
-                    type: newDataset.type,
-                    metadata: { name: newDataset.name }
+                    dataset_type: newDataset.type,
+                    dataset_name: newDataset.name
                 })
             });
             if (res.ok) {

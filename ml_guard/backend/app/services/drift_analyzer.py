@@ -190,9 +190,9 @@ class DriftAnalyzer:
         or None if insufficient data.
         """
         # 1. Load current window
-        current_df = get_recent_predictions_df(self.db, self.model_id, hours=window_hours)
+        current_df = await get_recent_predictions_df(self.db, self.model_id, hours=window_hours)
         if current_df.empty or len(current_df) < min_samples:
-            logger.warning("drift_insufficient_data", model_id=self.model_id, count=len(current_df))
+            logger.warning(f"drift_insufficient_data model_id={self.model_id} count={len(current_df)}")
             return None
 
         # 2. Load reference baseline
@@ -201,7 +201,7 @@ class DriftAnalyzer:
             # Auto-bootstrap: first run stores current window as reference
             feature_cols = self._get_feature_cols(current_df)
             store_baseline_to_minio(self.model_id, current_df[feature_cols])
-            logger.info("drift_baseline_bootstrapped", model_id=self.model_id)
+            logger.info(f"drift_baseline_bootstrapped model_id={self.model_id}")
             return None
 
         feature_cols = [c for c in self._get_feature_cols(current_df) if c in ref_df.columns]
@@ -292,19 +292,17 @@ class DriftAnalyzer:
                     "severity": severity,
                 },
             )
-            logger.info("governance_audit_triggered", model_id=self.model_id, severity=severity)
+            logger.info(f"governance_audit_triggered model_id={self.model_id} severity={severity}")
         except Exception as e:
-            logger.warning("governance_trigger_failed", error=str(e))
+            logger.warning(f"governance_trigger_failed error={e}")
 
-    def get_history(self, limit: int = 30) -> List[Dict[str, Any]]:
+    async def get_history(self, limit: int = 30) -> List[Dict[str, Any]]:
         """Return the last N drift reports for this model."""
-        reports = (
-            self.db.query(DriftReport)
-            .filter(DriftReport.model_id == self.model_id)
-            .order_by(DriftReport.created_at.desc())
-            .limit(limit)
-            .all()
-        )
+        from sqlalchemy import desc
+        stmt = select(DriftReport).filter(DriftReport.model_id == self.model_id).order_by(desc(DriftReport.created_at)).limit(limit)
+        result = await self.db.execute(stmt)
+        reports = result.scalars().all()
+
         return [
             {
                 "report_id": str(r.id),
@@ -318,15 +316,13 @@ class DriftAnalyzer:
             for r in reports
         ]
 
-    def get_feature_timeline(self, feature_name: str, limit: int = 30) -> List[Dict[str, Any]]:
+    async def get_feature_timeline(self, feature_name: str, limit: int = 30) -> List[Dict[str, Any]]:
         """Return per-feature drift score timeline for sparkline rendering."""
-        reports = (
-            self.db.query(DriftReport)
-            .filter(DriftReport.model_id == self.model_id)
-            .order_by(DriftReport.created_at.desc())
-            .limit(limit)
-            .all()
-        )
+        from sqlalchemy import desc
+        stmt = select(DriftReport).filter(DriftReport.model_id == self.model_id).order_by(desc(DriftReport.created_at)).limit(limit)
+        result = await self.db.execute(stmt)
+        reports = result.scalars().all()
+        
         results = []
         for r in reports:
             for fr in (r.feature_results or []):

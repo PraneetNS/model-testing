@@ -49,27 +49,27 @@ class LabelRequest(BaseModel):
 
 # ─── Internal background write ────────────────────────────────────────────────
 
-def _background_ingest(req: PredictRequest, log_id: str) -> None:
+async def _background_ingest(req: PredictRequest, log_id: str) -> None:
     """Non-blocking write executed in FastAPI BackgroundTasks."""
     from app.db.session import SessionLocal
-    db = SessionLocal()
-    try:
-        ingest_single(
-            db=db,
-            model_id=req.model_id,
-            features=req.features,
-            prediction=req.prediction,
-            prediction_proba=req.prediction_proba,
-            latency_ms=req.latency_ms,
-            data_source=req.data_source,
-            environment=req.environment,
-            tags=req.tags,
-        )
-    except Exception:
-        pass  # Fire-and-forget; log handled inside service
-    finally:
-        db.close()
+    async with SessionLocal() as db:
+        try:
+            await ingest_single(
+                db=db,
+                model_id=req.model_id,
+                features=req.features,
+                prediction=req.prediction,
+                prediction_proba=req.prediction_proba,
+                latency_ms=req.latency_ms,
+                data_source=req.data_source or "api",
+                environment=req.environment or "production",
+                tags=req.tags,
+            )
+        except Exception as e:
+            # For background tasks, we should at least log locally
+            print(f"ERROR in background ingest: {e}")
 
+# ─── Endpoints ───────────────────────────────────────────────────────────────
 
 # ─── Endpoints ───────────────────────────────────────────────────────────────
 
@@ -96,7 +96,7 @@ async def ingest_batch_predictions(req: BatchPredictRequest):
     if len(req.rows) > 10_000:
         raise HTTPException(status_code=400, detail="Batch max is 10,000 rows.")
 
-    rows = [r.model_dump() for r in req.rows]
+    rows = [_r.model_dump() for _r in req.rows]
 
     try:
         from app.core.celery_app import celery_app
@@ -108,7 +108,7 @@ async def ingest_batch_predictions(req: BatchPredictRequest):
     except Exception:
         # Fallback: synchronous if Celery unavailable
         from app.services.ingestion_service import ingest_batch
-        ingest_batch(rows)
+        await ingest_batch(rows)
         task_id = "sync-fallback"
 
     return {"task_id": task_id, "count": len(rows), "status": "dispatched"}
@@ -128,7 +128,7 @@ async def add_ground_truth_labels(
             status_code=400,
             detail="log_ids and ground_truths must be equal length."
         )
-    updated = stitch_labels(db, req.log_ids, req.ground_truths)
+    updated = await stitch_labels(db, req.log_ids, req.ground_truths)
     return {"updated": updated, "requested": len(req.log_ids)}
 
 
@@ -146,24 +146,25 @@ async def get_recent_predictions(
     Retrieve the most recent prediction logs for a model.
     Supports filtering by environment, date range, and label status.
     """
-    q = db.query(PredictionLog).filter(PredictionLog.model_id == model_id)
+    stmt = select(PredictionLog).filter(PredictionLog.model_id == model_id)
 
     if environment:
-        q = q.filter(PredictionLog.environment == environment)
+        stmt = stmt.filter(PredictionLog.environment == environment)
     if start:
-        q = q.filter(PredictionLog.timestamp >= start)
+        stmt = stmt.filter(PredictionLog.timestamp >= start)
     if end:
-        q = q.filter(PredictionLog.timestamp <= end)
+        stmt = stmt.filter(PredictionLog.timestamp <= end)
     if labeled_only:
-        q = q.filter(PredictionLog.ground_truth.isnot(None))
+        stmt = stmt.filter(PredictionLog.ground_truth.isnot(None))
 
-    rows = q.order_by(PredictionLog.timestamp.desc()).limit(limit).all()
+    result = await db.execute(stmt.order_by(PredictionLog.timestamp.desc()).limit(limit))
+    rows = result.scalars().all()
 
     return [
         {
             "log_id": str(r.id),
             "model_id": r.model_id,
-            "timestamp": r.timestamp.isoformat(),
+            "timestamp": r.timestamp.isoformat() if r.timestamp else None,
             "features": r.features,
             "prediction": r.prediction,
             "prediction_proba": r.prediction_proba,
@@ -189,11 +190,13 @@ async def get_ingest_stats(
     """
     from datetime import timedelta
     cutoff = datetime.utcnow() - timedelta(hours=window_hours)
-    rows = (
-        db.query(PredictionLog)
-        .filter(PredictionLog.model_id == model_id, PredictionLog.timestamp >= cutoff)
-        .all()
+    
+    stmt = select(PredictionLog).filter(
+        PredictionLog.model_id == model_id, 
+        PredictionLog.timestamp >= cutoff
     )
+    result = await db.execute(stmt)
+    rows = result.scalars().all()
 
     total = len(rows)
     labeled = sum(1 for r in rows if r.ground_truth is not None)

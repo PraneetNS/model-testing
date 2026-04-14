@@ -18,6 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import func, desc
 
 from app.db.models import DriftReport, PerformanceSnapshot, PredictionLog
 from app.db.session import get_db
@@ -52,31 +53,19 @@ async def compute_live_governance_score(
     live_score = base_score × (1 - drift_penalty) × (1 - perf_penalty)
     """
     # Get last drift report
-    last_drift = (
-        db.query(DriftReport)
-        .filter(DriftReport.model_id == model_id)
-        .order_by(DriftReport.created_at.desc())
-        .first()
-    )
+    last_drift_stmt = select(DriftReport).filter(DriftReport.model_id == model_id).order_by(DriftReport.created_at.desc()).limit(1)
+    last_drift = (await db.execute(last_drift_stmt)).scalars().first()
 
     # Get last performance snapshot
-    last_perf = (
-        db.query(PerformanceSnapshot)
-        .filter(PerformanceSnapshot.model_id == model_id)
-        .order_by(PerformanceSnapshot.computed_at.desc())
-        .first()
-    )
+    last_perf_stmt = select(PerformanceSnapshot).filter(PerformanceSnapshot.model_id == model_id).order_by(PerformanceSnapshot.computed_at.desc()).limit(1)
+    last_perf = (await db.execute(last_perf_stmt)).scalars().first()
 
     # Try to get base audit score from scan records
     base_score = 75.0
     try:
         from app.db.models import ScanRecord
-        last_scan = (
-            db.query(ScanRecord)
-            .filter(ScanRecord.model_id == model_id)
-            .order_by(ScanRecord.created_at.desc())
-            .first()
-        )
+        last_scan_stmt = select(ScanRecord).filter(ScanRecord.model_id == model_id).order_by(ScanRecord.created_at.desc()).limit(1)
+        last_scan = (await db.execute(last_scan_stmt)).scalars().first()
         if last_scan and last_scan.governance_score:
             base_score = last_scan.governance_score
     except Exception:
@@ -121,17 +110,16 @@ async def global_observability_feed(
     Command center view: all models with health score, drift status,
     prediction volume, and last alert. Equivalent to WhyLabs home dashboard.
     """
-    # Get all unique model IDs from prediction logs
-    model_ids_result = (await db.execute(select(PredictionLog.model_id).distinct())).scalars().all()
-    model_ids = [r[0] for r in model_ids_result]
-
-    # Also pull from scan records for models without logs yet
+    # Get all unique model IDs from registry (Primary Source)
     try:
-        from app.db.models import ScanRecord, Model
-        scan_model_ids = [str(r[0]) for r in (await db.execute(select(ScanRecord.model_id).distinct())).scalars().all()]
-        model_ids = list(set(model_ids + scan_model_ids))
+        from app.db.models import Model
+        model_ids = [str(r[0]) for r in (await db.execute(select(Model.id))).scalars().all()]
     except Exception:
-        pass
+        model_ids = []
+
+    # Supplement with IDs from logs just in case there are orphaned logs (unlikely but safe)
+    log_ids = [str(r[0]) for r in (await db.execute(select(PredictionLog.model_id).distinct())).scalars().all()]
+    model_ids = list(set(model_ids + [mid for mid in log_ids if mid]))
 
     cutoff_24h = datetime.utcnow() - timedelta(hours=24)
     cutoff_30d = datetime.utcnow() - timedelta(days=30)
@@ -142,30 +130,19 @@ async def global_observability_feed(
             continue
         try:
             # Prediction volume
-            pred_count = (
-                db.query(PredictionLog)
-                .filter(PredictionLog.model_id == mid, PredictionLog.timestamp >= cutoff_24h)
-                .count()
-            )
+            count_stmt = select(func.count(PredictionLog.id)).filter(PredictionLog.model_id == mid, PredictionLog.timestamp >= cutoff_24h)
+            pred_count = (await db.execute(count_stmt)).scalar() or 0
 
             # Last drift
-            last_drift = (
-                db.query(DriftReport)
-                .filter(DriftReport.model_id == mid)
-                .order_by(DriftReport.created_at.desc())
-                .first()
-            )
+            drift_stmt = select(DriftReport).filter(DriftReport.model_id == mid).order_by(DriftReport.created_at.desc()).limit(1)
+            last_drift = (await db.execute(drift_stmt)).scalars().first()
 
             # Last perf
-            last_perf = (
-                db.query(PerformanceSnapshot)
-                .filter(PerformanceSnapshot.model_id == mid)
-                .order_by(PerformanceSnapshot.computed_at.desc())
-                .first()
-            )
+            perf_stmt = select(PerformanceSnapshot).filter(PerformanceSnapshot.model_id == mid).order_by(PerformanceSnapshot.computed_at.desc()).limit(1)
+            last_perf = (await db.execute(perf_stmt)).scalars().first()
 
             # Live score
-            live_gov = compute_live_governance_score(mid, db)
+            live_gov = await compute_live_governance_score(mid, db)
 
             # Last alert (could be drift breach)
             alert_triggered = last_drift.alert_triggered if last_drift else False
@@ -174,12 +151,8 @@ async def global_observability_feed(
             days_since_audit = None
             try:
                 from app.db.models import ScanRecord
-                last_scan = (
-                    db.query(ScanRecord)
-                    .filter(ScanRecord.model_id == mid)
-                    .order_by(ScanRecord.created_at.desc())
-                    .first()
-                )
+                scan_stmt = select(ScanRecord).filter(ScanRecord.model_id == mid).order_by(ScanRecord.created_at.desc()).limit(1)
+                last_scan = (await db.execute(scan_stmt)).scalars().first()
                 if last_scan:
                     days_since_audit = (datetime.utcnow() - last_scan.created_at).days
             except Exception:
@@ -197,7 +170,7 @@ async def global_observability_feed(
                 "days_since_last_audit": days_since_audit,
             })
         except Exception as e:
-            logger.warning("feed_model_error", model_id=mid, error=str(e))
+            logger.warning(f"feed_model_error model_id={mid} error={e}")
             continue
 
     # Sort
@@ -227,7 +200,7 @@ async def get_drift_report(
     Compares current window against MinIO-stored baseline.
     """
     analyzer = DriftAnalyzer(db, model_id, method=method)
-    result = analyzer.analyze(window_hours=window_hours)
+    result = await analyzer.analyze(window_hours=window_hours)
     if result is None:
         return {
             "model_id": model_id,
@@ -245,7 +218,7 @@ async def get_drift_history(
 ):
     """Last N drift reports with trend per feature."""
     analyzer = DriftAnalyzer(db, model_id)
-    return {"model_id": model_id, "history": analyzer.get_history(limit=limit)}
+    return {"model_id": model_id, "history": await analyzer.get_history(limit=limit)}
 
 
 @router.get("/drift/{model_id}/features")
@@ -257,7 +230,7 @@ async def get_feature_drift_timeline(
 ):
     """Per-feature drift score timeline for sparkline charts."""
     analyzer = DriftAnalyzer(db, model_id)
-    timeline = analyzer.get_feature_timeline(feature_name=feature, limit=limit)
+    timeline = await analyzer.get_feature_timeline(feature_name=feature, limit=limit)
     return {"model_id": model_id, "feature": feature, "timeline": timeline}
 
 
@@ -272,7 +245,7 @@ async def set_drift_baseline(
     Stores as parquet in MinIO: baselines/{model_id}/reference.parquet
     """
     from app.services.ingestion_service import get_recent_predictions_df, store_baseline_to_minio
-    df = get_recent_predictions_df(db, model_id, hours=window_hours)
+    df = await get_recent_predictions_df(db, model_id, hours=window_hours)
     if df.empty:
         raise HTTPException(status_code=404, detail="No prediction data found to set as baseline.")
 
@@ -304,16 +277,11 @@ async def get_live_performance(
     tracker = PerformanceTracker(db, model_id)
 
     # Load baseline from last stored snapshot
-    prev_snap = (
-        db.query(PerformanceSnapshot)
-        .filter(PerformanceSnapshot.model_id == model_id)
-        .order_by(PerformanceSnapshot.computed_at.desc())
-        .offset(1)  # second-to-last as baseline reference
-        .first()
-    )
+    baseline_stmt = select(PerformanceSnapshot).filter(PerformanceSnapshot.model_id == model_id).order_by(PerformanceSnapshot.computed_at.desc()).offset(1).limit(1)
+    prev_snap = (await db.execute(baseline_stmt)).scalars().first()
     baseline_metrics = prev_snap.metrics if prev_snap else None
 
-    result = tracker.compute_snapshot(window_hours=window_hours, baseline_metrics=baseline_metrics)
+    result = await tracker.compute_snapshot(window_hours=window_hours, baseline_metrics=baseline_metrics)
     if result is None:
         return {
             "model_id": model_id,
@@ -331,7 +299,7 @@ async def get_performance_timeline(
 ):
     """Hourly performance snapshots for timeline charts."""
     tracker = PerformanceTracker(db, model_id)
-    return {"model_id": model_id, "timeline": tracker.get_timeline(limit=limit)}
+    return {"model_id": model_id, "timeline": await tracker.get_timeline(limit=limit)}
 
 
 @router.post("/performance/{model_id}/task-type")
@@ -357,7 +325,7 @@ async def get_performance_slice(
     Reveals if model fails for specific subgroups (Arize heatmap equivalent).
     """
     tracker = PerformanceTracker(db, model_id)
-    result = tracker.analyze_slice(req.slice_feature, window_hours=req.window_hours)
+    result = await tracker.analyze_slice(req.slice_feature, window_hours=req.window_hours)
     return result
 
 
@@ -377,11 +345,8 @@ async def get_model_overview(
     - live governance score
     """
     cutoff = datetime.utcnow() - timedelta(hours=24)
-    preds_24h = (
-        db.query(PredictionLog)
-        .filter(PredictionLog.model_id == model_id, PredictionLog.timestamp >= cutoff)
-        .all()
-    )
+    stmt = select(PredictionLog).filter(PredictionLog.model_id == model_id, PredictionLog.timestamp >= cutoff)
+    preds_24h = (await db.execute(stmt)).scalars().all()
 
     latencies = [p.latency_ms for p in preds_24h if p.latency_ms is not None]
     avg_latency = round(sum(latencies) / len(latencies), 1) if latencies else None
@@ -394,15 +359,11 @@ async def get_model_overview(
         count = sum(1 for p in preds_24h if h_start <= p.timestamp < h_end)
         sparkline.append({"hour": h, "count": count})
 
-    live_gov = compute_live_governance_score(model_id, db)
+    live_gov = await compute_live_governance_score(model_id, db)
 
     # Last drift per-feature summary
-    last_drift_report = (
-        db.query(DriftReport)
-        .filter(DriftReport.model_id == model_id)
-        .order_by(DriftReport.created_at.desc())
-        .first()
-    )
+    ld_stmt = select(DriftReport).filter(DriftReport.model_id == model_id).order_by(DriftReport.created_at.desc()).limit(1)
+    last_drift_report = (await db.execute(ld_stmt)).scalars().first()
 
     feature_summary = []
     if last_drift_report and last_drift_report.feature_results:

@@ -4,6 +4,7 @@ Endpoints for enterprise model lifecycle management:
 versioning, deployment, and governance tracking.
 """
 import uuid
+from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -12,6 +13,7 @@ from app.db.session import get_db
 from app.db.models import (
     Model, ModelVersion, Deployment, Environment, AuditLog, utcnow
 )
+from app.core.auth import AuthContext, require_role, log_action
 from pydantic import BaseModel, Field, field_validator
 import re
 
@@ -198,17 +200,24 @@ async def list_models(
 ):
     """List all registered models with version counts."""
     offset = (page - 1) * per_page
-    total = db.query(func.count(Model.id)).scalar() or 0
-    models = (await db.execute(select(Model).order_by(Model.created_at.desc()).offset(offset).limit(per_page))).scalars().all()
+    
+    # Async count
+    total_stmt = select(func.count(Model.id))
+    total = (await db.execute(total_stmt)).scalar() or 0
+    
+    # Async items
+    models_stmt = select(Model).order_by(Model.created_at.desc()).offset(offset).limit(per_page)
+    models = (await db.execute(models_stmt)).scalars().all()
 
     items = []
     for m in models:
-        version_count = db.query(func.count(ModelVersion.id)).filter(
-            ModelVersion.model_id == m.id
-        ).scalar() or 0
-        latest_version = db.query(ModelVersion).filter(
-            ModelVersion.model_id == m.id
-        ).order_by(ModelVersion.version_number.desc()).first()
+        # Async version count
+        v_count_stmt = select(func.count(ModelVersion.id)).filter(ModelVersion.model_id == m.id)
+        version_count = (await db.execute(v_count_stmt)).scalar() or 0
+        
+        # Async latest version
+        latest_v_stmt = select(ModelVersion).filter(ModelVersion.model_id == m.id).order_by(ModelVersion.version_number.desc()).limit(1)
+        latest_version = (await db.execute(latest_v_stmt)).scalars().first()
 
         items.append({
             "model_id": str(m.id),
@@ -234,17 +243,19 @@ async def list_versions(
     auth: AuthContext = Depends(require_role("viewer")),
 ):
     """List all versions of a specific model."""
-    model = db.get(Model, model_id)
+    model = await db.get(Model, model_id)
     if not model:
         raise HTTPException(404, "Model not found.")
 
-    versions = db.query(ModelVersion).filter(
+    stmt = select(ModelVersion).filter(
         ModelVersion.model_id == model_id
-    ).order_by(ModelVersion.version_number.desc()).all()
+    ).order_by(ModelVersion.version_number.desc())
+    versions = (await db.execute(stmt)).scalars().all()
 
     items = []
     for v in versions:
-        deployments = (await db.execute(select(Deployment).filter(Deployment.version_id == v.id))).scalars().all()
+        d_stmt = select(Deployment).filter(Deployment.version_id == v.id)
+        deployments = (await db.execute(d_stmt)).scalars().all()
         items.append({
             "version_id": str(v.id),
             "version_number": v.version_number,

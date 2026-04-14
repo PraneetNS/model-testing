@@ -48,11 +48,11 @@ async def create_rule(body: AlertRuleCreate, db: AsyncSession = Depends(get_db))
 
 
 @router.get("/alerts/rules")
-def list_rules(org_id: str = "", db: AsyncSession = Depends(get_db)):
-    q = db.query(AlertRule)
+async def list_rules(org_id: str = "", db: AsyncSession = Depends(get_db)):
+    stmt = select(AlertRule)
     if org_id:
-        q = q.filter(AlertRule.org_id == org_id)
-    rules = q.all()
+        stmt = stmt.filter(AlertRule.org_id == org_id)
+    rules = (await db.execute(stmt)).scalars().all()
     return [
         {"id": str(r.id), "name": r.name, "condition": r.condition, "channels": r.channels, "is_active": r.is_active}
         for r in rules
@@ -61,10 +61,11 @@ def list_rules(org_id: str = "", db: AsyncSession = Depends(get_db)):
 
 @router.delete("/alerts/rules/{rule_id}")
 async def delete_rule(rule_id: str, db: AsyncSession = Depends(get_db)):
-    rule = db.get(AlertRule, rule_id)
+    result = await db.execute(select(AlertRule).filter(AlertRule.id == rule_id))
+    rule = result.scalar_one_or_none()
     if not rule:
         raise HTTPException(404, "Rule not found.")
-    db.delete(rule)
+    await db.delete(rule)
     await db.commit()
     return {"deleted": True}
 

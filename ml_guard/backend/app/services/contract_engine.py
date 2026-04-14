@@ -50,14 +50,15 @@ class ContractEngine:
 
         # ── Fast path ─────────────────────────────────────────────────────────
         try:
-            contracts = (
-                db.query(ModelContract)
+            stmt = (
+                select(ModelContract)
                 .filter(
                     ModelContract.model_id == model_id,
                     ModelContract.is_active.is_(True),
                 )
-                .all()
             )
+            result = await db.execute(stmt)
+            contracts = result.scalars().all()
             logger.info(f"contract_engine found {len(contracts)} active models={model_id}")
         except Exception as e:
             logger.warning(f"contract_query_failed model_id={model_id} error={e}")
@@ -105,15 +106,17 @@ class ContractEngine:
                             window_mins = getattr(contract, "breach_window_minutes", 60)
                             cutoff_window = datetime.utcnow() - timedelta(minutes=window_mins)
                             
-                            earliest_breach = (
-                                db.query(ContractBreach)
+                            stmt = (
+                                select(ContractBreach)
                                 .filter(
                                     ContractBreach.contract_id == contract.id,
                                     ContractBreach.created_at >= cutoff_window
                                 )
                                 .order_by(ContractBreach.created_at.asc())
-                                .first()
+                                .limit(1)
                             )
+                            result = await db.execute(stmt)
+                            earliest_breach = result.scalars().first()
                             
                             if earliest_breach is None:
                                 # This is the first breach!
@@ -165,7 +168,9 @@ class ContractEngine:
     ) -> Dict[str, Any]:
         """Aggregate breach summary across all contracts for a model."""
         from app.db.models import ModelContract
-        contracts = db.query(ModelContract).filter(ModelContract.model_id == model_id).all()
+        stmt = select(ModelContract).filter(ModelContract.model_id == model_id)
+        result = await db.execute(stmt)
+        contracts = result.scalars().all()
         total_breaches = 0
         total_penalty = 0.0
         by_severity = {}
@@ -191,7 +196,9 @@ class ContractEngine:
         from app.db.models import ContractBreach, ModelContract
 
         try:
-            contract = db.query(ModelContract).filter(ModelContract.id == contract_id).first()
+            stmt = select(ModelContract).filter(ModelContract.id == contract_id).limit(1)
+            result = await db.execute(stmt)
+            contract = result.scalars().first()
             if not contract:
                 return {}
             
@@ -199,14 +206,15 @@ class ContractEngine:
             cutoff_24h = datetime.utcnow() - timedelta(hours=24)
             cutoff_window = datetime.utcnow() - timedelta(minutes=window_mins)
             
-            breaches_24h = (
-                db.query(ContractBreach)
+            stmt = (
+                select(ContractBreach)
                 .filter(
                     ContractBreach.contract_id == contract_id,
                     ContractBreach.created_at >= cutoff_24h,
                 )
-                .all()
             )
+            result = await db.execute(stmt)
+            breaches_24h = result.scalars().all()
         except Exception as e:
             logger.warning(f"get_contract_breach_summary_failed contract_id={contract_id} error={e}")
             return {
@@ -395,14 +403,15 @@ class ContractEngine:
         cutoff = datetime.utcnow() - timedelta(hours=window_hours)
 
         try:
-            rows = (
-                db.query(PredictionLog.prediction)
+            stmt = (
+                select(PredictionLog.prediction)
                 .filter(
                     PredictionLog.model_id == model_id,
                     PredictionLog.timestamp >= cutoff,
                 )
-                .all()
             )
+            result = await db.execute(stmt)
+            rows = result.scalars().all()
             if len(rows) < 10:
                 return None  # insufficient data
 
@@ -454,14 +463,15 @@ class ContractEngine:
 
         cutoff = datetime.utcnow() - timedelta(hours=window_hours)
         try:
-            rows = (
-                db.query(PredictionLog.features, PredictionLog.prediction)
+            stmt = (
+                select(PredictionLog.features, PredictionLog.prediction)
                 .filter(
                     PredictionLog.model_id == model_id,
                     PredictionLog.timestamp >= cutoff,
                 )
-                .all()
             )
+            result = await db.execute(stmt)
+            rows = result.all()
             if len(rows) < 20:
                 return None
 

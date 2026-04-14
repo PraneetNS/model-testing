@@ -13,7 +13,7 @@ router = APIRouter()
 @router.post("/start", response_model=dict)
 async def start_red_team_session(model_id: str, max_attacks: int = 10, db: AsyncSession = Depends(get_db)):
     """Initialize a red-teaming session and dispatch to background worker."""
-    model = db.query(Model).get(model_id)
+    model = await db.get(Model, model_id)
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
         
@@ -30,7 +30,7 @@ async def start_red_team_session(model_id: str, max_attacks: int = 10, db: Async
 @router.get("/{session_id}/report")
 async def get_red_team_report(session_id: str, db: AsyncSession = Depends(get_db)):
     """Return structured findings and summary for a red-teaming session."""
-    session = db.query(RedTeamSession).get(session_id)
+    session = await db.get(RedTeamSession, session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
         

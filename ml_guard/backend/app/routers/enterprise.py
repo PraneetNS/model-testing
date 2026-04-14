@@ -53,11 +53,12 @@ class PolicyPatch(BaseModel):
 
 
 # ─── LOG HELPER ───
-async def _log(db, org_id, user_id, action, resource_type=None, resource_id=None, details=None, ip=None):
+async def _log(db: AsyncSession, org_id, user_id, action, resource_type=None, resource_id=None, details=None, ip=None):
+    from app.db.models import AuditLog
     db.add(AuditLog(
         org_id=org_id, user_id=user_id, action=action,
         resource_type=resource_type, resource_id=str(resource_id) if resource_id else None,
-        details=details, ip_address=ip,
+        details=details, actor_ip=ip,
     ))
     await db.commit()
 
@@ -165,10 +166,10 @@ async def patch_policy(policy_id: str, body: PolicyPatch, db: AsyncSession = Dep
     Creates an audit log entry for traceability.
     """
     # Try PolicyVersion first, then PolicyRule
-    policy = db.get(PolicyVersion, policy_id)
+    policy = await db.get(PolicyVersion, policy_id)
     policy_type = "version"
     if not policy:
-        policy = db.get(PolicyRule, policy_id)
+        policy = await db.get(PolicyRule, policy_id)
         policy_type = "rule"
     if not policy:
         raise HTTPException(404, "Policy not found.")
@@ -222,11 +223,12 @@ async def patch_policy(policy_id: str, body: PolicyPatch, db: AsyncSession = Dep
 # ══════════════════════════════════════════════════════
 
 @router.get("/health/db")
-def db_health_check(db: AsyncSession = Depends(get_db)):
+async def db_health_check(db: AsyncSession = Depends(get_db)):
     """Check database connectivity and return status."""
     try:
         from sqlalchemy import text
-        result = db.execute(text("SELECT 1")).fetchone()
+        result = await db.execute(text("SELECT 1"))
+        result = result.fetchone()
         # Detect DB type
         uri = str(db.bind.url) if db.bind else "unknown"
         if "postgresql" in uri or "neon" in uri:
@@ -252,8 +254,8 @@ async def create_org(body: OrgCreate, db: AsyncSession = Depends(get_db)):
     db.add(org)
     await db.commit()
     await db.refresh(org)
-    _log(db, str(org.id), None, "org.create", "organization", org.id, {"name": body.name})
-    return {"id": str(org.id), "name": org.name, "slug": org.slug, "plan": org.plan}
+    await _log(db, str(org.id), None, "org.create", "organization", org.id, {"name": body.name})
+    return {"id": str(org.id), "name": org.name, "slug": org.slug, "plan": body.plan}
 
 
 @router.get("/orgs")
@@ -263,8 +265,8 @@ async def list_orgs(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/orgs/{org_id}")
-def get_org(org_id: str, db: AsyncSession = Depends(get_db)):
-    org = db.get(Organization, org_id)
+async def get_org(org_id: str, db: AsyncSession = Depends(get_db)):
+    org = await db.get(Organization, org_id)
     if not org:
         raise HTTPException(404, "Organization not found.")
     return {
@@ -279,7 +281,7 @@ def get_org(org_id: str, db: AsyncSession = Depends(get_db)):
 # ══════════════════════════════════════════════════════
 @router.post("/orgs/{org_id}/users")
 async def create_user(org_id: str, body: UserCreate, db: AsyncSession = Depends(get_db)):
-    org = db.get(Organization, org_id)
+    org = await db.get(Organization, org_id)
     if not org:
         raise HTTPException(404, "Organization not found.")
     if body.role not in ("admin", "ml_engineer", "auditor", "viewer"):
@@ -295,7 +297,7 @@ async def create_user(org_id: str, body: UserCreate, db: AsyncSession = Depends(
     db.add(user)
     await db.commit()
     await db.refresh(user)
-    _log(db, org_id, str(user.id), "user.create", "user", user.id, {"email": body.email, "role": body.role})
+    await _log(db, org_id, str(user.id), "user.create", "user", user.id, {"email": body.email, "role": body.role})
     return {"id": str(user.id), "email": user.email, "name": user.name, "role": user.role}
 
 
@@ -310,14 +312,14 @@ async def list_users(org_id: str, db: AsyncSession = Depends(get_db)):
 # ══════════════════════════════════════════════════════
 @router.post("/orgs/{org_id}/projects")
 async def create_project(org_id: str, body: ProjectCreate, db: AsyncSession = Depends(get_db)):
-    org = db.get(Organization, org_id)
+    org = await db.get(Organization, org_id)
     if not org:
         raise HTTPException(404, "Organization not found.")
     proj = Project(org_id=org_id, name=body.name, description=body.description)
     db.add(proj)
     await db.commit()
     await db.refresh(proj)
-    _log(db, org_id, None, "project.create", "project", proj.id, {"name": body.name})
+    await _log(db, org_id, None, "project.create", "project", proj.id, {"name": body.name})
     return {"id": str(proj.id), "name": proj.name, "description": proj.description}
 
 
@@ -332,7 +334,7 @@ async def list_projects(org_id: str, db: AsyncSession = Depends(get_db)):
 # ══════════════════════════════════════════════════════
 @router.post("/orgs/{org_id}/api-keys")
 async def create_api_key(org_id: str, body: APIKeyCreate, db: AsyncSession = Depends(get_db)):
-    org = db.get(Organization, org_id)
+    org = await db.get(Organization, org_id)
     if not org:
         raise HTTPException(404, "Organization not found.")
     raw_key = f"mlg_{secrets.token_urlsafe(32)}"
@@ -340,7 +342,7 @@ async def create_api_key(org_id: str, body: APIKeyCreate, db: AsyncSession = Dep
     api_key = APIKey(org_id=org_id, key_hash=key_hash, label=body.label, scopes=body.scopes)
     db.add(api_key)
     await db.commit()
-    _log(db, org_id, None, "api_key.create", "api_key", api_key.id, {"label": body.label})
+    await _log(db, org_id, None, "api_key.create", "api_key", api_key.id, {"label": body.label})
     return {"id": str(api_key.id), "key": raw_key, "label": body.label, "scopes": body.scopes,
             "warning": "Store this key securely. It will not be shown again."}
 

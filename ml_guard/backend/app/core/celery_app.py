@@ -47,8 +47,8 @@ class ReliableTask(Task):
 celery_app = Celery("ml_guard", broker=settings.REDIS_URL)
 celery_app.Task = ReliableTask
 celery_app.conf.result_backend = settings.REDIS_URL
-celery_app.conf.task_soft_time_limit = 120
-celery_app.conf.task_time_limit = 180
+celery_app.conf.task_soft_time_limit = 600  # 10 minutes
+celery_app.conf.task_time_limit = 900       # 15 minutes
 
 # Automatically discover tasks in all task modules
 celery_app.autodiscover_tasks([

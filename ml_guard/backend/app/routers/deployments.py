@@ -4,6 +4,7 @@ Endpoints for environment management and model promotion.
 """
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func
@@ -25,9 +26,10 @@ async def list_environments(
     auth: AuthContext = Depends(require_role("viewer")),
 ):
     """List all deployment environments."""
-    envs = db.query(Environment).filter(
+    stmt = select(Environment).filter(
         (Environment.org_id == auth.org_id) | (Environment.org_id.is_(None))
-    ).all()
+    )
+    envs = (await db.execute(stmt)).scalars().all()
 
     # If no environments exist, seed defaults
     if not envs:
@@ -55,15 +57,21 @@ async def list_environments(
 # ═══════════════════════════════════════════════
 # PROMOTE MODEL (DEV → STAGING → PRODUCTION)
 # ═══════════════════════════════════════════════
+class PromoteSchema(BaseModel):
+    version_id: str
+    target_environment: str
+
 @router.post("/deployments/promote")
 async def promote_model(
-    version_id: str,
-    target_environment: str,
+    data: PromoteSchema,
     db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("ml_engineer")),
 ):
     """Promote a model version to a target environment."""
-    version = db.get(ModelVersion, version_id)
+    version_id = data.version_id
+    target_environment = data.target_environment
+    
+    version = await db.get(ModelVersion, version_id)
     if not version:
         raise HTTPException(404, "Model version not found.")
 
@@ -83,11 +91,12 @@ async def promote_model(
     # Check promotion path: must have been deployed to the previous environment
     if promotion_order[target_environment] > 0:
         prev_envs = ["DEV"] if target_environment == "STAGING" else ["DEV", "STAGING"]
-        existing = db.query(Deployment).filter(
+        stmt = select(Deployment).filter(
             Deployment.version_id == version_id,
             Deployment.environment.in_(prev_envs),
             Deployment.status == "ACTIVE",
-        ).first()
+        ).limit(1)
+        existing = (await db.execute(stmt)).scalars().first()
         if not existing:
             raise HTTPException(
                 400,
@@ -127,7 +136,7 @@ async def rollback_deployment(
     auth: AuthContext = Depends(require_role("ml_engineer")),
 ):
     """Rollback a specific deployment."""
-    deployment = db.get(Deployment, deployment_id)
+    deployment = await db.get(Deployment, deployment_id)
     if not deployment:
         raise HTTPException(404, "Deployment not found.")
 
@@ -157,20 +166,33 @@ async def list_deployments(
     auth: AuthContext = Depends(require_role("viewer")),
 ):
     """List all deployments with optional filtering."""
-    q = db.query(Deployment)
+    stmt = select(Deployment)
     if environment:
-        q = q.filter(Deployment.environment == environment)
+        stmt = stmt.filter(Deployment.environment == environment)
     if status:
-        q = q.filter(Deployment.status == status)
+        stmt = stmt.filter(Deployment.status == status)
 
-    total = q.count()
+    total_result = await db.execute(
+        select(func.count(Deployment.id)).filter(
+            *([Deployment.environment == environment] if environment else []),
+            *([Deployment.status == status] if status else []),
+        )
+    )
+    total = total_result.scalar() or 0
     offset = (page - 1) * per_page
-    deployments = q.order_by(Deployment.created_at.desc()).offset(offset).limit(per_page).all()
+    deployments_result = await db.execute(
+        stmt.order_by(Deployment.created_at.desc()).offset(offset).limit(per_page)
+    )
+    deployments = deployments_result.scalars().all()
 
     items = []
     for d in deployments:
-        version = db.get(ModelVersion, str(d.version_id))
-        model = db.get(Model, str(version.model_id)) if version else None
+        version_result = await db.execute(select(ModelVersion).filter(ModelVersion.id == str(d.version_id)))
+        version = version_result.scalar_one_or_none()
+        model = None
+        if version:
+            model_result = await db.execute(select(Model).filter(Model.id == str(version.model_id)))
+            model = model_result.scalar_one_or_none()
         items.append({
             "deployment_id": str(d.id),
             "model_name": model.name if model else "Unknown",

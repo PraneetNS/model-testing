@@ -86,12 +86,8 @@ class GovernanceEngine:
         # ── Pull latest scan record for this model ──────────────────────────
         last_scan: Optional[Any] = None
         try:
-            last_scan = (
-                db.query(ScanRecord)
-                .filter(ScanRecord.model_id == model_id)
-                .order_by(ScanRecord.created_at.desc())
-                .first()
-            )
+            stmt = select(ScanRecord).filter(ScanRecord.model_id == model_id).order_by(ScanRecord.created_at.desc())
+            last_scan = (await db.execute(stmt)).scalars().first()
         except Exception as e:
             logger.warning(f"scan_record_query_failed model_id={model_id} error={str(e)}")
 
@@ -99,12 +95,8 @@ class GovernanceEngine:
 
         # Performance
         try:
-            perf = (
-                db.query(PerformanceResult)
-                .filter(PerformanceResult.model_id == model_id)
-                .order_by(PerformanceResult.created_at.desc())
-                .first()
-            )
+            stmt = select(PerformanceResult).filter(PerformanceResult.model_id == model_id).order_by(PerformanceResult.created_at.desc())
+            perf = (await db.execute(stmt)).scalars().first()
             metrics = getattr(perf, "computed_metrics_json", {}) or {}
             if metrics:
                 acc = metrics.get("accuracy", metrics.get("accuracy_score", 0.75))
@@ -118,12 +110,8 @@ class GovernanceEngine:
 
         # Drift
         try:
-            drift = (
-                db.query(DriftResult)
-                .filter(DriftResult.model_id == model_id)
-                .order_by(DriftResult.created_at.desc())
-                .first()
-            )
+            stmt = select(DriftResult).filter(DriftResult.model_id == model_id).order_by(DriftResult.created_at.desc())
+            drift = (await db.execute(stmt)).scalars().first()
             metrics = getattr(drift, "computed_metrics_json", {}) or {}
             if metrics:
                 psi = metrics.get("psi", metrics.get("overall_psi", 0.0))
@@ -136,12 +124,8 @@ class GovernanceEngine:
 
         # Fairness
         try:
-            fairness = (
-                db.query(FairnessResult)
-                .filter(FairnessResult.model_id == model_id)
-                .order_by(FairnessResult.created_at.desc())
-                .first()
-            )
+            stmt = select(FairnessResult).filter(FairnessResult.model_id == model_id).order_by(FairnessResult.created_at.desc())
+            fairness = (await db.execute(stmt)).scalars().first()
             if fairness and fairness.computed_metrics_json:
                 m = fairness.computed_metrics_json
                 # demographic_parity_diff: 0 is best, >0.1 is bad
@@ -155,12 +139,8 @@ class GovernanceEngine:
 
         # LLM Safety
         try:
-            llm = (
-                db.query(LLMResult)
-                .filter(LLMResult.model_id == model_id)
-                .order_by(LLMResult.created_at.desc())
-                .first()
-            )
+            stmt = select(LLMResult).filter(LLMResult.model_id == model_id).order_by(LLMResult.created_at.desc())
+            llm = (await db.execute(stmt)).scalars().first()
             if llm and llm.computed_metrics_json:
                 m = llm.computed_metrics_json
                 tox = m.get("toxicity_score", 0.0)
@@ -174,12 +154,8 @@ class GovernanceEngine:
 
         # Robustness (from behavior tests in ScanRecord or GovernanceResult)
         try:
-            gov = (
-                db.query(GovernanceResult)
-                .filter(GovernanceResult.model_id == model_id)
-                .order_by(GovernanceResult.created_at.desc())
-                .first()
-            )
+            stmt = select(GovernanceResult).filter(GovernanceResult.model_id == model_id).order_by(GovernanceResult.created_at.desc())
+            gov = (await db.execute(stmt)).scalars().first()
             if gov and gov.computed_metrics_json:
                 m = gov.computed_metrics_json
                 rob = m.get("robustness_score", m.get("stability_score", 0.75))
@@ -198,18 +174,11 @@ class GovernanceEngine:
 
         # ── Live decay from production observability ─────────────────────────
         try:
-            last_drift_report = (
-                db.query(DriftReport)
-                .filter(DriftReport.model_id == model_id)
-                .order_by(DriftReport.created_at.desc())
-                .first()
-            )
-            last_perf_snapshot = (
-                db.query(PerformanceSnapshot)
-                .filter(PerformanceSnapshot.model_id == model_id)
-                .order_by(PerformanceSnapshot.computed_at.desc())
-                .first()
-            )
+            d_stmt = select(DriftReport).filter(DriftReport.model_id == model_id).order_by(DriftReport.created_at.desc())
+            last_drift_report = (await db.execute(d_stmt)).scalars().first()
+            
+            p_stmt = select(PerformanceSnapshot).filter(PerformanceSnapshot.model_id == model_id).order_by(PerformanceSnapshot.computed_at.desc())
+            last_perf_snapshot = (await db.execute(p_stmt)).scalars().first()
         except Exception:
             last_drift_report = None
             last_perf_snapshot = None

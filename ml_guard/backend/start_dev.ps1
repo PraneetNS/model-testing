@@ -15,6 +15,6 @@ Start-Process powershell -ArgumentList `
     "-Command", `
     "cd '$PWD'; .\venv\Scripts\Activate.ps1; celery -A app.core.celery_app worker --loglevel=info --pool=solo"
 
-Write-Host "✓ FastAPI starting on http://127.0.0.1:8000"
-Write-Host "✓ Celery worker starting"
-Write-Host "✓ Swagger UI: http://127.0.0.1:8000/docs"
+Write-Host "[*] FastAPI starting on http://127.0.0.1:8000"
+Write-Host "[*] Celery worker starting"
+Write-Host "[*] Swagger UI: http://127.0.0.1:8000/docs"

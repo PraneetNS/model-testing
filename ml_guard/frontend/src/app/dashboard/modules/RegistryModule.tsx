@@ -46,8 +46,13 @@ export default function ModelRegistryModule({ state, setState, onAction }: any) 
         e.preventDefault();
         setRegistering(true);
         try {
-            const res = await apiFetch(`/api/v1/models/register?model_name=${encodeURIComponent(newModel.name)}&owner=${encodeURIComponent(newModel.provider)}&description=${encodeURIComponent(newModel.description)}`, {
-                method: "POST"
+            const res = await apiFetch(`/api/v1/models/register`, {
+                method: "POST",
+                body: JSON.stringify({
+                    model_name: newModel.name,
+                    owner: newModel.provider,
+                    description: newModel.description
+                })
             });
             if (res.ok) {
                 setShowRegister(false);

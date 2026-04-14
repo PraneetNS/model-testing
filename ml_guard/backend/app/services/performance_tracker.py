@@ -141,14 +141,16 @@ class PerformanceTracker:
         self.db = db
         self.model_id = model_id
 
-    def _get_task_type(self) -> str:
+    async def _get_task_type(self) -> str:
         """Retrieve stored task type for model (defaults to classification)."""
-        snap = (
-            self.db.query(PerformanceSnapshot)
+        stmt = (
+            select(PerformanceSnapshot)
             .filter(PerformanceSnapshot.model_id == self.model_id)
             .order_by(PerformanceSnapshot.computed_at.desc())
-            .first()
+            .limit(1)
         )
+        result = await self.db.execute(stmt)
+        snap = result.scalars().first()
         return snap.task_type if snap else "classification"
 
     async def compute_snapshot(
@@ -161,17 +163,17 @@ class PerformanceTracker:
         Compute a PerformanceSnapshot from labeled predictions in the window.
         Persists to DB and returns the result dict.
         """
-        df = get_recent_predictions_df(self.db, self.model_id, hours=window_hours)
+        df = await get_recent_predictions_df(self.db, self.model_id, hours=window_hours)
         if df.empty:
             return None
 
         labeled = df.dropna(subset=["ground_truth"])
         label_coverage_pct = round(len(labeled) / len(df) * 100, 2) if len(df) > 0 else 0.0
 
-        task_type = task_type or self._get_task_type()
+        task_type = task_type or await self._get_task_type()
 
         if len(labeled) < 10:
-            logger.warning("insufficient_labeled_data", model_id=self.model_id, labeled=len(labeled))
+            logger.warning(f"insufficient_labeled_data model_id={self.model_id} labeled={len(labeled)}")
             return None
 
         y_true = pd.to_numeric(labeled["ground_truth"], errors="coerce").fillna(0).values
@@ -221,15 +223,17 @@ class PerformanceTracker:
             "label_coverage_pct": label_coverage_pct,
         }
 
-    def get_timeline(self, limit: int = 48) -> List[Dict[str, Any]]:
+    async def get_timeline(self, limit: int = 48) -> List[Dict[str, Any]]:
         """Return the last N performance snapshots as a timeline."""
-        snaps = (
-            self.db.query(PerformanceSnapshot)
+        from sqlalchemy import desc
+        stmt = (
+            select(PerformanceSnapshot)
             .filter(PerformanceSnapshot.model_id == self.model_id)
-            .order_by(PerformanceSnapshot.computed_at.desc())
+            .order_by(desc(PerformanceSnapshot.computed_at))
             .limit(limit)
-            .all()
         )
+        result = await self.db.execute(stmt)
+        snaps = result.scalars().all()
         return [
             {
                 "snapshot_id": str(s.id),
@@ -242,10 +246,10 @@ class PerformanceTracker:
             for s in snaps
         ]
 
-    def analyze_slice(self, slice_feature: str, window_hours: int = 24) -> Dict[str, Any]:
+    async def analyze_slice(self, slice_feature: str, window_hours: int = 24) -> Dict[str, Any]:
         """Compute performance broken down by a specific feature slice."""
-        df = get_recent_predictions_df(self.db, self.model_id, hours=window_hours)
+        df = await get_recent_predictions_df(self.db, self.model_id, hours=window_hours)
         if df.empty:
             return {"error": "No prediction data available."}
-        task_type = self._get_task_type()
+        task_type = await self._get_task_type()
         return _analyze_slice(df, slice_feature, task_type)

@@ -29,6 +29,7 @@ api_key_header = APIKeyHeader(
 class AuthContext:
     """Consolidated authentication and authorization context."""
     user_id: Optional[uuid.UUID]
+    api_key_id: Optional[uuid.UUID]
     org_id: Optional[uuid.UUID]
     role: str
     scopes: List[str]
@@ -76,12 +77,13 @@ async def get_auth_context(
     
     found_key = None
     for key_record in api_keys:
-        # Check if it looks like a bcrypt hash (starts with $2b$ or $2a$)
-        if key_record.key_hash.startswith("$2") and verify_password(x_api_key, key_record.key_hash):
-            found_key = key_record
-            break
-        # Fallback for old SHA-256 keys (migration period)
-        elif not key_record.key_hash.startswith("$2"):
+        # Check if it's a passlib-compatible hash (starts with $)
+        if key_record.key_hash.startswith("$"):
+            if verify_password(x_api_key, key_record.key_hash):
+                found_key = key_record
+                break
+        # Fallback for old raw SHA-256 keys (migration period)
+        else:
             import hashlib
             old_hash = hashlib.sha256(x_api_key.encode()).hexdigest()
             if old_hash == key_record.key_hash:
@@ -108,6 +110,7 @@ async def get_auth_context(
     
     return AuthContext(
         user_id=None,
+        api_key_id=found_key.id,
         org_id=found_key.org_id,
         role="admin" if "admin" in (found_key.scopes or []) else "viewer",
         scopes=found_key.scopes or []
@@ -147,7 +150,7 @@ async def log_action(
         from app.db.models import AuditLog
         log = AuditLog(
             org_id=auth.org_id,
-            user_id=auth.user_id,
+            actor_key_id=getattr(auth, "api_key_id", None),
             action=action,
             resource_type=resource_type,
             resource_id=resource_id,

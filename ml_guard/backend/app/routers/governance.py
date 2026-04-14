@@ -73,7 +73,7 @@ async def get_governance_score(
     Returns audit-derived score AND live score with drift/perf decay applied.
     """
     try:
-        result = _governance_engine.compute_score(model_id=model_id, db=db)
+        result = await _governance_engine.compute_score(model_id=model_id, db=db)
         return _score_to_dict(result)
     except Exception as e:
         logger.error("governance_score_failed", model_id=model_id, error=str(e))
@@ -92,30 +92,18 @@ async def get_live_governance_score(
 
     base_score = 75.0
     try:
-        last_scan = (
-            db.query(ScanRecord)
-            .filter(ScanRecord.model_id == model_id)
-            .order_by(ScanRecord.created_at.desc())
-            .first()
-        )
+        stmt = select(ScanRecord).filter(ScanRecord.model_id == model_id).order_by(ScanRecord.created_at.desc())
+        last_scan = (await db.execute(stmt)).scalars().first()
         if last_scan and last_scan.governance_score:
             base_score = last_scan.governance_score
     except Exception:
         pass
 
-    last_drift = (
-        db.query(DriftReport)
-        .filter(DriftReport.model_id == model_id)
-        .order_by(DriftReport.created_at.desc())
-        .first()
-    )
+    d_stmt = select(DriftReport).filter(DriftReport.model_id == model_id).order_by(DriftReport.created_at.desc())
+    last_drift = (await db.execute(d_stmt)).scalars().first()
 
-    last_perf = (
-        db.query(PerformanceSnapshot)
-        .filter(PerformanceSnapshot.model_id == model_id)
-        .order_by(PerformanceSnapshot.computed_at.desc())
-        .first()
-    )
+    p_stmt = select(PerformanceSnapshot).filter(PerformanceSnapshot.model_id == model_id).order_by(PerformanceSnapshot.computed_at.desc())
+    last_perf = (await db.execute(p_stmt)).scalars().first()
 
     live_score = _governance_engine.compute_live_score(base_score, last_drift, last_perf)
 
@@ -151,7 +139,7 @@ async def certify_model(
     Trigger full governance audit and generate a compliance certificate.
     """
     try:
-        result = _governance_engine.compute_score(model_id=model_id, db=db)
+        result = await _governance_engine.compute_score(model_id=model_id, db=db)
     except Exception as e:
         logger.error("governance_certify_failed", model_id=model_id, error=str(e))
         raise HTTPException(status_code=500, detail=f"Governance computation failed: {str(e)}")
@@ -226,7 +214,7 @@ async def synchronous_gate_check(
     SYNCHRONOUS CI/CD policy gate check.
     """
     try:
-        result = _governance_engine.compute_score(model_id=model_id, db=db)
+        result = await _governance_engine.compute_score(model_id=model_id, db=db)
     except Exception as e:
         logger.error("gate_computation_failed", model_id=model_id, error=str(e))
         raise HTTPException(status_code=500, detail=f"Gate computation failed: {str(e)}")
@@ -241,12 +229,8 @@ async def synchronous_gate_check(
     if not policy_config:
         try:
             from app.db.models import PolicyVersion
-            active_policy = (
-                db.query(PolicyVersion)
-                .filter(PolicyVersion.is_active == True)
-                .order_by(PolicyVersion.created_at.desc())
-                .first()
-            )
+            stmt = select(PolicyVersion).filter(PolicyVersion.is_active == True).order_by(PolicyVersion.created_at.desc())
+            active_policy = (await db.execute(stmt)).scalars().first()
             if active_policy:
                 policy_config = active_policy.config or {}
         except Exception:

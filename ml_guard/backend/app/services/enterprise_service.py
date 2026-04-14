@@ -141,7 +141,8 @@ async def get_scans_paginated(
 
     # Sorting
     sort_col = getattr(ScanRecord, sort_by, ScanRecord.created_at)
-    stmt = select(ScanRecord)
+    from sqlalchemy.orm import selectinload
+    stmt = select(ScanRecord).options(selectinload(ScanRecord.model))
     if sort_dir == "asc":
         stmt = stmt.order_by(asc(sort_col))
     else:
@@ -264,8 +265,8 @@ async def get_audit_logs_paginated(
                 "resource_type": l.resource_type,
                 "resource_id": l.resource_id,
                 "details": l.details,
-                "user_id": str(l.user_id) if l.user_id else None,
-                "ip_address": l.ip_address,
+                "actor_key_id": str(l.actor_key_id) if l.actor_key_id else None,
+                "ip_address": l.actor_ip,
                 "created_at": str(l.created_at),
             }
             for l in logs

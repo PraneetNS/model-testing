@@ -42,7 +42,7 @@ def compute_ks(expected, actual):
         expected = expected[~np.isnan(expected)]
         actual = actual[~np.isnan(actual)]
         stat, pval = stats.ks_2samp(expected, actual)
-        return float(stat), float(pval)
+        return float(stat) if not np.isnan(stat) else 0.0, float(pval) if not np.isnan(pval) else 1.0
     except Exception as e:
         raise MetricComputationError(f"Failed to compute KS statistic: {e}")
 
@@ -96,8 +96,8 @@ def compute_target_drift(y_train, y_val, task="classification"):
             stat, pval = stats.chisquare(obs_train, f_exp=obs_val_scaled)
             return {
                 "test": "chi_square",
-                "statistic": float(stat),
-                "p_value": float(pval),
+                "statistic": float(stat) if not np.isnan(stat) else 0.0,
+                "p_value": float(pval) if not np.isnan(pval) else 1.0,
                 "drifted": bool(pval < 0.05),
                 "class_distribution_train": {str(c): int(np.sum(y_train == c)) for c in classes},
                 "class_distribution_val": {str(c): int(np.sum(y_val == c)) for c in classes},
@@ -106,8 +106,8 @@ def compute_target_drift(y_train, y_val, task="classification"):
             stat, pval = stats.ks_2samp(y_train.astype(float), y_val.astype(float))
             return {
                 "test": "ks",
-                "statistic": float(stat),
-                "p_value": float(pval),
+                "statistic": float(stat) if not np.isnan(stat) else 0.0,
+                "p_value": float(pval) if not np.isnan(pval) else 1.0,
                 "drifted": bool(pval < 0.05),
             }
     except Exception as e:
@@ -124,11 +124,11 @@ def compute_feature_drift_report(X_train: pd.DataFrame, X_val: pd.DataFrame, psi
         ks_stat, ks_pval = compute_ks(X_train[col].values, X_val[col].values)
         jsd = compute_jsd(X_train[col].values, X_val[col].values)
         report[col] = {
-            "PSI": round(psi, 6),
-            "KS_Stat": round(ks_stat, 6),
-            "KS_pval": round(ks_pval, 6),
-            "JSD": round(jsd, 6),
-            "drift_flag": psi > psi_threshold or jsd > jsd_threshold,
+            "PSI": round(psi, 6) if not np.isnan(psi) else 0.0,
+            "KS_Stat": round(ks_stat, 6) if not np.isnan(ks_stat) else 0.0,
+            "KS_pval": round(ks_pval, 6) if not np.isnan(ks_pval) else 1.0,
+            "JSD": round(jsd, 6) if not np.isnan(jsd) else 0.0,
+            "drift_flag": bool(psi > psi_threshold or jsd > jsd_threshold) if not np.isnan(psi) and not np.isnan(jsd) else False,
         }
     # Top 5 drifted features by JSD
     sorted_by_jsd = sorted(report.items(), key=lambda x: x[1]["JSD"], reverse=True)

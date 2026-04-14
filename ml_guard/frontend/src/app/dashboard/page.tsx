@@ -402,7 +402,7 @@ function ModelAuditPage({ state, setState, onAction }: any) {
                         return;
                     }
                     try {
-                        const jobRes = await apiFetch(`/api/v1/jobs/${d.job_id}`);
+                        const jobRes = await apiFetch(`/api/v1/gate/result/${d.submission_token}`);
                         const jobData = await jobRes.json();
                         if (jobData.status === "COMPLETED") {
                             clearInterval(poll);
@@ -1282,7 +1282,7 @@ function AIAdvisoryPage({ state, setState, onAction }: any) {
         const body: any = { question };
         if (scanId) body.scan_id = scanId;
         try {
-            const r = await fetch(`${API_BASE}/api/v1/${endpoint}`, {
+            const r = await apiFetch(`/api/v1/${endpoint}`, {
                 method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
             });
             const d = await r.json();

@@ -60,7 +60,7 @@ async def ingest_single(
     try:
         from app.services.contract_engine import ContractEngine
         _ce = ContractEngine()
-        breaches = _ce.check_prediction(
+        breaches = await _ce.check_prediction(
             db=db,
             model_id=model_id,
             prediction=prediction,
@@ -204,14 +204,16 @@ async def get_recent_predictions_df(
     from datetime import timedelta
     cutoff = datetime.utcnow() - timedelta(hours=hours)
 
-    q = db.query(PredictionLog).filter(
+    from sqlalchemy import select
+    stmt = select(PredictionLog).filter(
         PredictionLog.model_id == model_id,
         PredictionLog.timestamp >= cutoff,
     )
     if environment:
-        q = q.filter(PredictionLog.environment == environment)
+        stmt = stmt.filter(PredictionLog.environment == environment)
 
-    rows = q.order_by(PredictionLog.timestamp.desc()).all()
+    result = await db.execute(stmt.order_by(PredictionLog.timestamp.desc()))
+    rows = result.scalars().all()
     if not rows:
         return pd.DataFrame()
 

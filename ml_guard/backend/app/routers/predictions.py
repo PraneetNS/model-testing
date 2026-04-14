@@ -93,10 +93,11 @@ async def prediction_trends(
     """Get prediction distribution and drift trends over time."""
     since = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=hours)
 
-    logs = db.query(PredictionLog).filter(
+    stmt = select(PredictionLog).filter(
         PredictionLog.model_version_id == model_version_id,
-        PredictionLog.created_at >= since,
-    ).order_by(PredictionLog.created_at.desc()).limit(5000).all()
+        PredictionLog.timestamp >= since,
+    ).order_by(PredictionLog.timestamp.desc()).limit(5000)
+    logs = (await db.execute(stmt)).scalars().all()
 
     if not logs:
         return {
@@ -148,14 +149,13 @@ async def latest_logs(
     auth: AuthContext = Depends(require_role("viewer")),
 ):
     """Retrieve the latest prediction logs for the dashboard."""
-    logs = (await db.execute(select(PredictionLog).order_by(PredictionLog.created_at.desc()).limit(limit))).scalars().all()
+    logs = (await db.execute(select(PredictionLog).order_by(PredictionLog.timestamp.desc()).limit(limit))).scalars().all()
     
-    # Mock some data if empty for demo/enterprise feel, but try real first
     items = []
     for l in logs:
         items.append({
             "id": str(l.id),
-            "created_at": l.created_at.isoformat(),
+            "created_at": l.timestamp.isoformat() if l.timestamp else None,
             "latency_ms": l.latency_ms or 12.5,
             "audit_result": "CLEAN" if (l.confidence or 1.0) > 0.6 else "FLAGGED",
             "status": "SUCCESS" if l.prediction else "ERROR",
@@ -173,21 +173,33 @@ async def prediction_stats(
     auth: AuthContext = Depends(require_role("viewer")),
 ):
     """Retrieve aggregate prediction statistics."""
-    total = db.query(func.count(PredictionLog.id)).scalar() or 0
-    avg_latency = db.query(func.avg(PredictionLog.latency_ms)).scalar() or 0.0
+    total = (await db.execute(select(func.count(PredictionLog.id)))).scalar() or 0
+    avg_latency = (await db.execute(select(func.avg(PredictionLog.latency_ms)))).scalar() or 0.0
     
     # Calculate real-time stats from the last hour vs previous hour
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     last_1h = now - timedelta(hours=1)
     last_2h = now - timedelta(hours=2)
 
-    h1_count = db.query(func.count(PredictionLog.id)).filter(PredictionLog.created_at >= last_1h).scalar() or 0
-    h2_count = db.query(func.count(PredictionLog.id)).filter(PredictionLog.created_at >= last_2h, PredictionLog.created_at < last_1h).scalar() or 0
+    h1_count = (await db.execute(
+        select(func.count(PredictionLog.id)).filter(PredictionLog.timestamp >= last_1h)
+    )).scalar() or 0
+    h2_count = (await db.execute(
+        select(func.count(PredictionLog.id)).filter(
+            PredictionLog.timestamp >= last_2h, PredictionLog.timestamp < last_1h
+        )
+    )).scalar() or 0
     
     vol_drift = round(((h1_count - h2_count) / max(h2_count, 1)) * 100, 1) if h2_count > 0 else 0
     
-    h1_lat = db.query(func.avg(PredictionLog.latency_ms)).filter(PredictionLog.created_at >= last_1h).scalar() or 0
-    h2_lat = db.query(func.avg(PredictionLog.latency_ms)).filter(PredictionLog.created_at >= last_2h, PredictionLog.created_at < last_1h).scalar() or 0
+    h1_lat = (await db.execute(
+        select(func.avg(PredictionLog.latency_ms)).filter(PredictionLog.timestamp >= last_1h)
+    )).scalar() or 0
+    h2_lat = (await db.execute(
+        select(func.avg(PredictionLog.latency_ms)).filter(
+            PredictionLog.timestamp >= last_2h, PredictionLog.timestamp < last_1h
+        )
+    )).scalar() or 0
     lat_drift = round(((h1_lat - h2_lat) / max(h2_lat, 1)) * 100, 1) if h2_lat > 0 else 0
 
     return {

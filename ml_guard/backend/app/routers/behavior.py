@@ -72,24 +72,27 @@ async def list_scenarios():
 
 
 @router.post("/behavior/test")
-def run_behavior_test(
+async def run_behavior_test(
     model_file:     UploadFile = File(...),
-    reference_file: UploadFile = File(None),
+    ref_file:       UploadFile = File(None),
     ref_dataset_url: str = Form(None),
     val_file:       UploadFile = File(None),   # Optional — needed for permutation importance
     scenarios:      str = Form(...),
     label_col:      str = Form("target"),
     auth:           AuthContext = Depends(require_engineer),
-    db:             Session = Depends(get_db),
+    db:             AsyncSession = Depends(get_db),
 ):
     from app.services.storage_service import download_from_url
     
-    model_bytes = model_file.file.read()
+    model_bytes = await model_file.read()
     model = _load_model(model_bytes, model_file.filename)
+    
+    filename = ""
+    ref_bytes = b""
 
-    if reference_file:
-        ref_bytes = reference_file.file.read()
-        filename = reference_file.filename
+    if ref_file:
+        ref_bytes = await ref_file.read()
+        filename = ref_file.filename
     elif ref_dataset_url:
         ref_bytes = download_from_url(ref_dataset_url)
         filename = ref_dataset_url
@@ -241,7 +244,7 @@ def run_behavior_test(
         robustness_score = max(0, 100 - unstable * 20)
 
     # ─── Log action ───
-    log_action(db, auth, "behavior.test", resource_type="model", details={"scenarios": selected, "score": robustness_score})
+    await log_action(db, auth, "behavior.test", resource_type="model", details={"scenarios": selected, "score": robustness_score})
 
     return {
         "baseline_variance": baseline_variance,

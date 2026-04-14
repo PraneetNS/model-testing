@@ -87,9 +87,11 @@ async def get_explainability(
         raise HTTPException(400, "Invalid explainability model_id format.")
 
     """Get stored explainability results for a model."""
-    results = db.query(ExplainabilityResult).filter(
+    stmt = select(ExplainabilityResult).filter(
         ExplainabilityResult.model_id == valid_model_id
-    ).order_by(ExplainabilityResult.created_at.desc()).all()
+    ).order_by(ExplainabilityResult.created_at.desc())
+    res = await db.execute(stmt)
+    results = res.scalars().all()
 
     if not results:
         raise HTTPException(404, "No explainability results found for this model.")

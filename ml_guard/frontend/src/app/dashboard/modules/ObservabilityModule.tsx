@@ -80,7 +80,7 @@ const StatCard = ({ label, value, sub, trend, icon: Icon, accent }: any) => {
                 <p className={`text-2xl font-black ${accent ? "text-orange-400" : "text-white"}`}>{value ?? "—"}</p>
                 {trend && <TrendIcon className={`w-4 h-4 mb-1 ${trendColor}`} />}
             </div>
-            {sub && <p className="text-[10px] text-slate-600 font-medium">{sub}</p>}
+            {sub && <div className="text-[10px] text-slate-600 font-medium">{sub}</div>}
         </div>
     );
 };
@@ -239,7 +239,9 @@ export default function ObservabilityModule({ state, setState, onAction }: any) 
         try {
             const r = await apiFetch(`/api/v1/models`);
             const d = await r.json();
-            setModels(Array.isArray(d) ? d : []);
+            // Handle both flat array and paginated items object
+            const items = Array.isArray(d) ? d : (d.items || []);
+            setModels(items);
         } catch { }
     }, []);
 

@@ -135,7 +135,7 @@ async def analyze_fairness(
     policy_result = evaluate_policy(fairness=fairness_result)
 
     # ─── Log to enterprise stream ───
-    log_action(db, auth, "fairness.analyze", "fairness", None, {
+    await log_action(db, auth, "fairness.analyze", "fairness", None, {
         "sensitive_column": sensitive_column,
         "spd": fairness_result["statistical_parity_diff"],
         "dir": fairness_result["disparate_impact_ratio"],
@@ -155,7 +155,7 @@ async def analyze_fairness(
 @router.get("/fairness/{job_id}")
 async def get_fairness_results(job_id: str, db: AsyncSession = Depends(get_db)):
     """Get fairness results for a specific job (legacy compatibility)."""
-    job = db.get(Job, job_id)
+    job = await db.get(Job, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 

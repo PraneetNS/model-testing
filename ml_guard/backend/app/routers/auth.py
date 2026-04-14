@@ -32,30 +32,41 @@ class APIKeyResponse(BaseModel):
     request_count: int
     rate_limit_rpm: int
 
+    class Config:
+        from_attributes = True
+
 class APIKeyCreatedResponse(APIKeyResponse):
     api_key: str
 
 @router.post("/auth/keys", response_model=APIKeyCreatedResponse)
+@router.post("/auth/apikey", response_model=APIKeyCreatedResponse)
 async def create_new_key(
-    data: APIKeyCreate,
+    data: Optional[APIKeyCreate] = None,
+    label: Optional[str] = Query(None),
     auth: AuthContext = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
 ):
-    """Issue a new API key (Admin only)."""
+    """Issue a new API key (Admin only). Supports both JSON body and query param label."""
+    # Resolve label and settings
+    key_label = label if label else (data.label if data else "New API Key")
+    scopes = data.scopes if data else ["read"]
+    expires_in_days = data.expires_in_days if data else 30
+    rate_limit_rpm = data.rate_limit_rpm if data else 120
+
     raw_key = f"mlg_{secrets.token_urlsafe(32)}"
     key_hash = get_password_hash(raw_key)
 
     expires_at = None
-    if data.expires_in_days:
-        expires_at = utcnow() + timedelta(days=data.expires_in_days)
+    if expires_in_days:
+        expires_at = utcnow() + timedelta(days=expires_in_days)
 
     new_key = APIKey(
         org_id=auth.org_id,
         key_hash=key_hash,
-        label=data.label,
-        scopes=data.scopes,
+        label=key_label,
+        scopes=scopes,
         expires_at=expires_at,
-        rate_limit_rpm=data.rate_limit_rpm,
+        rate_limit_rpm=rate_limit_rpm,
         is_active=True,
         request_count=0
     )
@@ -76,7 +87,8 @@ async def create_new_key(
         "api_key": raw_key
     }
 
-@router.get("/auth/keys", response_model=List[APIKeyResponse])
+@router.get("/auth/keys")
+@router.get("/auth/apikeys")
 async def list_keys(
     auth: AuthContext = Depends(require_admin),
     db: AsyncSession = Depends(get_db)
@@ -84,7 +96,20 @@ async def list_keys(
     """List all API keys with metadata (never expose raw keys)."""
     result = await db.execute(select(APIKey).filter(APIKey.org_id == auth.org_id))
     keys = result.scalars().all()
-    return keys
+    return [
+        {
+            "id": str(k.id),
+            "label": k.label,
+            "scopes": k.scopes,
+            "is_active": k.is_active,
+            "created_at": k.created_at,
+            "expires_at": k.expires_at,
+            "last_used": k.last_used,
+            "request_count": k.request_count or 0,
+            "rate_limit_rpm": k.rate_limit_rpm or 120,
+        }
+        for k in keys
+    ]
 
 @router.delete("/auth/keys/{key_id}")
 async def revoke_key(
@@ -137,10 +162,10 @@ async def get_audit_log(
     if resource_type:
         query = query.filter(AuditLog.resource_type == resource_type)
     if from_date:
-        query = query.filter(AuditLog.timestamp >= from_date)
+        query = query.filter(AuditLog.created_at >= from_date)
     if to_date:
-        query = query.filter(AuditLog.timestamp <= to_date)
+        query = query.filter(AuditLog.created_at <= to_date)
     
-    query = query.order_by(AuditLog.timestamp.desc())
+    query = query.order_by(AuditLog.created_at.desc())
     result = await db.execute(query)
     return result.scalars().all()

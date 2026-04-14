@@ -17,11 +17,12 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
     # Storage
-    MINIO_ENDPOINT: str = "localhost:9000"
+    MINIO_ENDPOINT: str = "http://localhost:9000"
     MINIO_ACCESS_KEY: str = "minioadmin"
     MINIO_SECRET_KEY: str = "minioadmin"
     MINIO_BUCKET: str = "mlguard"
     MINIO_USE_SSL: bool = False
+    MINIO_REGION: str = "us-east-1"
     
     # Redis / Celery
     REDIS_URL: str = "redis://localhost:6379/0"
