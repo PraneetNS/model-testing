@@ -30,7 +30,7 @@ async def log_prediction(
     auth: AuthContext = Depends(require_role("ml_engineer")),
 ):
     """Log a single prediction for monitoring."""
-    version = db.get(ModelVersion, model_version_id)
+    version = await db.get(ModelVersion, model_version_id)
     if not version:
         raise HTTPException(404, "Model version not found.")
 
@@ -59,7 +59,7 @@ async def batch_log_predictions(
     auth: AuthContext = Depends(require_role("ml_engineer")),
 ):
     """Log multiple predictions at once."""
-    version = db.get(ModelVersion, model_version_id)
+    version = await db.get(ModelVersion, model_version_id)
     if not version:
         raise HTTPException(404, "Model version not found.")
 

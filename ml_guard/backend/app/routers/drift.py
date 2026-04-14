@@ -18,7 +18,7 @@ async def evaluate_drift(model_id: str, baseline_id: str, current_id: str, db: A
 
 @router.get("/drift/{job_id}")
 async def get_drift_results(job_id: str, db: AsyncSession = Depends(get_db)):
-    job = db.get(Job, job_id)
+    job = await db.get(Job, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 

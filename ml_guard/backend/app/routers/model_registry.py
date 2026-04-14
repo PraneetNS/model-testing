@@ -150,7 +150,7 @@ async def deploy_model(
     auth: AuthContext = Depends(require_role("ml_engineer")),
 ):
     """Deploy a model version to an environment."""
-    version = db.get(ModelVersion, version_id)
+    version = await db.get(ModelVersion, version_id)
     if not version:
         raise HTTPException(404, "Model version not found.")
 

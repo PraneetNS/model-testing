@@ -208,7 +208,7 @@ async def explain_governance(
     # Get results from scan_id or direct JSON
     results = body.results_json
     if not results and body.scan_id:
-        scan = db.get(ScanRecord, body.scan_id)
+        scan = await db.get(ScanRecord, body.scan_id)
         if not scan:
             raise HTTPException(404, "Scan not found.")
         results = scan.results_json
@@ -220,7 +220,7 @@ async def explain_governance(
     advisory = _generate_local_advisory(results, body.question)
 
     # Log action
-    log_action(db, auth, "advisory.explain", resource_type="scan", resource_id=body.scan_id, details={"question": body.question})
+    await log_action(db, auth, "advisory.explain", resource_type="scan", resource_id=body.scan_id, details={"question": body.question})
 
     return advisory
 
@@ -240,7 +240,7 @@ async def explain_with_llm(
 
     results = body.results_json
     if not results and body.scan_id:
-        scan = db.get(ScanRecord, body.scan_id)
+        scan = await db.get(ScanRecord, body.scan_id)
         if not scan:
             raise HTTPException(404, "Scan not found.")
         results = scan.results_json
@@ -295,7 +295,7 @@ async def explain_with_llm(
             }
 
         # Log action
-        log_action(db, auth, "advisory.explain_llm", resource_type="scan", resource_id=body.scan_id, details={"question": body.question, "provider": "groq"})
+        await log_action(db, auth, "advisory.explain_llm", resource_type="scan", resource_id=body.scan_id, details={"question": body.question, "provider": "groq"})
         return {
             "advisory_type": "llm",
             "provider": "groq",
@@ -311,5 +311,5 @@ async def explain_with_llm(
         advisory = _generate_local_advisory(results, body.question)
         advisory["fallback_reason"] = f"LLM unavailable: {str(e)}"
         # Log fallback
-        log_action(db, auth, "advisory.explain_fallback", resource_type="scan", resource_id=body.scan_id, details={"question": body.question, "error": str(e)})
+        await log_action(db, auth, "advisory.explain_fallback", resource_type="scan", resource_id=body.scan_id, details={"question": body.question, "error": str(e)})
         return advisory

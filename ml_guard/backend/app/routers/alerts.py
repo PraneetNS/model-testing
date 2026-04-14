@@ -105,7 +105,7 @@ def _extract_metric(scan_results: dict, metric_name: str):
 @router.post("/alerts/evaluate/{scan_id}")
 async def evaluate_alerts(scan_id: str, db: AsyncSession = Depends(get_db)):
     """Evaluate all active alert rules against a scan result."""
-    scan = db.get(ScanRecord, scan_id)
+    scan = await db.get(ScanRecord, scan_id)
     if not scan:
         raise HTTPException(404, "Scan not found.")
 

@@ -18,7 +18,7 @@ async def run_preflight(model_id: str, db: AsyncSession = Depends(get_db)):
 
 @router.get("/preflight/{job_id}")
 async def get_preflight_results(job_id: str, db: AsyncSession = Depends(get_db)):
-    job = db.get(Job, job_id)
+    job = await db.get(Job, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 

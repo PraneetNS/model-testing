@@ -119,10 +119,10 @@ async def list_contracts(
     db: AsyncSession = Depends(get_db),
 ) -> List[Dict[str, Any]]:
     """List all contracts (or only active ones) for a model."""
-    q = db.query(ModelContract).filter(ModelContract.model_id == model_id)
+    q = select(ModelContract).filter(ModelContract.model_id == model_id)
     if active_only:
         q = q.filter(ModelContract.is_active.is_(True))
-    contracts = q.order_by(ModelContract.created_at.desc()).all()
+    contracts = (await db.execute(q.order_by(ModelContract.created_at.desc()))).scalars().all()
 
     return [
         {
@@ -150,9 +150,7 @@ async def deactivate_contract(
     Deactivate a contract. Stops checking inbound predictions immediately.
     Historical breaches are preserved.
     """
-    contract = db.query(ModelContract).filter(
-        ModelContract.id == contract_id
-    ).first()
+    contract = await db.get(ModelContract, contract_id)
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
     contract.is_active = False
@@ -169,12 +167,10 @@ async def delete_contract(
     Hard-delete a contract and all associated breaches (CASCADE).
     Use with caution — breach history will be permanently lost.
     """
-    contract = db.query(ModelContract).filter(
-        ModelContract.id == contract_id
-    ).first()
+    contract = await db.get(ModelContract, contract_id)
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
-    db.delete(contract)
+    await db.delete(contract)
     await db.commit()
 
 
@@ -194,7 +190,7 @@ async def get_breaches(
     Supports filtering by resolved status, severity, and promise type.
     """
     cutoff = datetime.utcnow() - timedelta(hours=hours)
-    q = db.query(ContractBreach).filter(
+    q = select(ContractBreach).filter(
         ContractBreach.model_id == model_id,
         ContractBreach.created_at >= cutoff,
     )
@@ -205,7 +201,7 @@ async def get_breaches(
     if promise_type:
         q = q.filter(ContractBreach.promise_type == promise_type)
 
-    breaches = q.order_by(ContractBreach.created_at.desc()).limit(500).all()
+    breaches = (await db.execute(q.order_by(ContractBreach.created_at.desc()).limit(500))).scalars().all()
 
     return [
         {
@@ -241,9 +237,7 @@ async def resolve_breach(
     db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
     """Mark a specific breach as resolved."""
-    breach = db.query(ContractBreach).filter(
-        ContractBreach.id == breach_id
-    ).first()
+    breach = await db.get(ContractBreach, breach_id)
     if not breach:
         raise HTTPException(status_code=404, detail="Breach not found")
     breach.resolved = True
@@ -259,15 +253,12 @@ async def resolve_all_breaches(
 ) -> Dict[str, Any]:
     """Bulk-resolve all open breaches for a model in the last N hours."""
     cutoff = datetime.utcnow() - timedelta(hours=hours)
-    updated = (
-        db.query(ContractBreach)
-        .filter(
-            ContractBreach.model_id == model_id,
-            ContractBreach.created_at >= cutoff,
-            ContractBreach.resolved.is_(False),
-        )
-        .all()
+    q = select(ContractBreach).filter(
+        ContractBreach.model_id == model_id,
+        ContractBreach.created_at >= cutoff,
+        ContractBreach.resolved.is_(False),
     )
+    updated = (await db.execute(q)).scalars().all()
     for b in updated:
         b.resolved = True
     await db.commit()
@@ -285,7 +276,7 @@ async def validate_prediction(
     Dry-run contract check for a prediction without persisting anything.
     Useful for testing contracts before activating them or during CI.
     """
-    breaches = _engine.check_prediction(
+    breaches = await _engine.check_prediction(
         db=db,
         model_id=req.model_id,
         prediction=req.prediction,

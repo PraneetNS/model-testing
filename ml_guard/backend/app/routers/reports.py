@@ -18,7 +18,7 @@ logger = structlog.get_logger()
 @router.post("/{model_id}/generate")
 async def start_report_generation(model_id: str, db: AsyncSession = Depends(get_db)):
     """Async trigger for governance report card synthesis."""
-    model = db.query(Model).get(model_id)
+    model = await db.get(Model, model_id)
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
         
@@ -46,7 +46,7 @@ async def verify_certificate(request: Request, cert_hash: str, db: AsyncSession 
     if not report:
         return {"valid": False, "message": "Certificate not found."}
         
-    model = db.query(Model).get(report.model_id)
+    model = await db.get(Model, report.model_id)
     return {
         "valid": not report.is_revoked,
         "model_name": model.name if model else "Unknown",
@@ -60,10 +60,9 @@ async def verify_certificate(request: Request, cert_hash: str, db: AsyncSession 
 @router.get("/{model_id}/history")
 async def get_report_history(model_id: str, db: AsyncSession = Depends(get_db)):
     """Timeline of all generated certificates for a specific model."""
-    reports = db.query(ReportCard)\
-        .filter(ReportCard.model_id == model_id)\
-        .order_by(ReportCard.issued_at.desc())\
-        .all()
+    reports = (await db.execute(select(ReportCard)
+        .filter(ReportCard.model_id == model_id)
+        .order_by(ReportCard.issued_at.desc()))).scalars().all()
         
     return [{
         "cert_hash": r.cert_hash,

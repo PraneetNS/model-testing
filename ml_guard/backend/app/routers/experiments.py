@@ -30,7 +30,7 @@ async def start_experiment(
     auth: AuthContext = Depends(require_role("ml_engineer")),
 ):
     """Start a new experiment/training run."""
-    model = db.get(Model, model_id)
+    model = await db.get(Model, model_id)
     if not model:
         raise HTTPException(404, "Model not found.")
 
@@ -74,7 +74,7 @@ async def log_experiment(
     auth: AuthContext = Depends(require_role("ml_engineer")),
 ):
     """Log metrics and parameters to a running experiment."""
-    experiment = db.get(Experiment, experiment_id)
+    experiment = await db.get(Experiment, experiment_id)
     if not experiment:
         raise HTTPException(404, "Experiment not found.")
     if experiment.status != "RUNNING":
@@ -115,7 +115,7 @@ async def end_experiment(
     auth: AuthContext = Depends(require_role("ml_engineer")),
 ):
     """End an experiment with final metrics."""
-    experiment = db.get(Experiment, experiment_id)
+    experiment = await db.get(Experiment, experiment_id)
     if not experiment:
         raise HTTPException(404, "Experiment not found.")
 

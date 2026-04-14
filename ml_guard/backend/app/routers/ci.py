@@ -170,11 +170,11 @@ async def github_webhook(
     repo_url = payload.get("repository", {}).get("html_url", "")
 
     # Find matching integration
-    integration = db.query(CIIntegration).filter(
+    integration = (await db.execute(select(CIIntegration).filter(
         CIIntegration.repo_url == repo_url,
         CIIntegration.provider == "github",
         CIIntegration.is_active == True,
-    ).first()
+    ))).scalars().first()
 
     # ─── Verify HMAC signature ───
     if integration and integration.webhook_secret and x_hub_signature_256:
@@ -249,16 +249,16 @@ async def report_status(
     1. Update GitHub commit status (success/failure)
     2. Post a PR comment with the governance summary
     """
-    scan = db.get(ScanRecord, scan_id)
+    scan = await db.get(ScanRecord, scan_id)
     if not scan:
         raise HTTPException(404, "Scan not found.")
 
     # Find integration with access token
-    integration = db.query(CIIntegration).filter(
+    integration = (await db.execute(select(CIIntegration).filter(
         CIIntegration.org_id == auth.org_id,
         CIIntegration.provider == "github",
         CIIntegration.is_active == True,
-    ).first()
+    ))).scalars().first()
 
     if not integration or not integration.settings.get("raw_token"):
         raise HTTPException(400, "No GitHub integration with access token configured.")
@@ -312,7 +312,7 @@ async def report_status(
 @router.get("/ci/status/{scan_id}")
 async def ci_status(scan_id: str, db: AsyncSession = Depends(get_db)):
     """CI-compatible status for a governance scan."""
-    scan = db.get(ScanRecord, scan_id)
+    scan = await db.get(ScanRecord, scan_id)
     if not scan:
         raise HTTPException(404, "Scan not found.")
 
