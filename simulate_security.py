@@ -4,7 +4,6 @@ import time
 import random
 
 API_URL = "http://localhost:8000/api/v1/ingest/predict"
-HEADERS = {"X-API-Key": "mlg_1Ai7zfmfsB_GLaoNuKjOOopFh12xLzGy7SDqh7Kho1U"}
 
 async def simulate_attacks():
     print("Starting real-time security simulation...")
