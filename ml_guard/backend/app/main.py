@@ -2,11 +2,13 @@ import os
 import sys
 from contextlib import asynccontextmanager
 
-_repo_root = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "../../../")
-)
-if _repo_root not in sys.path:
-    sys.path.append(_repo_root)
+# --- Repo Root Logic ---
+_app_parent = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+_repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../"))
+
+for path in [_app_parent, _repo_root]:
+    if path not in sys.path:
+        sys.path.append(path)
 
 from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware

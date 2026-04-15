@@ -264,6 +264,7 @@ class GovernanceEngine:
             calibration=metrics.get("calibration"),
             stability_score=metrics.get("stability_score"),
             governance_score=metrics.get("governance_score"),
+            security=metrics.get("security"),
             policy=rules
         )
         

@@ -48,6 +48,7 @@ def evaluate_policy(
     governance_score: float = None,
     fairness: dict = None,
     llm_evaluation: dict = None,
+    security: dict = None,
     policy: dict = None,
 ) -> dict:
     """
@@ -226,6 +227,18 @@ def evaluate_policy(
             actual_value=hall,
             status=status,
             message=f"Hallucination {hall:.4f} vs policy max {threshold}",
+        ))
+
+    # --- Security Risk ---
+    if security:
+        risk = security.get("overall_risk", "LOW")
+        status = "PASSED" if risk in ["LOW", "MEDIUM"] else "CRITICAL"
+        checks.append(PolicyCheckResult(
+            name="Model Security Risk",
+            policy_value=0.0, # N/A
+            actual_value=None,
+            status=status,
+            message=f"Model security risk level is {risk}",
         ))
 
     # --- Overall Gate ---

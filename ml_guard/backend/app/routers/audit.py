@@ -411,7 +411,7 @@ async def run_audit(
 
         from app.domain.services.governance_engine import GovernanceEngine
         eval_ctx = {"metrics": metrics, "drift": drift_report, "overfitting_gap": ov_gap,
-                    "governance_score": gov["governance_score"]}
+                    "governance_score": gov["governance_score"], "security": security_results}
         if policy_override:
             import json
             policy_result = evaluate_policy(**eval_ctx, policy=json.loads(policy_override))
@@ -427,6 +427,14 @@ async def run_audit(
             fingerprint = compute_model_fingerprint(mf)
         complexity = compute_model_complexity(model_obj)
 
+        # --- Security Checks ---
+        security_results = None
+        if "security" in selected and _has_lifecycle_core:
+            try:
+                security_results = run_security_checks(model_obj, X_train, X_val, y_train, y_val)
+            except Exception as sec_err:
+                logger.warning(f"Security checks failed: {sec_err}")
+
         results_json = {
             "checks_run": selected, "metrics": metrics, "drift": drift_report,
             "overfitting_gap": ov_gap, "governance": gov, "policy": policy_result,
@@ -435,6 +443,7 @@ async def run_audit(
             "risk_level": risk_result.get("risk_level"), "top_drifted_ranked": top_drifted,
             "top5_drifted_features": [f["feature"] for f in top_drifted[:5]],
             "fingerprint": fingerprint, "complexity": complexity,
+            "security": security_results
         }
 
         scan = ScanRecord(
@@ -446,6 +455,7 @@ async def run_audit(
             gate_status=policy_result.get("gate_status", "UNKNOWN"),
             triggered_by=auth.user_id if hasattr(auth, "user_id") else None,
             trigger_source="inline",
+            security_checks=security_results
         )
         db.add(scan)
 

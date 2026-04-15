@@ -66,3 +66,5 @@ __pycache__/
 .env
 .next/
 node_modules/
+
+scratch/

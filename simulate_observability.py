@@ -6,12 +6,13 @@ import uuid
 import sys
 
 BACKEND_URL = "http://localhost:8000/api/v1"
+HEADERS = {"X-API-Key": "mlg_simulator_key_2026_safe_dev"}
 
 def get_real_model_id():
     """Fetch the first available model_id from the registry."""
     try:
         # Use models endpoint to find valid IDs
-        resp = requests.get(f"{BACKEND_URL}/models")
+        resp = requests.get(f"{BACKEND_URL}/models", headers=HEADERS)
         if resp.status_code == 200:
             data = resp.json()
             models = data.get("items", [])
@@ -44,7 +45,7 @@ def simulate_predictions(model_id, count=50):
         }
         
         try:
-            resp = requests.post(f"{BACKEND_URL}/ingest/predict", json=payload)
+            resp = requests.post(f"{BACKEND_URL}/ingest/predict", json=payload, headers=HEADERS)
             if resp.status_code == 202:
                 print(f"  [{i+1}/{count}] Logged prediction: {resp.json().get('log_id')}")
             else:
@@ -71,7 +72,7 @@ def generate_drift_events(model_id):
             "latency_ms": 300,
             "environment": "production"
         }
-        requests.post(f"{BACKEND_URL}/ingest/predict", json=payload)
+        requests.post(f"{BACKEND_URL}/ingest/predict", json=payload, headers=HEADERS)
 
 if __name__ == "__main__":
     model_id = get_real_model_id()
