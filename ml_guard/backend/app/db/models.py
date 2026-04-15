@@ -250,6 +250,29 @@ class AuditLog(Base):
     created_at  = Column(DateTime, default=utcnow)
 
 
+class CredentialConfig(Base):
+    """Encrypted configurations for data connectors."""
+    __tablename__ = "credential_configs"
+    id              = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    connector_type  = Column(String(50), nullable=False) # s3, gcs, etc.
+    label           = Column(String(255), nullable=False)
+    encrypted_config = Column(Text, nullable=False)
+    created_by_key_id = Column(UUID(), ForeignKey("api_keys.id", ondelete="SET NULL"), nullable=True)
+    created_at      = Column(DateTime, default=utcnow)
+
+
+class DatasetRegistry(Base):
+    """Audit log of all datasets pulled via connectors."""
+    __tablename__ = "dataset_registry"
+    id              = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    source_type     = Column(String(50), nullable=False) # s3, snowflake, etc.
+    source_uri      = Column(String(1024), nullable=False)
+    row_count       = Column(Integer, nullable=True)
+    column_names    = Column(PortableJSON, nullable=True)
+    sha256          = Column(String(64), nullable=True)
+    fetched_at      = Column(DateTime, default=utcnow)
+
+
 # ══════════════════════════════════════════════════════════
 # VERSIONED GOVERNANCE POLICIES
 # ══════════════════════════════════════════════════════════
