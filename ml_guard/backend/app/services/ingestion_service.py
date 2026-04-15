@@ -54,6 +54,27 @@ async def ingest_single(
     await db.refresh(log)
     logger.info("ingested_prediction", model_id=model_id, log_id=str(log.id))
 
+    # ── Real-time Security Scan (v7.2) ────────────────────────────────────────
+    try:
+        from app.routers.security import run_realtime_scan
+        # We run this synchronously here for the demo/stability
+        sec_res = await run_realtime_scan(
+            model_id=model_id, 
+            features=features or {}
+        )
+        if sec_res.get("risk_level") in ("HIGH", "MEDIUM"):
+            logger.warning(
+                "realtime_security_threat_detected",
+                model_id=model_id,
+                log_id=str(log.id),
+                risk=sec_res.get("risk_level"),
+                anomalies=sec_res.get("anomalies")
+            )
+            # Store in PredictionLog if we had a security_flag column, 
+            # for now just log it.
+    except Exception as _sec_err:
+        logger.debug(f"realtime_security_scan_failed error={_sec_err}")
+
     # ── Contract enforcement (fire-and-forget safe) ───────────────────────────
     # Runs synchronously but NEVER raises. Any failure is silently swallowed
     # so the ingest pipeline is always safe.

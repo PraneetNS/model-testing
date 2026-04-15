@@ -64,6 +64,7 @@ from app.routers import red_team
 from app.routers import streaming
 from app.routers import advisory
 from app.routers import monitoring
+from app.routers import security
 from app.api.v1.endpoints import aibom as aibom_api
 from app.api.v1.endpoints import sandbox as sandbox_api
 from app.api.v1.endpoints import agent_eval as agent_eval_api
@@ -327,6 +328,8 @@ app.include_router(advisory.router,
     prefix="/api/v1", tags=["advisory"])
 app.include_router(monitoring.router,
     prefix="/api/v1", tags=["monitoring"])
+app.include_router(security.router,
+    prefix="/api/v1/security", tags=["security"])
 app.include_router(aibom_api.router,
     prefix="/api/v1", tags=["aibom"])
 app.include_router(sandbox_api.router,
