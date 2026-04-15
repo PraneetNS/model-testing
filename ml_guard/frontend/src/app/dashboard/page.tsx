@@ -6,7 +6,7 @@ import {
     Building2, Users, FolderOpen, KeyRound, Bell, GitBranch, BarChart3,
     Clock, ArrowUpDown, TrendingUp, TrendingDown, Minus, Shield, Eye, LogOut, User,
     Scale, Brain, Zap, Package, FlaskConical, Target, Sliders, Database, Layout,
-    Search, ShieldAlert, MonitorCheck
+    Search, ShieldAlert, MonitorCheck, Globe, ExternalLink
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip as ReTooltip, ResponsiveContainer } from "recharts";
@@ -26,6 +26,7 @@ import ModelReportCardModule from "./modules/ModelReportCardModule";
 import ObservabilityModule from "./modules/ObservabilityModule";
 import GovernanceModule from "./modules/GovernanceModule";
 import NotificationsBell from "./components/NotificationsBell";
+import HuggingFacePluginModal from "./components/HuggingFaceModal";
 import { apiFetch } from "@/lib/api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "";
@@ -428,18 +429,35 @@ function ModelAuditPage({ state, setState, onAction }: any) {
 
     return (
         <div className="grid grid-cols-1 xl:grid-cols-[400px_1fr] gap-8">
-            <div className="space-y-4">
-                <FileUpload label="1. Model Artifact (.pkl/.joblib/.onnx)" accept=".pkl,.joblib,.onnx" file={modelFile} onFile={onModelUpload} />
-                {modelMeta?.model_metadata && (
-                    <Card className="p-5 border-orange-500/20">
-                        <CardHeader title="Detected Model" />
+                <div className="flex items-center justify-between px-1">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">1. Model Artifact</p>
+                    <button onClick={() => setAuditState({ isHFModalOpen: true })} className="flex items-center gap-1.5 text-[9px] font-black uppercase text-orange-400 hover:text-orange-300 transition-colors">
+                        <Globe className="w-3 h-3" /> Pull from Hub
+                    </button>
+                </div>
+                <FileUpload label="" accept=".pkl,.joblib,.onnx" file={modelFile} onFile={onModelUpload} />
+                
+                {modelMeta && (
+                    <Card className={`p-5 ${modelMeta.source === "huggingface" ? "border-orange-500/30 bg-orange-500/[0.02]" : "border-orange-500/20"}`}>
+                        <CardHeader title={modelMeta.source === "huggingface" ? "HuggingFace Model" : "Detected Model"} badge={modelMeta.source === "huggingface" ? "REMOTE" : null} />
                         <div className="grid grid-cols-2 gap-3">
-                            <Tile label="Class" value={modelMeta.model_metadata.model_class} />
-                            <Tile label="Framework" value={modelMeta.model_metadata.framework} />
-                            <Tile label="Task" value={modelMeta.model_metadata.task} />
-                            <Tile label="Features" value={modelMeta.model_metadata.n_features_in ?? "—"} />
-                            {modelMeta.complexity?.proxy_score != null && <Tile label="Complexity" value={modelMeta.complexity.proxy_score} accent />}
+                            {modelMeta.source === "huggingface" ? (
+                                <>
+                                    <Tile label="Repo ID" value={modelMeta.repo_id} />
+                                    <Tile label="License" value={modelMeta.license || "Unknown"} />
+                                    <Tile label="Task" value={modelMeta.pipeline_tag || "—"} />
+                                    <Tile label="Downloads" value={modelMeta.downloads_last_month || "0"} />
+                                </>
+                            ) : (
+                                <>
+                                    <Tile label="Class" value={modelMeta.model_metadata?.model_class} />
+                                    <Tile label="Framework" value={modelMeta.model_metadata?.framework} />
+                                    <Tile label="Task" value={modelMeta.model_metadata?.task} />
+                                    <Tile label="Features" value={modelMeta.model_metadata?.n_features_in ?? "—"} />
+                                </>
+                            )}
                         </div>
+                        {modelMeta.sha256 && <p className="text-[9px] text-slate-600 font-mono mt-3 truncate">SHA256: {modelMeta.sha256}</p>}
                         {modelMeta.fingerprint && <p className="text-[9px] text-slate-600 font-mono mt-3 truncate">SHA256: {modelMeta.fingerprint}</p>}
                     </Card>
                 )}
@@ -1878,7 +1896,8 @@ export default function DashboardPage() {
     const [auditState, setAuditState] = useState({
         modelFile: null, trainFile: null, valFile: null, labelCol: "target",
         checks: { accuracy: true, f1: true, psi_drift: true, overfitting_check: true },
-        modelMeta: null, trainSum: null, results: null, loading: false, error: null, activePolicy: null
+        modelMeta: null, trainSum: null, results: null, loading: false, error: null, activePolicy: null,
+        isHFModalOpen: false
     });
     const [behaviorState, setBehaviorState] = useState({
         modelFile: null, refFile: null, scenarios: { monte_carlo_stability: true, ood_boundary_test: true },
@@ -2095,6 +2114,29 @@ export default function DashboardPage() {
                 <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-orange-500/5 blur-[120px] pointer-events-none rounded-full" />
                 <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/5 blur-[120px] pointer-events-none rounded-full" />
             </main>
+
+            <HuggingFacePluginModal 
+                isOpen={auditState.isHFModalOpen} 
+                onClose={() => setAuditState({...auditState, isHFModalOpen: false})}
+                onModelSelected={(data: any) => {
+                    setAuditState({
+                        ...auditState,
+                        isHFModalOpen: false,
+                        modelFile: data.repo_id, // Store repo_id as a hint
+                        modelMeta: { source: "huggingface", ...data }
+                    });
+                    refreshEnterprise();
+                }}
+                onAuditStarted={(scan: any) => {
+                    setAuditState({
+                        ...auditState,
+                        isHFModalOpen: false,
+                        results: scan,
+                        loading: false
+                    });
+                    refreshEnterprise();
+                }}
+            />
         </div>
     );
 }
