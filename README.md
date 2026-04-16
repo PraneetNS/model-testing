@@ -1,195 +1,159 @@
-# ML Guard v7.2 — The Enterprise AI Governance Platform
+# 🛡️ ML Guard v8.2 — The Enterprise AI Governance Platform
 
-[![ML Guard](https://img.shields.io/badge/Version-7.2.0%20(Agentic)-blueviolet)](https://github.com/FireFlink/ml_guard)
+[![Version](https://img.shields.io/badge/Version-8.2.0%20(Agentic)-blueviolet)](https://github.com/FireFlink/ml_guard)
 [![Stack](https://img.shields.io/badge/Stack-FastAPI%20%7C%20PostgreSQL%20%7C%20Next.js-blue)](https://github.com/FireFlink/ml_guard)
+[![License](https://img.shields.io/badge/License-Proprietary-red)](https://github.com/FireFlink/ml_guard)
 
 **ML Guard** is a state-of-the-art AI governance and observability platform designed to bring accountability, security, and behavioral compliance to machine learning models. Beyond simple monitoring, ML Guard implements a **Governance-as-Code** philosophy through its novel Behavioral Contract system, integrating directly into enterprise CI/CD workflows and production runtimes.
 
 ---
 
-## 🚀 The Feature Universe (v7.2)
+## 🚀 The Feature Universe (v8.2)
 
 ML Guard is designed to evaluate, monitor, and enforce policy across the entire ML lifecycle. From local development to production pipelines, ML Guard protects your enterprise.
 
-### 1. CI/CD Governance Gates (The Model Sentinel)
-No bad models ever make it to production.
-- **Automated Gates**: A CLI tool (`ml_guard_ci.py`) that executes a multipart submission to the backend API during your GitHub Actions pipeline.
-- **Strict Mode Enforcement**: Models must meet scoring criteria (e.g. `> 60/100`) and receive a `CERTIFIED` or `CONDITIONAL` verdict to pass.
-- **Job Asynchrony**: Background Celery workers execute the checks without blocking CI, responding via poll hooks with deterministic evaluation results.
+### 1. 📂 AI Bill of Materials (SBOM) & Governance
+Maintain a transparent and immutable record of your AI supply chain.
+- **Supply Chain Tracking**: Track model lineage, base-model origin, and dataset provenance.
+- **Audit Trails**: Full historical record of every model version, evaluation, and certification.
+- **Governance Scores**: Multi-dimensional composite grading (Performance, Fairness, Security, Robustness).
 
-### 2. Model Behavior Contracts (Novel)
+### 2. 📑 Actuarial AI Insurance Scoring (New)
+The industry's first standardized risk rating system for enterprise AI.
+- **Risk Quantization**: Mathematical assessment of model reliability, deployment risk, and incident history.
+- **Standardized Rating**: Provides an "Insurance Grade" (A++ to F) based on actuarial risk parameters.
+- **Downgrade Alerts**: Automated notification when real-time breaches impact the model's risk tier.
+
+### 3. 🧠 SHAP Governance Explainability
+Integrated SHAP (SHapley Additive exPlanations) for deep governance transparency.
+- **Fairness Alerts**: Automatically flags when sensitive features (Race, Gender, Age) contribute significantly to model outcomes.
+- **Global & Local Explanations**: Visualizes feature importance across the entire dataset and for individual high-risk predictions.
+- **Asynchronous Processing**: Background SHAP computation for high-dimensional models without impacting API performance.
+
+### 4. 🔌 Enterprise Data Connector System
+Securely ingest data from any enterprise source via our modular plugin architecture.
+- **Cloud Storage**: Native connectors for **S3, GCS, and Azure Blob Storage**.
+- **Data Warehouses**: Direct ingestion from **Snowflake and BigQuery**.
+- **Secure Credentials**: Fernet-encrypted credential management ensuring data source secrets are never leaked.
+
+### 5. 🛑 Behavioral Contracts (The Model Sentinel)
 Define behavioral promises that your model must keep. Validated in real-time during every prediction via our Python SDK.
 - **Promise Types**: Output confidence ranges, latency SLAs, probabilistic thresholds, and fairness parity bounds.
 - **Breach Management**: Automated recording of violations classified by severity (CRITICAL, HIGH, LOW).
-- **Governance Impact**: Real-world contract breaches directly and automatically penalize the model's live governance score.
+- **Live Decay**: Real-world contract breaches directly and automatically penalize the model's live governance score.
 
-### 3. Certified Governance Report Cards
-Bring peace of mind to stakeholders with audit-ready documentation.
-- **Automated Generation**: Produces professional PDF report cards for any model version at an audited timestamp.
-- **Executive Summary**: Contains the ultimate verdict (CERTIFIED, CONDITIONAL, FAILED) alongside multi-dimensional radar charts.
-- **Tamper-Proof & Cryptographic**: Every certificate includes a unique SHA-256 hash mathematically locking the state of the model when the certificate was issued.
+### 6. 📊 Real-Time Drift & RAG Observability
+High-performance sliding-window drift detection and RAG-specific monitoring.
+- **Statistical Distance**: PSI, Kolmogorov-Smirnov (KS-Test), and Jensen-Shannon Divergence.
+- **RAG Fidelity**: Grounding assessment, context relevance, and retrieval hit rate tracking.
+- **Embedding Drift**: Multi-dimensional vector drift analysis using Cosine similarity and MMD.
 
-### 4. Real-Time Drift Sentinel
-High-performance sliding-window drift detection for production models.
-- **Statistical Distance Calculation**: Monitors Population Stability Index (PSI), Kolmogorov-Smirnov (KS-Test), and Jensen-Shannon Divergence.
-- **Asynchronous Telemetry Ingestion**: Handles high-throughput production request logging using fire-and-forget ingestion powered by Celery queues.
-- **Feature Level Granularity**: Analyzes concept drift on target labels, and data drift on specific input features.
-
-### 5. Multi-dimensional Composite Scoring Engine
-Calculates the "health" of an AI model using heuristic weighting:
-- **Performance**: Statistical accuracy metrics (F1, Accuracy, Brier Score, Precision, Recall).
-- **Security & Vulnerability**: Protection against Data Poisoning, Data Extraction, and Membership Inference attacks. 
-- **Fairness & Bias**: Parity assessment across sensitive demographic features.
-- **Live Decay**: Automatically rots a deployed model's governance score based on real-time SLA/contract breaches.
-
-### 6. LLM Security & Red Teaming (Generative AI)
+### 7. 🔒 LLM Security & Red Teaming
 A dedicated suite tailored specifically to Large Language Model governance.
-- **Heuristic Toxicity & Hallucination Guardrails**: Analyzes model outputs systematically.
+- **Heuristic Toxicity & Hallucination Guardrails**: Systematic analysis of GAI outputs.
 - **Adversarial Resiliency**: Active jailbreak vector detection and prompt-injection mitigations.
 - **PII Leakage Scanning**: Guarantees generative assets do not exfiltrate sensitive data.
-
-### 7. RAG System Observability (New)
-Advanced monitoring for Retrieval-Augmented Generation (RAG) pipelines.
-- **Grounding Fidelity**: Quantifies how well model answers are supported by retrieved context.
-- **Context Relevance**: Mathematical assessment of the relevance of retrieved chunks to the user query.
-- **Retrieval Hit Rate**: Performance tracking for vector databases and retrieval indices.
-- **Observability Dashboard**: Time-series visualization of RAG performance and hallucination ratios.
-
-### 8. Embedding Drift Detection (New)
-Go beyond tabular statistics with multi-dimensional vector drift analysis.
-- **Cosine Drift & MMD**: Measures distribution distance between reference and production embeddings.
-- **UMAP Visualization**: Automatic 2D projection of embedding clusters to visualize semantic shift.
-
-### 9. Regulatory Compliance Layer (New)
-Map technical metrics directly to legal and regulatory frameworks.
-- **EU AI Act Support**: Automated mapping to Articles 9, 10, 13, 15, and 72 for compliance reporting.
-- **NIST AI RMF Mapping**: Technical verification against GOVERN, MAP, MEASURE, and MANAGE controls.
-- **Compliance Scoring**: Automated "Pass/Fail" status based on technical governance thresholds.
 
 ---
 
 ## 🏗️ System Architecture
 
-ML Guard operates on an asynchronous microservices architecture meant to run at scale:
+ML Guard operates on an asynchronous microservices architecture designed to run at enterprise scale:
 
-- **Core ML Engine (`ml_guard/core`)**: Pure Python libraries housing the deterministic statistics, risk algorithms, and heuristics.
-- **Backend API (`ml_guard/backend`)**: Built with **FastAPI** utilizing **SQLAlchemy** for asynchronous persistence into **PostgreSQL**.
-- **Asynchronous Workers**: Redis-backed **Celery** tasks specifically tasked to compute heavy algorithms (Fairness/Drift computations) outside of the HTTP cycle.
-- **Dashboard (`ml_guard/frontend`)**: A blazing fast **Next.js 14** application styled with Tailwind and Shadcn UI.
-- **Data & Artifact Layer**: S3-compatible generic storage (MinIO interface ready).
-- **Outbound Plugins (`ml_guard/plugins`)**: Modular system for Slack, Teams, MLflow, and Weights & Biases integration.
+```mermaid
+graph TD
+    A[Python SDK / CLI] -->|Log/Scan| B(FastAPI Backend)
+    B -->|Persist| C[(PostgreSQL)]
+    B -->|Task Queue| D[Redis]
+    D -->|Execute| E[Celery Workers]
+    E -->|Core Logic| F[ML Guard Core]
+    F -->|Analyze| G[Explainability / Drift / Insurance]
+    B -->|Notify| H[Slack / MS Teams]
+    I[Next.js Dashboard] -->|Manage| B
+    J[Data Connectors] -->|Fetch| B
+```
 
----
-
-## 📖 Module Catalog
-
-The backend exposes a highly separated Domain Driven structure comprising over 20 top-level routers:
-
-- `audit.py` - Initiates multipart scanning and metadata extraction for uploaded models.
-- `gate.py` - The fast, synchronous execution path for CI pipeline verdicts.
-- `governance.py` - Retrieves complex scoring distributions across the platform.
-- `contracts.py` - Evaluates strict behavioral constraints and prediction bounds.
-- `rag_eval.py` - (NEW) Evaluation metrics and trace logging for RAG systems.
-- `compliance.py` - (NEW) Mapping layer for EU AI Act and NIST AI RMF standards.
-- `plugins.py` - (NEW) Integration hub for MLflow, W&B, and notification dispatch.
-- `report.py` & `history.py` - Historical audit trails and PDF certificate generation.
-- `sentinel.py` / `alerts.py` - Streaming prediction bounds check and notification systems.
-- `notifications.py` - (NEW) Config hub for Slack and Microsoft Teams outbound alerts.
-- `drift.py`, `performance.py`, `fairness.py`, `llm_eval.py` - Granular sub-domain analysis endpoints.
-
----
-
-## 🔌 Ecosystem Integrations
-
-ML Guard now supports first-class integration with standard ML tools:
-
-### Experiment Tracking
-Sync metrics from your existing tools to maintain a single source of truth for governance.
-- **MLflow**: Pull run metrics directly into ML Guard's performance snapshots.
-- **Weights & Biases**: Auto-sync model summary statistics via the W&B API.
-
-### Outbound Notifications
-Receive real-time breach alerts where your team lives.
-- **Slack (Block Kit)**: Rich visual alerts with model performance cards.
-- **Microsoft Teams (Adaptive Cards)**: Professional, interactive cards for production monitoring.
+- **Backend API**: Optimized FastAPI service with SQLAlchemy async support.
+- **Dashboard**: High-performance Next.js 14 application with Tailwind CSS and Shadcn UI.
+- **Core Engine**: Pure Python libraries housing risk algorithms and statistical heuristics.
+- **Workers**: Redis-backed Celery cluster for heavy-lift computations (SHAP, Fairness).
 
 ---
 
 ## 🛠️ Complete Setup Guide
 
 ### 1. Requirements
-
 - Node.js 20+
 - Python 3.11+
 - Redis (For Celery Task Queues)
+- PostgreSQL (Recommended for production)
 
-### 2. Backend & Core Dependencies
-
+### 2. Backend & Core Setup
 ```bash
 cd ml_guard/backend
 python -m venv venv
-# On Windows: venv\Scripts\activate
-# On Mac/Linux: source venv/bin/activate
+# Windows: venv\\Scripts\\activate | Mac/Linux: source venv/bin/activate
 
 pip install -r requirements.txt
-pip install celery redis mlflow wandb httpx
+pip install celery redis mlflow wandb "shap>=0.40.0" cryptography
 ```
 
-Set up your `.env` file (you can copy `.env.example`):
+**Environment Configuration (`.env`):**
 ```ini
 SECRET_KEY=your_secure_hash
-DATABASE_URL=sqlite:///./ml_guard.db # Or PostgreSQL for production
-# Redis connection for Celery
+DATABASE_URL=sqlite:///./ml_guard.db # Or PostgreSQL
 REDIS_URL=redis://localhost:6379/0
+ENCRYPTION_KEY=your_fernet_key # For Data Connectors
 ```
 
-Start the primary API:
+**Start Services:**
 ```bash
+# Start API
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
 
-Start the Celery Worker (In a new terminal, `ml_guard/backend`):
-```bash
-# Activate your venv first
+# Start Celery Worker (New terminal)
 celery -A app.core.celery_app worker --loglevel=info -P solo
 ```
-*(Note for Windows users: `-P solo` is required for Celery execution on Windows)*
 
 ### 3. Frontend Dashboard
-
 ```bash
 cd ml_guard/frontend
 npm install
 npm run dev
 ```
-
-The ML Guard dashboard will be accessible via `http://localhost:3000`.
+Dashboard available at `http://localhost:3000`.
 
 ---
 
-## 🛡️ Setting up the Github Actions CI Gate
+## 🛡️ CI/CD Integration (The Quality Gate)
 
-Ensure your deployment stays un-corrupted by integrating the governance pipeline directly into your CI!
-Read the specific markdown instructions at [`.github/SETUP.md`](./.github/SETUP.md).
+Ensure zero "bad models" reach production by integrating the governance gate into your CI pipeline.
 
-**Local Test Drive of the CI Tool**:
-Ensure your `uvicorn` instance is running, then execute from the repository root:
+**Deterministic Polling with Submission Tokens:**
+The latest CI gate uses a UUID-based submission system to ensure stable, parallel-safe evaluation tracking.
+
 ```bash
 python .github/scripts/ml_guard_ci.py \
   --api-url http://127.0.0.1:8000 \
-  --api-key mlg_1Ai7zfmfsB_GLaoNuKjOOopFh12xLzGy7SDqh7Kho1U \
-  --model-name TestChurnModel-v1 \
-  --model-path ml_guard/backend/fair_loan_model.pkl \
-  --data-path ml_guard/backend/fair_loan_test.csv \
-  --label-col target \
-  --min-score 60
+  --api-key your_api_key \
+  --model-name Production-Churn-V2 \
+  --model-path ./artifacts/model.pkl \
+  --data-path ./data/test_samples.csv \
+  --min-score 75
 ```
-This script will:
-1. Run a health check against the local API.
-2. Submit your model and dataset as a multi-part payload.
-3. Determine job status and asynchronously poll Celery for completion.
-4. Obtain the `model_id` via heuristic lookup.
-5. Provide you an automated Score & Verdict.
+
+---
+
+## 🔌 Ecosystem Integrations
+
+### Outbound Notifications
+Real-time breach alerts delivered where your team works:
+- **Slack**: Rich Block Kit alerts with performance snapshots.
+- **Microsoft Teams**: Adaptive cards for production monitoring.
+
+### Enterprise Connectors
+- **S3 / GCS**: Direct ingestion of validation datasets.
+- **Snowflake / BigQuery**: Pull production data directly for drift analysis.
 
 ---
 

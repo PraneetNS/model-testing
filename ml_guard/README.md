@@ -1,58 +1,60 @@
-# ML Guard Enterprise — v7.2
+# 🛡️ ML Guard Enterprise — v8.2
 
 ## Enterprise AI Governance Platform
 
-ML Guard is a production-grade, multi-tenant SaaS platform for comprehensive AI model governance.
-It provides offline audit, real-time monitoring, bias detection, and LLM safety evaluation
-through a unified dashboard with deterministic, transparent, and auditable governance logic.
+ML Guard is a production-grade, multi-tenant platform for comprehensive AI model governance. It provides offline audit, real-time monitoring, bias detection, and SHAP-based explainability through a unified dashboard with deterministic, transparent, and auditable governance logic.
 
 ---
 
 ## Architecture Overview
 
-```
-┌──────────────────────────────────────────────────────┐
-│                   FRONTEND (Next.js 18)              │
-│  10+ Modules: Audit│Report│Fairness│Behavior│Stream  │
-│          LLM Guard│History│AI Advisor│Enterprise     │
-└─────────────────┬────────────────────────────────────┘
-                  │ REST + WebSocket
-┌─────────────────▼────────────────────────────────────┐
-│              BACKEND (FastAPI + Celery)               │
-│  Routers: audit│fairness│behavior│monitoring│         │
-│           streaming│llm_eval│advisory│enterprise      │
-│           policies│alerts│ci│history│gate             │
-└─────────────────┬────────────────────────────────────┘
-                  │
-┌─────────────────▼────────────────────────────────────┐
-│          CORE SCIENTIFIC ENGINE (ml_guard/core)       │
-│  metrics│drift│fairness│llm_guard│stream_drift│       │
-│  policy│governance_score│calibration│sensitivity│     │
-│  leakage│evaluator│advisory│constraints               │
-└─────────────────┬────────────────────────────────────┘
-                  │
-┌─────────────────▼────────────────────────────────────┐
-│                   DATA LAYER                          │
-│  Neon PostgreSQL │ Upstash Redis │ MinIO Object Store │
-└──────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    subgraph Frontend [Next.js 14 Dashboard]
+        A[Governance Radar]
+        B[Audit History]
+        C[RAG Observability]
+        D[Insurance Scoring]
+    end
+
+    subgraph Backend [FastAPI + Celery Workers]
+        E[Audit API]
+        F[Explainability/SHAP]
+        G[Drift Sentinel]
+        H[Gate Orchestrator]
+    end
+
+    subgraph Core [Scientific Engine]
+        I[Statistical Metrics]
+        J[Equitable Bias]
+        K[Actuarial Risk]
+        L[SHAP Logic]
+    end
+
+    subgraph Data [Persistence Layer]
+        M[PostgreSQL]
+        N[Redis Queue]
+        O[MinIO Storage]
+    end
+
+    Frontend -->|REST/WS| Backend
+    Backend -->|Computes| Core
+    Backend -->|Persists| Data
 ```
 
 ---
 
-## v7.2 Feature Matrix
+## v8.2 Feature Matrix
 
-| Module                | Type         | Status    |
-|-----------------------|-------------|-----------|
-| Model Audit           | Classical ML | ✅ Stable |
-| Fairness Analysis     | Classical ML | ✅ Stable |
-| Behavior Testing      | Classical ML | ✅ Stable |
-| Live Monitoring       | Production   | ✅ Stable |
-| Stream Drift          | Real-time    | ✅ Enhanced|
-| LLM Governance        | LLM Safety   | ✅ Stable |
-| AI Advisory           | Copilot      | ✅ Stable |
-| **Scan History**      | Governance   | ✅ Stable |
-| **Model Report Card** | Compliance   | ✅ Stable |
-| **CI/CD Sync Gate**   | Automation   | ✅ **New (v7.2)** |
+| Module                | Type         | Status    | Features |
+|-----------------------|-------------|-----------|----------|
+| **Model Audit**           | Classical ML | ✅ Stable | Accuracy, Drift (PSI/KS), Overfitting, Over-confidence |
+| **SHAP Explainability**   | Transparency | ✅ **New** | Global feature importance, fairness-drift correlation |
+| **Insurance Scoring**     | Actuarial    | ✅ **New** | Standardized risk grades (A++ to F), reliability ratings |
+| **RAG Observability**     | GenAI        | ✅ Stable | Grounding, Retrieval Hit Rate, Context Relevance |
+| **Data Connectors**       | Enterprise   | ✅ **New** | S3, GCS, Snowflake, BigQuery direct ingestion |
+| **Live Monitoring**       | Production   | ✅ Stable | Real-time prediction tracking, latency SLAs |
+| **CI/CD Sync Gate**       | Automation   | ✅ Enhanced| Deterministic polling via submission tokens |
 
 ---
 
@@ -63,40 +65,33 @@ Full offline governance scan: accuracy, F1, PSI/KS/JSD drift, overfitting,
 calibration, leakage detection, data quality. Produces governance score, risk score,
 and enterprise intelligence stream events.
 
-### 2. CI/CD Governance Gate (NEW v7.2)
-Synchronous evaluation for pipeline integration:
-- **/api/v1/gate/evaluate**: Accepts `mlguard.yaml` policy & model path.
-- **Sync mode**: Responds with a PASSED/FAILED verdict in under 60s.
-- **Badge Integration**: Returns SVG badge URLs for PR comments.
+### 2. SHAP Governance Explainability (NEW v8.2)
+Deep transparency into model decisions:
+- **/api/v1/explain/shap**: Asynchronous background computation of SHapley values.
+- **Fairness Integration**: Automatically detects when "protected attributes" become top-k contributors to model decisions.
 
-### 3. Scan History & Compare
-Historical tracking of all governance scans with side-by-side comparison:
-- **Trajectory Sparklines**: Visualizes governance score trends across model versions.
-- **Side-by-Side Diff**: Compare two scans to identify metric regression or drift.
+### 3. Actuarial AI Insurance (NEW v8.2)
+Risk-based classification system for enterprise AI:
+- **Scoring Engine**: Aggregates Reliability, Robustness, Deployment, and Incident History into a single risk tier.
+- **Compliance Mapping**: Technical verification against EU AI Act and NIST RMF standards.
 
-### 4. Model Report Card
-Generate professional, printable governance certificates:
-- **Compliance Proof**: Consolidated summary of policy gates and statistical scores.
-- **Audit Sign-off**: Ready-to-use template for risk management reviews.
+### 4. Enterprise Data Connectors (NEW v8.2)
+Modular plugin system for direct ingestion:
+- **Storage Connectors**: Securely pull datasets from S3 and Google Cloud Storage.
+- **Warehouse Connectors**: Direct SQL execution in Snowflake and BigQuery for production drift baseline creation.
 
 ---
 
 ## 🛡️ CI/CD Pipeline Integration
 
-### mlguard.yaml (Policy-as-Code)
-```yaml
-version: "1.0"
-model_name: "CustomerChurnPredictor-V2"
-max_psi: 0.15
-min_accuracy: 0.88
-max_hallucination_rate: 0.04
-```
+### ml_guard_ci.py
+The primary automation script for pipelines.
 
-### mlguard CLI
 ```bash
-python ml_guard/sdk/python/mlguard_cli.py check \
-  --policy mlguard.yaml \
-  --artifact models/latest_model.pkl
+python .github/scripts/ml_guard_ci.py \
+  --api-url http://api.mlguard.enterprise \
+  --model-name "CreditRisk-v4" \
+  --min-score 80
 ```
 
 ---
@@ -105,11 +100,11 @@ python ml_guard/sdk/python/mlguard_cli.py check \
 
 | Layer     | Technology                              |
 |-----------|-----------------------------------------|
-| Frontend  | Next.js 18, React, TailwindCSS, Lucide  |
-| Backend   | FastAPI, Uvicorn, Celery, Upstash Redis |
-| Database  | Neon PostgreSQL (Serverless)            |
-| Storage   | MinIO Object Store (S3-Compatible)      |
-| ML Core   | NumPy, Pandas, Scikit-learn, SciPy       |
+| Frontend  | Next.js 14, React, TailwindCSS, Shadcn UI |
+| Backend   | FastAPI, SQLAlchemy (Async), Celery     |
+| Database  | PostgreSQL                              |
+| Cache/Bus | Redis                                   |
+| Core      | SHAP, Scikit-learn, NumPy, Pandas, SciPy|
 
 ---
 
@@ -117,23 +112,20 @@ python ml_guard/sdk/python/mlguard_cli.py check \
 
 ```
 ml_guard/
-├── core/                          # Scientific engine
+├── core/                          # Scientific & Risk engine
 ├── backend/
 │   ├── app/
 │   │   ├── main.py               # FastAPI application
-│   │   ├── routers/              # Modular API controllers
-│   │   │   ├── gate.py           # Sync evaluation gate (v7.2)
-│   │   │   └── ...
-│   │   └── db/                   # Neon PostgreSQL integration
-├── sdk/
-│   └── python/
-│       ├── mlguard_cli.py        # CI/CD CLI Tool (v7.2)
-│       └── ...
-├── frontend/                      # Governance Dashboard
-└── ...
+│   │   ├── routers/              # Domain-specific controllers
+│   │   │   ├── audit.py          | Explainability/SHAP/Monitoring
+│   │   │   └── insurance.py      | Actuarial Risk logic
+├── plugins/                       # Data Connectors & Notifications
+├── sdk/                           # Python Client & CLI
+├── frontend/                      # Enterprise Dashboard
+└── sentinel/                      # Real-time monitoring agent
 ```
 
 ---
 
-**ML Guard v7.2** — Standardizing AI Governance through deterministic compliance.
-Built with a composition-first architecture to ensure auditability across the full model lifecycle.
+**ML Guard v8.2** — The Platform for Technical AI Governance.
+© 2026 FireFlink ML Research. Proprietary & Confidential.
