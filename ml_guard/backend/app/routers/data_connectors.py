@@ -82,6 +82,7 @@ async def fetch_data(
     
     return {
         "task_id": task.id,
+        "estimated_rows": None,
         "message": "Data ingestion task started in background",
         "connector": req.connector_type,
         "source": req.source_uri
