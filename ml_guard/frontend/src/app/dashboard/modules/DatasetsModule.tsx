@@ -23,7 +23,7 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
     const [lineage, setLineage] = useState<any[]>([]);
     const [showRegister, setShowRegister] = useState(false);
     const [models, setModels] = useState<any[]>([]);
-    const [newDataset, setNewDataset] = useState({ model_id: "", name: "", type: "training" });
+    const [newDataset, setNewDataset] = useState({ model_id: "", name: "", type: "training", source: "local" });
     const [registering, setRegistering] = useState(false);
 
     const fetchDatasets = async () => {
@@ -61,12 +61,13 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
                 body: JSON.stringify({
                     model_id: newDataset.model_id,
                     dataset_type: newDataset.type,
-                    dataset_name: newDataset.name
+                    dataset_name: newDataset.name,
+                    source: newDataset.source
                 })
             });
             if (res.ok) {
                 setShowRegister(false);
-                setNewDataset({ model_id: "", name: "", type: "training" });
+                setNewDataset({ model_id: "", name: "", type: "training", source: "local" });
                 fetchDatasets();
             }
         } catch (e) { } finally { setRegistering(false); }
@@ -94,6 +95,7 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
                             <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
                             <span className="text-[8px] font-black text-emerald-500 uppercase">Automated Discovery Active</span>
                         </div>
+                        <button onClick={() => setShowRegister(true)} className="text-[9px] uppercase font-black px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-all">+ Add Dataset</button>
                         <button onClick={fetchDatasets} className="text-[9px] uppercase font-black text-slate-500 hover:text-white transition-all">↻ Sync</button>
                     </div>
                 </div>
@@ -104,18 +106,75 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
                             <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Register New Dataset</h4>
                             <button onClick={() => setShowRegister(false)} className="text-slate-600 hover:text-white">✕</button>
                         </div>
-                        <form onSubmit={handleRegister} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <select value={newDataset.model_id} onChange={e => setNewDataset({ ...newDataset, model_id: e.target.value })} className="bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-xs text-white focus:border-emerald-500/40 outline-none" required>
-                                <option value="" className="bg-[#0E1014]">Select Source Model</option>
-                                {models.map(m => <option key={m.model_id || m.id} value={m.model_id || m.id} className="bg-[#0E1014]">{m.name}</option>)}
-                            </select>
-                            <input value={newDataset.name} onChange={e => setNewDataset({ ...newDataset, name: e.target.value })} placeholder="Dataset Name" className="bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-xs text-white focus:border-emerald-500/40 outline-none" required />
-                            <select value={newDataset.type} onChange={e => setNewDataset({ ...newDataset, type: e.target.value })} className="bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-xs text-white focus:border-emerald-500/40 outline-none" required>
-                                <option value="training" className="bg-[#0E1014]">Training Data</option>
-                                <option value="validation" className="bg-[#0E1014]">Validation Data</option>
-                                <option value="test" className="bg-[#0E1014]">Test Data</option>
-                            </select>
-                            <button type="submit" disabled={registering} className="bg-emerald-600 text-white font-black py-3 rounded-xl text-[10px] uppercase tracking-widest disabled:opacity-50">
+                        <form onSubmit={handleRegister} className="grid grid-cols-1 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <select value={newDataset.model_id} onChange={e => setNewDataset({ ...newDataset, model_id: e.target.value })} className="bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-xs text-white focus:border-emerald-500/40 outline-none" required>
+                                    <option value="" className="bg-[#0E1014]">Select Source Model</option>
+                                    {models.map(m => <option key={m.model_id || m.id} value={m.model_id || m.id} className="bg-[#0E1014]">{m.name}</option>)}
+                                </select>
+                                <input value={newDataset.name} onChange={e => setNewDataset({ ...newDataset, name: e.target.value })} placeholder="Dataset Name" className="bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-xs text-white focus:border-emerald-500/40 outline-none" required />
+                                <select value={newDataset.type} onChange={e => setNewDataset({ ...newDataset, type: e.target.value })} className="bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-xs text-white focus:border-emerald-500/40 outline-none" required>
+                                    <option value="training" className="bg-[#0E1014]">Training Data</option>
+                                    <option value="validation" className="bg-[#0E1014]">Validation Data</option>
+                                    <option value="test" className="bg-[#0E1014]">Test Data</option>
+                                </select>
+                                <select value={newDataset.source} onChange={e => setNewDataset({ ...newDataset, source: e.target.value })} className="bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-xs text-white focus:border-emerald-500/40 outline-none" required>
+                                    <option value="local" className="bg-[#0E1014]">Local upload</option>
+                                    <option value="huggingface" className="bg-[#0E1014]">HuggingFace</option>
+                                    <option value="kaggle" className="bg-[#0E1014]">Kaggle</option>
+                                    <option value="openml" className="bg-[#0E1014]">OpenML</option>
+                                    <option value="roboflow" className="bg-[#0E1014]">Roboflow</option>
+                                    <option value="s3" className="bg-[#0E1014]">S3/Cloud</option>
+                                </select>
+                            </div>
+                            
+                            {/* Inline Form Additions Based on Source Selection */}
+                            <div className="bg-black/20 p-4 rounded-xl border border-white/[0.03]">
+                                {newDataset.source === "kaggle" && (
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        <input placeholder="Kaggle Username" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
+                                        <input type="password" placeholder="Kaggle API Key" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
+                                        <input placeholder="Dataset Slug (e.g. uciml/adult-census-income)" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
+                                    </div>
+                                )}
+                                {newDataset.source === "openml" && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <input placeholder="Dataset ID" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
+                                        <div className="text-xs text-slate-500 p-2 italic">Search OpenML functionality available via API.</div>
+                                    </div>
+                                )}
+                                {newDataset.source === "roboflow" && (
+                                    <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                                        <input type="password" placeholder="API Key" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
+                                        <input placeholder="Workspace" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
+                                        <input placeholder="Project" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
+                                        <input placeholder="Version" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
+                                        <select className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none">
+                                            <option value="yolov8">YOLOv8</option>
+                                            <option value="coco">COCO</option>
+                                            <option value="csv">CSV</option>
+                                        </select>
+                                    </div>
+                                )}
+                                {newDataset.source === "s3" && (
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                        <input placeholder="S3/Blob URL" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none col-span-2" />
+                                        <input placeholder="Access Key" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
+                                        <input type="password" placeholder="Secret Key" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
+                                    </div>
+                                )}
+                                {newDataset.source === "huggingface" && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <input placeholder="HuggingFace Repo ID" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
+                                        <input type="password" placeholder="HF Token (Optional)" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
+                                    </div>
+                                )}
+                                {newDataset.source === "local" && (
+                                    <div className="text-xs text-slate-500 italic p-2">Upload a file directly from your computer (Coming Soon).</div>
+                                )}
+                            </div>
+                            
+                            <button type="submit" disabled={registering} className="bg-emerald-600 text-white font-black py-3 rounded-xl text-[10px] uppercase tracking-widest disabled:opacity-50 mt-2">
                                 {registering ? "Registering..." : "Confirm Registration"}
                             </button>
                         </form>

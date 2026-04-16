@@ -13,6 +13,9 @@ from .gcs import GCSConnector
 from .azure_blob import AzureBlobConnector
 from .snowflake import SnowflakeConnector
 from .bigquery import BigQueryConnector
+from .kaggle import KaggleConnector
+from .openml import OpenMLConnector
+from .roboflow import RoboflowConnector
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +51,9 @@ CONNECTOR_MAP: Dict[str, Type[DataConnector]] = {
     "azure": AzureBlobConnector,
     "snowflake": SnowflakeConnector,
     "bigquery": BigQueryConnector,
+    "kaggle": KaggleConnector,
+    "openml": OpenMLConnector,
+    "roboflow": RoboflowConnector,
 }
 
 def get_connector(connector_type: str) -> DataConnector:

@@ -366,12 +366,16 @@ from app.routers import plugins
 from app.routers import notifications
 from app.routers import huggingface
 from app.routers import data_connectors
+from app.routers import public_connectors
 app.include_router(lineage.router)
 app.include_router(tasks.router)
 app.include_router(plugins.router, prefix="/api/plugins", tags=["plugins"])
 app.include_router(notifications.router, prefix="/api/v1", tags=["notifications"])
 app.include_router(huggingface.router, prefix="/api/plugins", tags=["huggingface"])
 app.include_router(data_connectors.router, prefix="/api/plugins/data-connectors", tags=["data-connectors"])
+app.include_router(public_connectors.kaggle_router, prefix="/api/plugins/kaggle", tags=["kaggle"])
+app.include_router(public_connectors.openml_router, prefix="/api/plugins/openml", tags=["openml"])
+app.include_router(public_connectors.roboflow_router, prefix="/api/plugins/roboflow", tags=["roboflow"])
 
 if __name__ == "__main__":
     import uvicorn
