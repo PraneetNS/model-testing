@@ -26,6 +26,10 @@ def data_connector_fetch_task(self, connector_type: str, config: Dict[str, Any],
     """
     Background task to pull data, compute stats, and register in DB.
     """
+    from app.core.celery_app import decrypt_task_payload
+    decrypted = decrypt_task_payload({"config": config}, ["config"])
+    config = decrypted["config"]
+    
     logger.info(f"Starting background fetch for {connector_type} from {source_uri}")
     
     try:

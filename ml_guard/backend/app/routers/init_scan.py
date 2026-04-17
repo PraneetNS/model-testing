@@ -107,16 +107,24 @@ async def initialize_scan(
     
     # Dispatch Celery Task here — passing cloud keys
     from app.workers.tasks import run_comprehensive_scan
-    run_comprehensive_scan.delay(
-        job_id=str(job.id),
-        model_id=str(model.id),
-        modules=parsed_modules,
-        train_path=None,
-        test_path=None,
-        model_artifact_key=model_key,
-        train_dataset_key=train_key,
-        val_dataset_key=test_key
+    from app.core.celery_app import encrypt_task_payload
+    
+    payload = {
+        "job_id": str(job.id),
+        "model_id": str(model.id),
+        "modules": parsed_modules,
+        "train_path": None,
+        "test_path": None,
+        "model_artifact_key": model_key,
+        "train_dataset_key": train_key,
+        "val_dataset_key": test_key
+    }
+    encrypted_payload = encrypt_task_payload(
+        payload, 
+        ["train_path", "test_path", "model_artifact_key", "train_dataset_key", "val_dataset_key"]
     )
+    
+    run_comprehensive_scan.delay(**encrypted_payload)
     
     await db.commit()
     

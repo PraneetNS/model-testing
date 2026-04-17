@@ -84,6 +84,23 @@ async def run_comprehensive_scan(
     train_dataset_key: str = None,
     val_dataset_key: str = None,
 ):
+    from app.core.celery_app import decrypt_task_payload
+    decrypted = decrypt_task_payload({
+        "train_path": train_path,
+        "test_path": test_path,
+        "model_path": model_path,
+        "model_artifact_key": model_artifact_key,
+        "train_dataset_key": train_dataset_key,
+        "val_dataset_key": val_dataset_key
+    }, ["train_path", "test_path", "model_path", "model_artifact_key", "train_dataset_key", "val_dataset_key"])
+    
+    train_path = decrypted["train_path"]
+    test_path = decrypted["test_path"]
+    model_path = decrypted["model_path"]
+    model_artifact_key = decrypted["model_artifact_key"]
+    train_dataset_key = decrypted["train_dataset_key"]
+    val_dataset_key = decrypted["val_dataset_key"]
+
     db = SessionLocal()
     job = (await db.execute(select(Job).filter(Job.id == job_id))).scalars().first()
     if not job:
@@ -257,6 +274,14 @@ async def run_comprehensive_scan(
                 pass
 @celery_app.task(name="run_explainability_task", bind=True, max_retries=3, default_retry_delay=10)
 def run_explainability_task(self, model_id: str, max_samples: int = 100, model_b64: str = None, data_b64: str = None, model_filename: str = "model.pkl", data_filename: str = "data.csv"):
+    from app.core.celery_app import decrypt_task_payload
+    decrypted = decrypt_task_payload({
+        "model_b64": model_b64,
+        "data_b64": data_b64
+    }, ["model_b64", "data_b64"])
+    model_b64 = decrypted["model_b64"]
+    data_b64 = decrypted["data_b64"]
+
     import asyncio
     import base64
     tmp_files = []
@@ -444,6 +469,17 @@ def run_governance_audit_task(
     org_id: str = None,
     policy_override: dict = None
 ):
+    from app.core.celery_app import decrypt_task_payload
+    decrypted = decrypt_task_payload({
+        "train_path": train_path,
+        "val_path": val_path,
+        "model_path": model_path,
+    }, ["train_path", "val_path", "model_path"])
+    
+    train_path = decrypted["train_path"]
+    val_path = decrypted["val_path"]
+    model_path = decrypted["model_path"]
+
     import asyncio
     import base64
     tmp_files = [] # track for cleanup
@@ -672,6 +708,14 @@ def run_governance_audit_task(
 
 @celery_app.task(name="generate_aibom_task", bind=True)
 def generate_aibom_task(self, model_id: str, model_b64: str, dataset_b64s: list, metadata: dict):
+    from app.core.celery_app import decrypt_task_payload
+    decrypted = decrypt_task_payload({
+        "model_b64": model_b64,
+        "dataset_b64s": dataset_b64s
+    }, ["model_b64", "dataset_b64s"])
+    model_b64 = decrypted["model_b64"]
+    dataset_b64s = decrypted["dataset_b64s"]
+
     import asyncio
     import base64
     tmp_files = []

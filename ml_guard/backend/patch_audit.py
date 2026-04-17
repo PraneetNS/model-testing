@@ -84,19 +84,28 @@ async def run_audit(
     celery_ok = False
     try:
         from app.workers.tasks import run_governance_audit_task
-        run_governance_audit_task.delay(
-            job_id=job_id, model_id=str(model.id), checks=selected,
-            model_b64=base64.b64encode(m_bytes).decode(),
-            train_b64=base64.b64encode(t_bytes).decode(),
-            val_b64=base64.b64encode(v_bytes).decode(),
-            model_filename=model_file.filename,
-            train_filename=(train_file.filename if (train_file and train_file.filename) else (train_dataset_url or "train.csv")),
-            val_filename=(val_file.filename if (val_file and val_file.filename) else (val_dataset_url or "val.csv")),
-            label_col=label_col,
-            user_id=auth.user_id if hasattr(auth, "user_id") else None,
-            org_id=auth.org_id if hasattr(auth, "org_id") else None,
-            policy_override=policy_override,
+        from app.core.celery_app import encrypt_task_payload
+        
+        payload = {
+            "job_id": job_id, "model_id": str(model.id), "checks": selected,
+            "model_b64": base64.b64encode(m_bytes).decode(),
+            "train_b64": base64.b64encode(t_bytes).decode(),
+            "val_b64": base64.b64encode(v_bytes).decode(),
+            "model_filename": model_file.filename,
+            "train_filename": (train_file.filename if (train_file and train_file.filename) else (train_dataset_url or "train.csv")),
+            "val_filename": (val_file.filename if (val_file and val_file.filename) else (val_dataset_url or "val.csv")),
+            "label_col": label_col,
+            "user_id": auth.user_id if hasattr(auth, "user_id") else None,
+            "org_id": auth.org_id if hasattr(auth, "org_id") else None,
+            "policy_override": policy_override,
+        }
+        
+        encrypted_payload = encrypt_task_payload(
+            payload,
+            ["model_path", "train_path", "val_path"]
         )
+        
+        run_governance_audit_task.delay(**encrypted_payload)
         celery_ok = True
     except Exception:
         celery_ok = False

@@ -74,11 +74,15 @@ async def fetch_data(
     masked = connector.mask_config(req.config)
     logger.info(f"User {auth.user_id} triggered {req.connector_type} fetch from {req.source_uri}. Config: {masked}")
     
-    task = data_connector_fetch_task.delay(
-        connector_type=req.connector_type,
-        config=req.config,
-        source_uri=req.source_uri
-    )
+    from app.core.celery_app import encrypt_task_payload
+    payload = {
+        "connector_type": req.connector_type,
+        "config": req.config,
+        "source_uri": req.source_uri
+    }
+    encrypted_payload = encrypt_task_payload(payload, ["config"])
+    
+    task = data_connector_fetch_task.delay(**encrypted_payload)
     
     return {
         "task_id": task.id,

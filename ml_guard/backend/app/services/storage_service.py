@@ -39,10 +39,10 @@ def _get_s3_client():
         aws_secret_access_key=settings.MINIO_SECRET_KEY,
         region_name=settings.MINIO_REGION,
         config=BotoConfig(
-            retries={"max_attempts": 0, "mode": "adaptive"}, # No retries for connectivity check
+            retries={"max_attempts": 3, "mode": "standard"},
             s3={"addressing_style": "path"},
-            connect_timeout=1,
-            read_timeout=1,
+            connect_timeout=5,
+            read_timeout=30,
         ),
     )
 

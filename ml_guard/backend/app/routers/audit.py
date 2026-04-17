@@ -253,45 +253,45 @@ async def run_audit(
     else:
         t_bytes = v_bytes  # use val as surrogate train
 
-    # --- Register Datasets in Lineage (Persistence) ---
-    from app.db.models import Dataset
-    import pandas as pd
+    # --- Try Celery; fall back to inline if unavailable ---
+    celery_ok = False
     try:
-        # We only register if we have a name/filename
-        for d_bytes, d_type, d_name in [(t_bytes, "training", train_file.filename if (train_file and train_file.filename) else (train_dataset_url or "train.csv")), 
-                                       (v_bytes, "validation", val_file.filename if (val_file and val_file.filename) else (val_dataset_url or "val.csv"))]:
-            # Create a fingerprint
-            d_hash = _fingerprint_data(d_bytes)[:32]
-            
-            # Check if this dataset already exists for this model
-            existing_ds = (await db.execute(select(Dataset).filter(Dataset.model_id == model.id, Dataset.fingerprint == d_hash))).scalars().first()
-            
-            if not existing_ds:
-                # Estimate row count
-                try:
-                    df_temp = pd.read_csv(io.BytesIO(d_bytes))
-                    rows = len(df_temp)
-                except:
-                    rows = 0
-                
-                new_ds = Dataset(
-                    model_id=model.id,
-                    type=d_type,
-                    row_count=rows,
-                    fingerprint=d_hash,
-                    metadata_json={"name": d_name, "auto_registered": True}
-                )
-                db.add(new_ds)
-        await db.flush()
-    except Exception as ds_err:
-        logger.error(f"Failed to auto-register datasets: {ds_err}")
+        from app.workers.tasks import run_governance_audit_task
+        from app.core.celery_app import encrypt_task_payload
+        
+        payload = {
+            "job_id": job_id, "model_id": str(model.id), "checks": selected,
+            "model_b64": base64.b64encode(m_bytes).decode(),
+            "train_b64": base64.b64encode(t_bytes).decode(),
+            "val_b64": base64.b64encode(v_bytes).decode(),
+            "model_filename": model_file.filename,
+            "train_filename": (train_file.filename if (train_file and train_file.filename) else (train_dataset_url or "train.csv")),
+            "val_filename": (val_file.filename if (val_file and val_file.filename) else (val_dataset_url or "val.csv")),
+            "label_col": label_col,
+            "user_id": auth.user_id if hasattr(auth, "user_id") else None,
+            "org_id": auth.org_id if hasattr(auth, "org_id") else None,
+            "policy_override": policy_override,
+        }
+        
+        encrypted_payload = encrypt_task_payload(
+            payload,
+            ["model_path", "train_path", "val_path"]
+        )
+        
+        run_governance_audit_task.delay(**encrypted_payload)
+        celery_ok = True
+    except Exception:
+        celery_ok = False
 
-    # --- Always run audit inline (no Celery dependency) ---
-    # Celery worker is not guaranteed to be running in dev; inline is reliable and
-    # returns results immediately without any polling round-trips.
-    logger.info("Running governance audit inline for job_id=%s", job_id)
+    if celery_ok:
+        return {
+            "status": "pending", "job_id": job_id,
+            "submission_token": submission_token,
+            "poll_url": f"/api/v1/gate/result/{submission_token}",
+            "message": "Governance audit dispatched to worker.",
+        }
 
-    # --- Inline: run audit synchronously within request ---
+    # --- Inline fallback: run audit synchronously within request ---
     tmp_files = []
     try:
         def _write_tmp(data: bytes, suffix: str) -> str:
@@ -328,12 +328,8 @@ async def run_audit(
         if getattr(model_obj, "feature_names_in_", None) is not None:
             expected = list(model_obj.feature_names_in_)
             for f in expected:
-                if f not in X_train_df.columns:
-                    X_train_df[f] = 0
-                if f not in X_val_df.columns:
-                    X_val_df[f] = 0
-            X_train = X_train_df[expected]
-            X_val = X_val_df[expected]
+                X_train_df.setdefault(f, 0); X_val_df.setdefault(f, 0)
+            X_train = X_train_df[expected]; X_val = X_val_df[expected]
         else:
             X_train = X_train_df
             X_val = X_val_df.reindex(columns=X_train.columns, fill_value=0)
@@ -392,35 +388,16 @@ async def run_audit(
 
         gov = compute_governance_score(drift_report=drift_report, overfitting_gap=ov_gap)
 
-        # --- Risk computation ---
         from app.domain.services.risk_engine import RiskEngine
-        
-        # Prepare metrics for RiskEngine
-        max_psi = max([v.get("PSI", 0) for v in drift_report.values()]) if drift_report else 0
-        drifted_count = sum([1 for v in drift_report.values() if v.get("PSI", 0) > 0.2]) if drift_report else 0
-        
-        risk_input = {
-            "accuracy_delta": ov_gap.get("accuracy_gap", 0),
-            "psi": max_psi,
-            "drifted_features_count": drifted_count,
-            "brier_score": calibration.get("brier_score", 0) if isinstance(calibration, dict) else 0,
-            "calibration_flag": calibration.get("calibration_error", False) if isinstance(calibration, dict) else False
-        }
-        
-        risk_result = RiskEngine().calculate_risk_score(risk_input)
-
-        # --- Security Checks ---
-        security_results = None
-        if "security" in selected and _has_lifecycle_core:
-            try:
-                from ml_guard.core.model_security import run_security_checks
-                security_results = run_security_checks(model_obj, X_train, X_val, y_train, y_val)
-            except Exception as sec_err:
-                logger.warning(f"Security checks failed: {sec_err}")
+        risk_result = RiskEngine().compute(
+            drift_report=drift_report, overfitting_gap=ov_gap,
+            governance_score=gov["governance_score"],
+            security_checks={}, performance_metrics=metrics,
+        )
 
         from app.domain.services.governance_engine import GovernanceEngine
         eval_ctx = {"metrics": metrics, "drift": drift_report, "overfitting_gap": ov_gap,
-                    "governance_score": gov["governance_score"], "security": security_results}
+                    "governance_score": gov["governance_score"]}
         if policy_override:
             import json
             policy_result = evaluate_policy(**eval_ctx, policy=json.loads(policy_override))
@@ -436,7 +413,6 @@ async def run_audit(
             fingerprint = compute_model_fingerprint(mf)
         complexity = compute_model_complexity(model_obj)
 
-
         results_json = {
             "checks_run": selected, "metrics": metrics, "drift": drift_report,
             "overfitting_gap": ov_gap, "governance": gov, "policy": policy_result,
@@ -445,7 +421,6 @@ async def run_audit(
             "risk_level": risk_result.get("risk_level"), "top_drifted_ranked": top_drifted,
             "top5_drifted_features": [f["feature"] for f in top_drifted[:5]],
             "fingerprint": fingerprint, "complexity": complexity,
-            "security": security_results
         }
 
         scan = ScanRecord(
@@ -457,7 +432,6 @@ async def run_audit(
             gate_status=policy_result.get("gate_status", "UNKNOWN"),
             triggered_by=auth.user_id if hasattr(auth, "user_id") else None,
             trigger_source="inline",
-            security_checks=security_results
         )
         db.add(scan)
 

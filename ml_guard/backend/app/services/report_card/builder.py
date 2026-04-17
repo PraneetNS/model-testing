@@ -30,19 +30,21 @@ class ReportCardBuilder:
     def __init__(self, db: AsyncSession, model_id: str):
         self.db = db
         self.model_id = model_id
-        self.model = db.query(Model).get(model_id)
-        if not self.model:
-            raise ValueError(f"Model {model_id} not found.")
+        self.model = None
 
-    def aggregate_audit_data(self) -> Dict[str, Any]:
+    async def initialize(self):
+        self.model = await self.db.get(Model, self.model_id)
+        if not self.model:
+            raise ValueError(f"Model {self.model_id} not found.")
+
+    async def aggregate_audit_data(self) -> Dict[str, Any]:
         """
         Pulls latest audit metrics for the model across all categories.
         """
         # Fetch latest scan result (most recent audit)
-        latest_audit = self.db.query(ScanRecord)\
-            .filter(ScanRecord.model_id == self.model_id)\
-            .order_by(ScanRecord.created_at.desc())\
-            .first()
+        query = select(ScanRecord).filter(ScanRecord.model_id == self.model_id).order_by(ScanRecord.created_at.desc())
+        result = await self.db.execute(query)
+        latest_audit = result.scalars().first()
             
         if not latest_audit:
             logger.warning("No audit results found for model", model_id=self.model_id)
@@ -60,19 +62,24 @@ class ReportCardBuilder:
             "scan_id": str(latest_audit.id)
         }
 
-    def compute_governance_score(self, aggregated_data: Dict[str, Any]) -> Tuple[float, str]:
+    async def compute_governance_score(self, aggregated_data: Dict[str, Any]) -> Tuple[float, str]:
         """
         Computes weighted total score and determines final verdict.
         Also checks ModelExplanation to flag 'SHAP-Fairness Alert' if top drift is inside sensitive_features.
         """
         # Fetch explanation
-        from app.db.models import ModelExplanation
-        explanation = self.db.query(ModelExplanation).filter(ModelExplanation.model_id == self.model_id).order_by(ModelExplanation.computed_at.desc()).first()
-        if explanation and explanation.top_drift_contributors:
-            top_drift = explanation.top_drift_contributors[0].get("feature")
-            sensitive_features = (self.model.metadata_json or {}).get("sensitive_features", [])
-            if top_drift in sensitive_features:
-                aggregated_data["shap_fairness_alert"] = True
+        from app.db.models import ExplainabilityResult # Changed to ExplainabilityResult based on current schema
+        query = select(ExplainabilityResult).filter(ExplainabilityResult.model_id == self.model_id).order_by(ExplainabilityResult.created_at.desc())
+        result = await self.db.execute(query)
+        explanation = result.scalars().first()
+        
+        if explanation and explanation.summary_metrics:
+            top_features = explanation.summary_metrics.get("top_features", [])
+            if top_features:
+                top_drift = top_features[0]
+                sensitive_features = (self.model.metadata_json or {}).get("sensitive_features", [])
+                if top_drift in sensitive_features:
+                    aggregated_data["shap_fairness_alert"] = True
         total = 0.0
         # Re-adjust weights if LLM safety is not applicable
         active_weights = self.WEIGHTS.copy()

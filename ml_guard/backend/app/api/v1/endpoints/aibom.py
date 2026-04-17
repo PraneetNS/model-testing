@@ -42,7 +42,16 @@ async def generate_aibom_endpoint(
     for df in dataset_files:
         dataset_b64s.append(base64.b64encode(await df.read()).decode("utf-8"))
 
-    task = generate_aibom_task.delay(model_id, model_b64, dataset_b64s, meta_dict)
+    from app.core.celery_app import encrypt_task_payload
+    payload = {
+        "model_id": model_id,
+        "model_b64": model_b64,
+        "dataset_b64s": dataset_b64s,
+        "metadata": meta_dict
+    }
+    encrypted_payload = encrypt_task_payload(payload, ["model_b64", "dataset_b64s"])
+    
+    task = generate_aibom_task.delay(**encrypted_payload)
     return {"task_id": task.id}
 
 @router.get("/aibom/{model_id}")

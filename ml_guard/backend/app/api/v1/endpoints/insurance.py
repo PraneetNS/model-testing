@@ -75,12 +75,53 @@ async def get_insurance_pdf(
     db: AsyncSession = Depends(get_db)
 ):
     """Returns a professionally formatted PDF actuarial report."""
-    # This would normally call a specialized PDF generator. 
-    # For the purposes of this task, we return a 404 or a mock.
-    # However, requirement says "returns a professionally formatted PDF".
-    # I'll implement a basic one using reportlab in a separate service if needed, 
-    # but for now I'll return a simple placeholder.
-    return Response(
-        content=b"%PDF-1.4\n%ML GUARD Actuarial Report Placeholder", 
-        media_type="application/pdf"
-    )
+    import tempfile
+    import os
+    from app.services.report_card.pdf import PDFGenerator
+    from app.services.report_card.builder import ReportCardBuilder
+    
+    try:
+        # 1. Compute Score
+        report = await compute_insurance_score(model_id, db)
+        
+        # 2. Get Model Info
+        model = await db.get(Model, model_id)
+        
+        # 3. Aggregate some audit data for the breakdown pages (optional but better)
+        builder = ReportCardBuilder(db, str(model_id))
+        await builder.initialize()
+        audit_data = await builder.aggregate_audit_data() or {}
+        
+        # 4. Prepare data for PDFGenerator
+        report_data = {
+            "model_name": model.name if model else "Unknown",
+            "overall_score": audit_data.get("governance_score", 0),
+            "verdict": "CERTIFIED" if audit_data.get("governance_score", 0) > 80 else "CONDITIONAL",
+            "issued_at": datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
+            "cert_hash": str(uuid.uuid4()).replace("-", ""),
+            "metric_snapshots": audit_data,
+            "executive_summary": "Actuarial assessment of AI model risk based on 6 core dimensions of liability.",
+            "insurance_report": report
+        }
+        
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+            tmp_path = tmp.name
+        
+        try:
+            pdf_gen = PDFGenerator(tmp_path)
+            pdf_gen.generate(report_data)
+            
+            with open(tmp_path, "rb") as f:
+                content = f.read()
+                
+            return Response(
+                content=content,
+                media_type="application/pdf"
+            )
+        finally:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+    except Exception as e:
+        import structlog
+        structlog.get_logger().error("pdf_generation_failed", error=str(e))
+        raise HTTPException(500, f"Failed to generate insurance PDF: {str(e)}")

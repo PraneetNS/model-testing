@@ -60,12 +60,16 @@ async def compute_explainability(
 
     # Dispatch task
     from app.workers.tasks import run_explainability_task
-    task = run_explainability_task.delay(
-        model_id=model_id,
-        model_b64=m_b64,
-        data_b64=d_b64,
-        max_samples=max_samples
-    )
+    from app.core.celery_app import encrypt_task_payload
+    payload = {
+        "model_id": model_id,
+        "model_b64": m_b64,
+        "data_b64": d_b64,
+        "max_samples": max_samples
+    }
+    encrypted_payload = encrypt_task_payload(payload, ["model_b64", "data_b64"])
+    
+    task = run_explainability_task.delay(**encrypted_payload)
 
     return {
         "status": "pending",

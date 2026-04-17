@@ -30,12 +30,13 @@ async def generate_governance_report(model_id: str):
     try:
         # 1. Aggregrate & Score
         builder = ReportCardBuilder(db, model_id)
-        audit_data = builder.aggregate_audit_data()
+        await builder.initialize()
+        audit_data = await builder.aggregate_audit_data()
         if not audit_data:
             logger.error("No audit data found to generate report", model_id=model_id)
             return {"status": "FAILED", "error": "No audit data found."}
 
-        score, verdict = builder.compute_governance_score(audit_data)
+        score, verdict = await builder.compute_governance_score(audit_data)
         cert_hash = builder.generate_cert_hash(model_id, audit_data['audit_timestamp'], score)
 
         # 2. Check Collision 
