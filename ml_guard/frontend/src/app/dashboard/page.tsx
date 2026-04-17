@@ -6,7 +6,7 @@ import {
     Building2, Users, FolderOpen, KeyRound, Bell, GitBranch, BarChart3,
     Clock, ArrowUpDown, TrendingUp, TrendingDown, Minus, Shield, Eye, LogOut, User,
     Scale, Brain, Zap, Package, FlaskConical, Target, Sliders, Database, Layout,
-    Search, ShieldAlert, MonitorCheck, Globe, ExternalLink
+    Search, ShieldAlert, MonitorCheck, Globe, ExternalLink, Star
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip as ReTooltip, ResponsiveContainer } from "recharts";
@@ -429,6 +429,7 @@ function ModelAuditPage({ state, setState, onAction }: any) {
 
     return (
         <div className="grid grid-cols-1 xl:grid-cols-[400px_1fr] gap-8">
+            <div className="space-y-4">
                 <div className="flex items-center justify-between px-1">
                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">1. Model Artifact</p>
                     <button onClick={() => setAuditState({ isHFModalOpen: true })} className="flex items-center gap-1.5 text-[9px] font-black uppercase text-orange-400 hover:text-orange-300 transition-colors">
@@ -1818,9 +1819,127 @@ function LLMGovernancePage({ state, setState, onAction }: any) {
 }
 
 // ═══════════════════════════════════════════════
+// MODULE 9 — PLATFORM OVERVIEW (SHOWCASE)
+// ═══════════════════════════════════════════════
+function OverviewModule({ onAction }: any) {
+    return (
+        <div className="space-y-6">
+            <Card className="p-8 text-center bg-gradient-to-br from-orange-500/10 to-transparent border-orange-500/20">
+                <ShieldCheck className="w-16 h-16 text-orange-400 mx-auto mb-4" />
+                <h1 className="text-3xl font-black text-white tracking-tight leading-loose">ML Guard V7.2 Enterprise</h1>
+                <p className="text-slate-400 mt-2 max-w-2xl mx-auto leading-relaxed">The definitive end-to-end platform for securing, monitoring, and governing machine learning implementations across multi-cloud environments. We've introduced state-of-the-art public dataset plugins, real-time RAG evaluation, SHAP-driven fairness tools, and streaming analytics.</p>
+            </Card>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mt-6">
+                <Card className="p-6 border-white/[0.05] hover:border-orange-500/30 transition-all cursor-default">
+                    <Database className="w-8 h-8 text-blue-400 mb-4" />
+                    <h3 className="font-bold text-white mb-2 tracking-wide text-sm">Universal Connectors</h3>
+                    <p className="text-[11px] text-slate-400 leading-relaxed">Ingest seamlessly from Snowflake, AWS S3, GCP, Azure Blob. Connect directly to Kaggle, OpenML, and Roboflow for benchmarking without leaving the dashboard.</p>
+                </Card>
+                <Card className="p-6 border-white/[0.05] hover:border-emerald-500/30 transition-all cursor-default">
+                    <Scale className="w-8 h-8 text-emerald-400 mb-4" />
+                    <h3 className="font-bold text-white mb-2 tracking-wide text-sm">SHAP & Fairness</h3>
+                    <p className="text-[11px] text-slate-400 leading-relaxed">Calculate Disparate Impact and Statistical Parity Difference out-of-the-box. Utilize exact SHAP valuations to flag data overlaps affecting sensitive demographics.</p>
+                </Card>
+                <Card className="p-6 border-white/[0.05] hover:border-cyan-500/30 transition-all cursor-default">
+                    <Brain className="w-8 h-8 text-cyan-400 mb-4" />
+                    <h3 className="font-bold text-white mb-2 tracking-wide text-sm">LLM Guardrails & RAG</h3>
+                    <p className="text-[11px] text-slate-400 leading-relaxed">Evaluate GenAI for Prompt Injections, Toxicity, and Hallucination Risk. Actively monitor RAG context relevance and grounding fidelity metrics continuously.</p>
+                </Card>
+                <Card className="p-6 border-white/[0.05] hover:border-purple-500/30 transition-all cursor-default">
+                    <ShieldAlert className="w-8 h-8 text-purple-400 mb-4" />
+                    <h3 className="font-bold text-white mb-2 tracking-wide text-sm">AI Insurance Scoring</h3>
+                    <p className="text-[11px] text-slate-400 leading-relaxed">Derive precise actuarial risks translating raw drift into comprehensive monetary and compliance ratings spanning reliability, deployment, and supply chain domains.</p>
+                </Card>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                <Card className="p-6 border-white/[0.05]">
+                    <div className="flex items-center gap-3 mb-4">
+                        <BarChart3 className="w-6 h-6 text-red-400" />
+                        <h3 className="font-bold text-white tracking-wide">Live WebSocket Streaming</h3>
+                    </div>
+                    <p className="text-xs text-slate-400 leading-relaxed mb-4">Push inference inputs in real-time across high-concurrency environments to detect Conceptual Drift and Data Shift instantly. Visualize Rolling JSD and PSI seamlessly while triggering external webhooks (Slack/Teams) within milliseconds of an anomaly.</p>
+                </Card>
+                <Card className="p-6 border-white/[0.05]">
+                    <div className="flex items-center gap-3 mb-4">
+                        <Eye className="w-6 h-6 text-amber-400" />
+                        <h3 className="font-bold text-white tracking-wide">AI Advisory Copilot</h3>
+                    </div>
+                    <p className="text-xs text-slate-400 leading-relaxed mb-4">Unsure what a failing Statistical Parity Diff means? Paste your Audit ID into the Groq-powered AI Copilot to generate plain-text, executive-ready remediation steps based directly on the model's empirical telemetry.</p>
+                </Card>
+            </div>
+        </div>
+    );
+}
+
+// ═══════════════════════════════════════════════
+// MODULE 10 — DOCUMENTATION
+// ═══════════════════════════════════════════════
+function DocsModule() {
+    return (
+        <div className="space-y-6 max-w-5xl mx-auto">
+            <Card className="p-8 space-y-8 bg-[#0E1014]/60">
+                <div className="border-b border-white/5 pb-6">
+                    <div className="flex items-center gap-3 mb-3">
+                        <FolderOpen className="w-8 h-8 text-blue-400" />
+                        <h2 className="text-2xl font-black text-white tracking-tight">Installation Guide & Docs</h2>
+                    </div>
+                    <p className="text-slate-400 text-sm">Full architecture references and microservice instructions.</p>
+                </div>
+
+                <div className="space-y-4">
+                    <h3 className="text-sm font-black uppercase tracking-widest text-emerald-400">1. Microservice Pre-requisites</h3>
+                    <ul className="list-disc pl-6 text-sm text-slate-300 space-y-2 leading-relaxed">
+                        <li><b>FastAPI Backend:</b> Python 3.10+ connected to PostgreSQL/SQLite, isolated via Alembic migrations. Runs via <code className="bg-white/10 px-1 py-0.5 rounded text-xs text-orange-300">uvicorn app.main:app</code>.</li>
+                        <li><b>Celery Background Runner:</b> Asynchronous process requiring Redis for distributing Data Connector ingestions and Model Auditing streams. Runs via <code className="bg-white/10 px-1 py-0.5 rounded text-xs text-orange-300">celery -A app.worker worker</code>.</li>
+                        <li><b>Next.JS Frontend:</b> Robust React application routing and visual UI running on <code className="bg-white/10 px-1 py-0.5 rounded text-xs text-orange-300">npm run dev</code>.</li>
+                    </ul>
+                    <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-xl mt-4">
+                        <p className="text-xs font-bold text-orange-400 mb-1">Quick Start</p>
+                        <p className="text-[11px] text-slate-300">On Windows, execute the unified launcher to automatically boot and multiplex all three required systems instantly: <code className="font-mono text-white">./start_services.bat</code></p>
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    <h3 className="text-sm font-black uppercase tracking-widest text-blue-400 mt-6">2. Configuring Connectors</h3>
+                    <p className="text-sm text-slate-300">The platform comes with securely isolated backend connectors. To activate them, provide corresponding access protocols during ingestion:</p>
+                    <div className="grid grid-cols-2 gap-4 mt-2">
+                        <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl">
+                            <p className="text-[11px] font-black uppercase text-white mb-2">Public Repositories</p>
+                            <ul className="text-[10px] text-slate-400 space-y-1 list-disc pl-4">
+                                <li>Kaggle: Needs `kaggle_username`, `kaggle_key`. Auto-downloads zipped subsets.</li>
+                                <li>OpenML: Needs `dataset_id`. Extracts standard X/Y metrics.</li>
+                                <li>RoboFlow: Needs `workspace`, `project`, `api_key`. Validates CV images.</li>
+                            </ul>
+                        </div>
+                        <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl">
+                            <p className="text-[11px] font-black uppercase text-white mb-2">Enterprise Warehousing</p>
+                            <ul className="text-[10px] text-slate-400 space-y-1 list-disc pl-4">
+                                <li>S3 / Google Cloud / Azure: Validates IAM keys via Fernet encrypted stores.</li>
+                                <li>Snowflake / BigQuery: Ingests via Data Warehouse SQL pipelines mapping direct database URIs.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </Card>
+        </div>
+    );
+}
+
+// ═══════════════════════════════════════════════
 // DASHBOARD SHELL
 // ═══════════════════════════════════════════════
 const NAV_CATEGORIES = [
+    {
+        id: "info",
+        label: "Platform Info",
+        icon: Info,
+        items: [
+            { id: "overview", label: "Showcase", sub: "Platform Overview", icon: Star },
+            { id: "docs", label: "Documentation", sub: "Installation & Guides", icon: FileText },
+        ]
+    },
     {
         id: "governance",
         label: "Governance",
@@ -1889,7 +2008,7 @@ const NAV_CATEGORIES = [
 const ALL_NAV_ITEMS = NAV_CATEGORIES.flatMap(c => c.items);
 
 export default function DashboardPage() {
-    const [active, setActive] = useState("audit");
+    const [active, setActive] = useState("overview");
     const { user, logout } = useAuth();
 
     // Lifted States
@@ -2084,6 +2203,8 @@ export default function DashboardPage() {
                 <div className="flex-1 overflow-y-auto px-10 pb-20 no-scrollbar relative z-20">
                     <div className="max-w-[1400px]">
                         <div className="animate-in fade-in slide-in-from-bottom-6 duration-700">
+                            {active === "overview" && <OverviewModule onAction={refreshEnterprise} />}
+                            {active === "docs" && <DocsModule />}
                             {active === "audit" && <ModelAuditPage state={auditState} setState={setAuditState} onAction={refreshEnterprise} />}
                             {active === "behavior" && <BehaviorTestingPage state={behaviorState} setState={setBehaviorState} onAction={refreshEnterprise} />}
                             {active === "monitoring" && <LiveMonitoringPage state={monitorState} setState={setMonitorState} onAction={refreshEnterprise} />}

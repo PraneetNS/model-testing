@@ -409,6 +409,15 @@ async def run_audit(
         
         risk_result = RiskEngine().calculate_risk_score(risk_input)
 
+        # --- Security Checks ---
+        security_results = None
+        if "security" in selected and _has_lifecycle_core:
+            try:
+                from ml_guard.core.model_security import run_security_checks
+                security_results = run_security_checks(model_obj, X_train, X_val, y_train, y_val)
+            except Exception as sec_err:
+                logger.warning(f"Security checks failed: {sec_err}")
+
         from app.domain.services.governance_engine import GovernanceEngine
         eval_ctx = {"metrics": metrics, "drift": drift_report, "overfitting_gap": ov_gap,
                     "governance_score": gov["governance_score"], "security": security_results}
@@ -427,13 +436,6 @@ async def run_audit(
             fingerprint = compute_model_fingerprint(mf)
         complexity = compute_model_complexity(model_obj)
 
-        # --- Security Checks ---
-        security_results = None
-        if "security" in selected and _has_lifecycle_core:
-            try:
-                security_results = run_security_checks(model_obj, X_train, X_val, y_train, y_val)
-            except Exception as sec_err:
-                logger.warning(f"Security checks failed: {sec_err}")
 
         results_json = {
             "checks_run": selected, "metrics": metrics, "drift": drift_report,

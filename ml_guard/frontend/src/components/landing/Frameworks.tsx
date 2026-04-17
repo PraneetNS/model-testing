@@ -6,7 +6,7 @@ import { Cpu, Database, BarChart3, AlertTriangle, CheckCircle2 } from 'lucide-re
 
 export const Frameworks = () => {
     const logos = [
-        "scikit-learn", "TensorFlow", "PyTorch", "XGBoost", "MLflow", "ONNX"
+        "scikit-learn", "PyTorch", "TensorFlow", "Snowflake", "BigQuery", "AWS S3", "GCS", "MLflow", "ONNX"
     ];
 
     return (

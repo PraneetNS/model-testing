@@ -101,19 +101,55 @@ export const Docs = () => {
                         </div>
                     ))}
                 </div>
+                
+                <div className="mt-12 text-center">
+                    <a 
+                        href="/docs" 
+                        className="text-orange-500 text-[10px] font-black uppercase tracking-[0.3em] hover:text-orange-400 transition-colors"
+                    >
+                        Explore Full Documentation →
+                    </a>
+                </div>
             </div>
         </section>
     );
 };
 
 export const Contact = () => {
+    const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        message: ''
+    });
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setStatus('loading');
+        try {
+            const response = await fetch('http://localhost:8000/api/v1/contact', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+            if (response.ok) {
+                setStatus('success');
+                setFormData({ name: '', email: '', message: '' });
+            } else {
+                setStatus('error');
+            }
+        } catch (error) {
+            setStatus('error');
+        }
+    };
+
     return (
         <section className="py-32 bg-[#090A0C]">
             <div className="max-w-7xl mx-auto px-6">
                 <div className="bg-gradient-to-br from-[#111318] to-black border border-white/5 rounded-[4rem] p-12 md:p-20 grid grid-cols-1 lg:grid-cols-2 gap-20 shadow-2xl">
                     <div>
                         <h2 className="text-5xl font-black text-white tracking-tighter mb-8">Let's Secure <br /> Your AI Fleet.</h2>
-                        <p className="text-slate-400 font-medium mb-12">Talk to our solutions architects about integrating ML Guard into your production ecosystem.</p>
+                        <p className="text-slate-400 font-medium mb-12">Talk to our solutions architects about integrating ML Guard into your production ecosystem. Any query will be forwarded to <span className="text-orange-500">savantpraneet@gamil.com</span>.</p>
 
                         <div className="flex gap-6">
                             {[Github, Twitter, Linkedin].map((Icon, i) => (
@@ -124,16 +160,39 @@ export const Contact = () => {
                         </div>
                     </div>
 
-                    <form className="space-y-6">
+                    <form className="space-y-6" onSubmit={handleSubmit}>
                         <div className="grid grid-cols-2 gap-6">
-                            <input className="bg-white/5 border border-white/5 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-orange-500/50 transition-all font-bold text-sm" placeholder="Full Name" />
-                            <input className="bg-white/5 border border-white/5 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-orange-500/50 transition-all font-bold text-sm" placeholder="Work Email" />
+                            <input 
+                                required
+                                value={formData.name}
+                                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                className="bg-white/5 border border-white/5 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-orange-500/50 transition-all font-bold text-sm" 
+                                placeholder="Full Name" 
+                            />
+                            <input 
+                                required
+                                type="email"
+                                value={formData.email}
+                                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                                className="bg-white/5 border border-white/5 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-orange-500/50 transition-all font-bold text-sm" 
+                                placeholder="Work Email" 
+                            />
                         </div>
-                        <input className="w-full bg-white/5 border border-white/5 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-orange-500/50 transition-all font-bold text-sm" placeholder="Company" />
-                        <textarea className="w-full bg-white/5 border border-white/5 rounded-2xl px-6 py-8 text-white focus:outline-none focus:border-orange-500/50 transition-all font-bold text-sm h-32" placeholder="Tell us about your requirements..." />
-                        <button className="w-full bg-orange-500 text-black py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-orange-400 transition-all flex items-center justify-center gap-3">
-                            Transmit Signal <Send className="w-4 h-4" />
+                        <textarea 
+                            required
+                            value={formData.message}
+                            onChange={(e) => setFormData({...formData, message: e.target.value})}
+                            className="w-full bg-white/5 border border-white/5 rounded-2xl px-6 py-8 text-white focus:outline-none focus:border-orange-500/50 transition-all font-bold text-sm h-32" 
+                            placeholder="Tell us about your requirements or any technical query..." 
+                        />
+                        <button 
+                            disabled={status === 'loading'}
+                            className="w-full bg-orange-500 text-black py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-orange-400 disabled:opacity-50 transition-all flex items-center justify-center gap-3"
+                        >
+                            {status === 'loading' ? 'Transmitting...' : status === 'success' ? 'Signal Received ✓' : 'Transmit Signal'} 
+                            <Send className="w-4 h-4" />
                         </button>
+                        {status === 'error' && <p className="text-red-500 text-xs text-center font-black uppercase tracking-widest">Transmission Failed. Please try again.</p>}
                     </form>
                 </div>
             </div>

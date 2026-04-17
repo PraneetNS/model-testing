@@ -21,9 +21,9 @@ export const Navbar = () => {
     }, []);
 
     const navLinks = [
-        { name: 'Features', href: '#features' },
-        { name: 'How it Works', href: '#how-it-works' },
-        { name: 'Docs', href: '#docs' },
+        { name: 'Features', href: '/features' },
+        { name: 'How it Works', href: '/how-it-works' },
+        { name: 'Docs', href: '/docs' },
     ];
 
     return (
@@ -47,7 +47,7 @@ export const Navbar = () => {
 
                 {/* Desktop Nav */}
                 <div className="hidden md:flex items-center gap-8">
-                    {navLinks.map((link) => (
+                    {!user && navLinks.map((link) => (
                         <Link
                             key={link.name}
                             href={link.href}

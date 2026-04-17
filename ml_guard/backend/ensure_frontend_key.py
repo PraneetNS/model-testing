@@ -11,7 +11,7 @@ async def ensure_key():
         org_res = await db.execute(select(Organization).limit(1))
         org = org_res.scalars().first()
         if not org:
-            org = Organization(name="Default Org")
+            org = Organization(name="Default Org", slug="default-org")
             db.add(org)
             await db.commit()
             await db.refresh(org)

@@ -13,44 +13,44 @@ import {
 
 const features = [
     {
-        title: "Pre-Deployment Quality Gates",
-        desc: "Automated verification protocols that stop low-quality models before they impact production environments.",
-        icon: Zap,
+        title: "Model Audit & Drift",
+        desc: "Automated verification tracking PSI/KS drift, label shift, and concept decay with sub-second latency.",
+        icon: Activity,
         color: "text-orange-500",
         bg: "bg-orange-500/10"
     },
     {
-        title: "Drift Detection & Monitoring",
-        desc: "Time-series telemetry tracking feature drift, label shift, and concept decay with sub-second latency.",
-        icon: Activity,
+        title: "SHAP Explainability",
+        desc: "Deep transparency into model decisions using SHapley values and fairness-drift correlation scans.",
+        icon: Scale,
         color: "text-blue-500",
         bg: "bg-blue-500/10"
     },
     {
-        title: "Bias & Fairness Validation",
-        desc: "Algorithmic scanning for protected attributes and disparate impact across demographic segments.",
-        icon: Scale,
+        title: "AI Insurance Scoring",
+        desc: "Standardized actuarial risk grades (A++ to F) based on reliability, robustness, and compliance data.",
+        icon: Lock,
         color: "text-green-500",
         bg: "bg-green-500/10"
     },
     {
-        title: "Robustness Testing",
-        desc: "Stress-testing model integrity against adversarial perturbations and edge-case distributional shifts.",
-        icon: Lock,
+        title: "Enterprise Connectors",
+        desc: "Native ingestion from S3, Snowflake, and BigQuery. Secure modular plugin system for data pipelines.",
+        icon: FileCheck,
         color: "text-purple-500",
         bg: "bg-purple-500/10"
     },
     {
-        title: "Compliance & Audit Reports",
-        desc: "Exportable governance documentation mapped to global regulatory frameworks (EU AI Act, NIST).",
-        icon: FileCheck,
+        title: "CI/CD Sync Gates",
+        desc: "Stop low-quality models in GitHub Actions or Jenkins before they impact production environments.",
+        icon: GitBranch,
         color: "text-red-500",
         bg: "bg-red-500/10"
     },
     {
-        title: "CI/CD Integration",
-        desc: "Native connectors for GitHub Actions, GitLab CI, and Jenkins to embed quality in your SDLC.",
-        icon: GitBranch,
+        title: "Sentinel Live Monitoring",
+        desc: "Real-time auditing of production prediction streams for adversarial attacks and distributional shifts.",
+        icon: Zap,
         color: "text-amber-500",
         bg: "bg-amber-500/10"
     }

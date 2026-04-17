@@ -934,8 +934,11 @@ class SecurityAlert(Base):
     """Storage for detected injection attempts and security anomalies."""
     __tablename__ = "alerts"
     id          = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    model_id    = Column(UUID(), ForeignKey("models.id", ondelete="CASCADE"), nullable=True, index=True)
     timestamp   = Column(DateTime, default=utcnow, index=True)
+    created_at  = Column(DateTime, default=utcnow)
     alert_type  = Column(String(100), nullable=False) # injection_attempt
+    severity    = Column(String(20), default="MEDIUM") # LOW, MEDIUM, HIGH, CRITICAL
     endpoint    = Column(String(255), nullable=True)
     payload_hash = Column(String(64), nullable=True)
     ip          = Column(String(45), nullable=True)
