@@ -22,7 +22,15 @@ def _compute_sha256(path: str) -> str:
     return h.hexdigest()
 
 @celery_app.task(name="tasks.data_connector_fetch", bind=True)
-def data_connector_fetch_task(self, connector_type: str, config: Dict[str, Any], source_uri: str):
+def data_connector_fetch_task(
+    self, 
+    connector_type: str, 
+    config: Dict[str, Any], 
+    source_uri: str,
+    model_id: str = None,
+    dataset_type: str = "training",
+    dataset_name: str = None
+):
     """
     Background task to pull data, compute stats, and register in DB.
     """
@@ -42,12 +50,11 @@ def data_connector_fetch_task(self, connector_type: str, config: Dict[str, Any],
         column_names = list(df.columns)
         sha256 = _compute_sha256(local_path)
         
-        # Cleanup temp file? Actually the task description says "registered in a dataset_registry table".
-        # Usually we'd move it to permanent storage, but the prompt says 
-        # "base.py ... save_to_temp ... saves to /tmp/...".
-        # I'll keep it there for now as indicated.
-        
         with SessionLocal() as db:
+            from app.db.models import Dataset, DatasetVersion
+            import hashlib
+
+            # 1. Register in DatasetRegistry (Audit log)
             reg = DatasetRegistry(
                 source_type=connector_type,
                 source_uri=source_uri,
@@ -56,12 +63,38 @@ def data_connector_fetch_task(self, connector_type: str, config: Dict[str, Any],
                 sha256=sha256
             )
             db.add(reg)
-            db.commit()
-            db.refresh(reg)
             
-            logger.info(f"Successfully registered dataset {reg.id} from {connector_type}")
+            # 2. If model_id is provided, also register in governance tables
+            dataset_id = None
+            if model_id:
+                name = dataset_name or f"{connector_type} Ingestion"
+                dataset = Dataset(
+                    model_id=model_id,
+                    type=dataset_type,
+                    metadata_json={"name": name, "source": connector_type, "source_uri": source_uri},
+                    row_count=row_count,
+                    fingerprint=sha256[:32],
+                )
+                db.add(dataset)
+                db.flush() # Get dataset.id
+                dataset_id = str(dataset.id)
+
+                version = DatasetVersion(
+                    dataset_id=dataset.id,
+                    version_number=1,
+                    storage_url=local_path,
+                    schema_hash=sha256[:32],
+                    row_count=row_count,
+                    feature_count=len(column_names)
+                )
+                db.add(version)
+
+            db.commit()
+            
+            logger.info(f"Successfully registered dataset source {connector_type}")
             return {
                 "registry_id": str(reg.id),
+                "dataset_id": dataset_id,
                 "row_count": row_count,
                 "sha256": sha256,
                 "local_path": local_path

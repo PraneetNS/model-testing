@@ -34,7 +34,10 @@ async def fetch_kaggle_data(
     task = data_connector_fetch_task.delay(
         connector_type="kaggle",
         config=req.config,
-        source_uri=req.source_uri
+        source_uri=req.source_uri,
+        model_id=req.model_id,
+        dataset_type=req.dataset_type,
+        dataset_name=req.dataset_name
     )
     
     return {
@@ -99,7 +102,10 @@ async def fetch_openml_data(
     task = data_connector_fetch_task.delay(
         connector_type="openml",
         config=req.config,
-        source_uri=req.source_uri
+        source_uri=req.source_uri,
+        model_id=req.model_id,
+        dataset_type=req.dataset_type,
+        dataset_name=req.dataset_name
     )
     
     return {
@@ -129,7 +135,10 @@ async def fetch_roboflow_data(
     task = data_connector_fetch_task.delay(
         connector_type="roboflow",
         config=req.config,
-        source_uri=req.source_uri
+        source_uri=req.source_uri,
+        model_id=req.model_id,
+        dataset_type=req.dataset_type,
+        dataset_name=req.dataset_name
     )
     
     return {

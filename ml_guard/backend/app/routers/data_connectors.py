@@ -26,10 +26,13 @@ router = APIRouter()
 # ── Schemas ───────────────────────────────────────────────────────────────────
 
 class FetchRequest(BaseModel):
-    connector_type: str
+    connector_type: Optional[str] = None # Optional for specific connector routers
     config: Dict[str, Any]
     source_uri: str
     save_config_label: Optional[str] = None
+    model_id: Optional[str] = None
+    dataset_type: Optional[str] = "training"
+    dataset_name: Optional[str] = None
 
 class ConfigListItem(BaseModel):
     id: UUID

@@ -23,54 +23,77 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
     const [lineage, setLineage] = useState<any[]>([]);
     const [showRegister, setShowRegister] = useState(false);
     const [models, setModels] = useState<any[]>([]);
-    const [newDataset, setNewDataset] = useState({ model_id: "", name: "", type: "training", source: "local" });
-    const [registering, setRegistering] = useState(false);
+    const [newDataset, setNewDataset] = useState<any>({ 
+        model_id: "", name: "", type: "training", source: "local",
+        config: {} 
+    });
+    const [openmlQuery, setOpenmlQuery] = useState("");
+    const [openmlResults, setOpenmlResults] = useState<any[]>([]);
+    const [searchingOpenml, setSearchingOpenml] = useState(false);
 
-    const fetchDatasets = async () => {
-        setLoading(true);
+    const searchOpenML = async () => {
+        if (!openmlQuery) return;
+        setSearchingOpenml(true);
         try {
-            const res = await apiFetch(`/api/v1/datasets`);
+            const res = await apiFetch(`/api/plugins/openml/search?query=${encodeURIComponent(openmlQuery)}&limit=5`);
             const d = await res.json();
-            setDatasets(d.items || []);
-        } catch (e) { } finally { setLoading(false); }
-    };
-
-    const fetchLineage = async (datasetId: string) => {
-        try {
-            const res = await apiFetch(`/api/v1/datasets/${datasetId}/lineage`);
-            const d = await res.json();
-            setLineage(d.lineage || []);
-        } catch (e) { }
-    };
-
-    const fetchModels = async () => {
-        try {
-            const res = await apiFetch(`/api/v1/models`);
-            const d = await res.json();
-            setModels(d.items || []);
-        } catch (e) { }
+            setOpenmlResults(d);
+        } catch (e) { } finally { setSearchingOpenml(false); }
     };
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
         setRegistering(true);
         try {
-            const res = await apiFetch(`/api/v1/datasets/register`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    model_id: newDataset.model_id,
-                    dataset_type: newDataset.type,
-                    dataset_name: newDataset.name,
-                    source: newDataset.source
-                })
-            });
+            let res;
+            if (newDataset.source === "local") {
+                // Legacy registration
+                res = await apiFetch(`/api/v1/datasets/register`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        model_id: newDataset.model_id,
+                        dataset_type: newDataset.type,
+                        dataset_name: newDataset.name,
+                    })
+                });
+            } else {
+                // Plugin-based fetch
+                const endpoint = newDataset.source === "huggingface" 
+                    ? `/api/plugins/huggingface/fetch`
+                    : `/api/plugins/${newDataset.source}/fetch`;
+                
+                res = await apiFetch(endpoint, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        source_uri: newDataset.source === "openml" ? `openml://${newDataset.config.dataset_id}` : newDataset.name,
+                        config: newDataset.config,
+                        model_id: newDataset.model_id,
+                        dataset_type: newDataset.type,
+                        dataset_name: newDataset.name
+                    })
+                });
+            }
+            
             if (res.ok) {
                 setShowRegister(false);
-                setNewDataset({ model_id: "", name: "", type: "training", source: "local" });
+                setNewDataset({ model_id: "", name: "", type: "training", source: "local", config: {} });
                 fetchDatasets();
+            } else {
+                const err = await res.json();
+                alert(`Error: ${JSON.stringify(err.detail || err)}`);
             }
-        } catch (e) { } finally { setRegistering(false); }
+        } catch (e) { 
+            console.error(e);
+        } finally { setRegistering(false); }
+    };
+
+    const updateConfig = (key: string, value: any) => {
+        setNewDataset({
+            ...newDataset,
+            config: { ...newDataset.config, [key]: value }
+        });
     };
 
     useEffect(() => {
@@ -112,13 +135,13 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
                                     <option value="" className="bg-[#0E1014]">Select Source Model</option>
                                     {models.map(m => <option key={m.model_id || m.id} value={m.model_id || m.id} className="bg-[#0E1014]">{m.name}</option>)}
                                 </select>
-                                <input value={newDataset.name} onChange={e => setNewDataset({ ...newDataset, name: e.target.value })} placeholder="Dataset Name" className="bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-xs text-white focus:border-emerald-500/40 outline-none" required />
+                                <input value={newDataset.name} onChange={e => setNewDataset({ ...newDataset, name: e.target.value })} placeholder="Dataset Display Name" className="bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-xs text-white focus:border-emerald-500/40 outline-none" required />
                                 <select value={newDataset.type} onChange={e => setNewDataset({ ...newDataset, type: e.target.value })} className="bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-xs text-white focus:border-emerald-500/40 outline-none" required>
                                     <option value="training" className="bg-[#0E1014]">Training Data</option>
                                     <option value="validation" className="bg-[#0E1014]">Validation Data</option>
                                     <option value="test" className="bg-[#0E1014]">Test Data</option>
                                 </select>
-                                <select value={newDataset.source} onChange={e => setNewDataset({ ...newDataset, source: e.target.value })} className="bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-xs text-white focus:border-emerald-500/40 outline-none" required>
+                                <select value={newDataset.source} onChange={e => setNewDataset({ ...newDataset, source: e.target.value, config: {} })} className="bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-xs text-white focus:border-emerald-500/40 outline-none" required>
                                     <option value="local" className="bg-[#0E1014]">Local upload</option>
                                     <option value="huggingface" className="bg-[#0E1014]">HuggingFace</option>
                                     <option value="kaggle" className="bg-[#0E1014]">Kaggle</option>
@@ -132,24 +155,48 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
                             <div className="bg-black/20 p-4 rounded-xl border border-white/[0.03]">
                                 {newDataset.source === "kaggle" && (
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                        <input placeholder="Kaggle Username" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
-                                        <input type="password" placeholder="Kaggle API Key" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
-                                        <input placeholder="Dataset Slug (e.g. uciml/adult-census-income)" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
+                                        <input value={newDataset.config.kaggle_username || ""} onChange={e => updateConfig("kaggle_username", e.target.value)} placeholder="Kaggle Username" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" required />
+                                        <input value={newDataset.config.kaggle_key || ""} onChange={e => updateConfig("kaggle_key", e.target.value)} type="password" placeholder="Kaggle API Key" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" required />
+                                        <input value={newDataset.config.dataset_slug || ""} onChange={e => updateConfig("dataset_slug", e.target.value)} placeholder="Dataset Slug" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" required />
+                                        <input value={newDataset.config.file_name || ""} onChange={e => updateConfig("file_name", e.target.value)} placeholder="File Name (Optional)" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
                                     </div>
                                 )}
                                 {newDataset.source === "openml" && (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        <input placeholder="Dataset ID" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
-                                        <div className="text-xs text-slate-500 p-2 italic">Search OpenML functionality available via API.</div>
+                                    <div className="space-y-4">
+                                        <div className="flex gap-2">
+                                            <input value={openmlQuery} onChange={e => setOpenmlQuery(e.target.value)} placeholder="Search OpenML datasets..." className="flex-1 bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
+                                            <button type="button" onClick={searchOpenML} className="px-4 py-2 bg-blue-600 rounded-md text-[9px] font-black uppercase text-white hover:bg-blue-500 transition-all">Search</button>
+                                        </div>
+                                        {openmlResults.length > 0 && (
+                                            <div className="grid grid-cols-1 gap-2">
+                                                {openmlResults.map(r => (
+                                                    <div key={r.id} onClick={() => { updateConfig("dataset_id", r.id); setNewDataset({...newDataset, name: r.name, config: {dataset_id: r.id}}); setOpenmlResults([]); }} 
+                                                        className={`p-3 rounded-lg border cursor-pointer transition-all ${newDataset.config.dataset_id === r.id ? "border-emerald-500 bg-emerald-500/10" : "border-white/5 bg-black/40 hover:border-white/20"}`}>
+                                                        <div className="flex justify-between items-center">
+                                                            <p className="text-xs font-bold text-white">{r.name}</p>
+                                                            <span className="text-[8px] font-black text-slate-600">ID: {r.id}</span>
+                                                        </div>
+                                                        <div className="flex gap-4 mt-2">
+                                                            <p className="text-[9px] text-slate-500">Rows: {r.n_rows}</p>
+                                                            <p className="text-[9px] text-slate-500">Cols: {r.n_cols}</p>
+                                                            <p className="text-[9px] text-slate-500">Classes: {r.n_classes}</p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {newDataset.config.dataset_id && !openmlResults.length && (
+                                            <div className="text-[10px] text-emerald-400 font-bold italic">Selected OpenML Dataset ID: {newDataset.config.dataset_id}</div>
+                                        )}
                                     </div>
                                 )}
                                 {newDataset.source === "roboflow" && (
                                     <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                                        <input type="password" placeholder="API Key" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
-                                        <input placeholder="Workspace" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
-                                        <input placeholder="Project" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
-                                        <input placeholder="Version" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
-                                        <select className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none">
+                                        <input value={newDataset.config.api_key || ""} onChange={e => updateConfig("api_key", e.target.value)} type="password" placeholder="Roboflow API Key" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" required />
+                                        <input value={newDataset.config.workspace || ""} onChange={e => updateConfig("workspace", e.target.value)} placeholder="Workspace" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" required />
+                                        <input value={newDataset.config.project || ""} onChange={e => updateConfig("project", e.target.value)} placeholder="Project" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" required />
+                                        <input value={newDataset.config.version || ""} onChange={e => updateConfig("version", e.target.value)} placeholder="Version" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" required />
+                                        <select value={newDataset.config.format || "yolov8"} onChange={e => updateConfig("format", e.target.value)} className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" required>
                                             <option value="yolov8">YOLOv8</option>
                                             <option value="coco">COCO</option>
                                             <option value="csv">CSV</option>
@@ -158,15 +205,15 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
                                 )}
                                 {newDataset.source === "s3" && (
                                     <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                                        <input placeholder="S3/Blob URL" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none col-span-2" />
-                                        <input placeholder="Access Key" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
-                                        <input type="password" placeholder="Secret Key" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
+                                        <input value={newDataset.config.url || ""} onChange={e => updateConfig("url", e.target.value)} placeholder="S3/Blob URL" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none col-span-2" required />
+                                        <input value={newDataset.config.access_key || ""} onChange={e => updateConfig("access_key", e.target.value)} placeholder="Access Key" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
+                                        <input value={newDataset.config.secret_key || ""} onChange={e => updateConfig("secret_key", e.target.value)} type="password" placeholder="Secret Key" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
                                     </div>
                                 )}
                                 {newDataset.source === "huggingface" && (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        <input placeholder="HuggingFace Repo ID" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
-                                        <input type="password" placeholder="HF Token (Optional)" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
+                                        <input value={newDataset.config.repo_id || ""} onChange={e => updateConfig("repo_id", e.target.value)} placeholder="HuggingFace Repo ID" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" required />
+                                        <input value={newDataset.config.token || ""} onChange={e => updateConfig("token", e.target.value)} type="password" placeholder="HF Token (Optional)" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
                                     </div>
                                 )}
                                 {newDataset.source === "local" && (
@@ -175,7 +222,7 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
                             </div>
                             
                             <button type="submit" disabled={registering} className="bg-emerald-600 text-white font-black py-3 rounded-xl text-[10px] uppercase tracking-widest disabled:opacity-50 mt-2">
-                                {registering ? "Registering..." : "Confirm Registration"}
+                                {registering ? "Registering..." : "Confirm & Fetch Data"}
                             </button>
                         </form>
                     </Card>

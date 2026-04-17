@@ -47,3 +47,9 @@ fastapi-limiter==0.1.5
 
 # Reporting
 reportlab
+
+# Public Data Connectors
+kaggle
+openml
+roboflow
+filelock
