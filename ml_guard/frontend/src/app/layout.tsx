@@ -24,11 +24,15 @@ export const metadata: Metadata = {
   description: "Automated quality gates, drift telemetry, and regulatory compliance auditing for production ML models.",
 };
 
-export default function RootLayout({
+import { headers } from "next/headers";
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const nonce = (await headers()).get('x-nonce') || "";
+
   return (
     <html lang="en" className="dark scroll-smooth">
       <body

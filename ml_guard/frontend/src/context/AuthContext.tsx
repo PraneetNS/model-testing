@@ -60,6 +60,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
                     if (currentUser) {
                         const idToken = await currentUser.getIdToken();
+                        
+                        // Set session in cookie
+                        await fetch('/api/auth/session', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ token: idToken })
+                        });
+
                         setUser({
                             uid: currentUser.uid,
                             email: currentUser.email,
@@ -72,6 +80,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     } else {
                         setUser(null);
                         setToken(null);
+                        // Clear session cookie
+                        fetch('/api/auth/session', { method: 'DELETE' }).catch(() => {});
+                        
                         if (pathname.startsWith('/dashboard')) {
                             router.push('/login');
                         }
@@ -105,6 +116,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             const { signOut } = await import('firebase/auth');
             const { auth } = await import('@/lib/firebase');
             await signOut(auth);
+            await fetch('/api/auth/session', { method: 'DELETE' });
         } catch { }
 
         setUser(null);

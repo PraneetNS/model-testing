@@ -4,21 +4,48 @@
  * Auth via X-API-Key header is injected automatically.
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
-const API_KEY = process.env.NEXT_PUBLIC_API_KEY || "";
+const API_BASE = "/api/proxy";
 
 export { API_BASE };
 
-export const apiHeaders: Record<string, string> = {
-  "Content-Type": "application/json",
-  "X-API-Key": API_KEY,
-};
+// Helper to get CSRF token from cookies
+function getCsrfToken(): string {
+  if (typeof document === 'undefined') return "";
+  const match = document.cookie.match(/csrf_token=([^;]+)/);
+  return match ? match[1] : "";
+}
+
+export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const isFormData = init.body instanceof FormData;
+  const csrfToken = getCsrfToken();
+
+  const headers: Record<string, string> = {
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
+    ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
+    ...(init.headers as Record<string, string> | undefined ?? {}),
+  };
+
+  // Ensure path starts with / if not present
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  
+  // Strip version if calling proxy, or handle it in proxy. 
+  // Let's assume the proxy handles /api/... and targets the backend.
+  const res = await fetch(`${API_BASE}${normalizedPath}`, {
+    ...init,
+    headers,
+  });
+
+  if (res.status === 401) {
+    if (typeof window !== 'undefined') {
+       window.location.href = '/login?expired=true';
+    }
+  }
+
+  return res;
+}
 
 export async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: apiHeaders,
-    cache: "no-store",
-  });
+  const res = await apiFetch(path);
   if (!res.ok) {
     const err = await res.text();
     throw new Error(`GET ${path} failed ${res.status}: ${err}`);
@@ -27,9 +54,8 @@ export async function apiGet<T>(path: string): Promise<T> {
 }
 
 export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await apiFetch(path, {
     method: "POST",
-    headers: apiHeaders,
     body: body ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) {
@@ -40,36 +66,10 @@ export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
 }
 
 export async function apiDelete<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await apiFetch(path, {
     method: "DELETE",
-    headers: apiHeaders,
   });
   if (!res.ok) throw new Error(`DELETE ${path} failed ${res.status}`);
   return res.json();
-}
-
-/**
- * apiFetch — drop-in authenticated replacement for bare fetch().
- *
- * Usage (replaces):  fetch(`${API_BASE}/api/v1/...`, options)
- * With:              apiFetch(`/api/v1/...`, options)
- *
- * - Always injects X-API-Key header
- * - Skips Content-Type for FormData (browser sets multipart boundary)
- * - Returns the raw Response so callers can call .json(), .text(), etc.
- */
-export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
-  const isFormData = init.body instanceof FormData;
-
-  const headers: Record<string, string> = {
-    "X-API-Key": API_KEY,
-    ...(isFormData ? {} : { "Content-Type": "application/json" }),
-    ...(init.headers as Record<string, string> | undefined ?? {}),
-  };
-
-  return fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers,
-  });
 }
 

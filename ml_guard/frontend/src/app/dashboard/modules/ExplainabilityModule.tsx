@@ -21,16 +21,9 @@ export default function ExplainabilityModule({ state, setState, onAction }: any)
     const [modelFile, setModelFile] = useState<File | null>(null);
     const [dataFile, setDataFile] = useState<File | null>(null);
 
-    const getToken = () => {
-        try { return JSON.parse(localStorage.getItem("mlguard_session") || "{}").token || ""; } catch { return ""; }
-    };
-
     const fetchHistory = useCallback(async () => {
-        const token = getToken();
         try {
-            const headers: Record<string, string> = {};
-            if (token) headers["Authorization"] = `Bearer ${token}`;
-            const res = await apiFetch(`/api/v1/history?scan_type=explainability&limit=10`, { headers });
+            const res = await apiFetch(`/v1/history?scan_type=explainability&limit=10`);
             const d = await res.json();
             if (Array.isArray(d)) setHistoryScans(d);
         } catch (e) { console.error("History fetch failed:", e); }
@@ -40,12 +33,9 @@ export default function ExplainabilityModule({ state, setState, onAction }: any)
 
     const loadPastResult = async (scanId: string) => {
         setLoading(true);
-        const token = getToken();
         try {
-            const headers: Record<string, string> = {};
-            if (token) headers["Authorization"] = `Bearer ${token}`;
             // Get full detail from history endpoint
-            const res = await apiFetch(`/api/v1/history/${scanId}`, { headers });
+            const res = await apiFetch(`/v1/history/${scanId}`);
             const d = await res.json();
             
             if (d.results_json) {
@@ -65,7 +55,6 @@ export default function ExplainabilityModule({ state, setState, onAction }: any)
     const runExplanation = async () => {
         if (!modelFile || !dataFile) { setError("Model and Dataset files required."); return; }
         setLoading(true); setError(null); setResults(null);
-        const token = getToken();
         const fd = new FormData();
         fd.append("model_file", modelFile);
         fd.append("dataset_file", dataFile);
@@ -73,9 +62,7 @@ export default function ExplainabilityModule({ state, setState, onAction }: any)
         fd.append("max_samples", "100");
 
         try {
-            const headers: Record<string, string> = {};
-            if (token) headers["Authorization"] = `Bearer ${token}`;
-            const res = await apiFetch(`/api/v1/explainability/compute`, { method: "POST", headers, body: fd });
+            const res = await apiFetch(`/v1/explainability/compute`, { method: "POST", body: fd });
             const d = await res.json();
             if (!res.ok) throw new Error(d.detail || "Computation failed.");
 
@@ -86,9 +73,7 @@ export default function ExplainabilityModule({ state, setState, onAction }: any)
             const poll = setInterval(async () => {
                 pollCount++;
                 try {
-                    const pollHeaders: Record<string, string> = {};
-                    if (token) pollHeaders["Authorization"] = `Bearer ${token}`;
-                    const r2 = await apiFetch(`/api/v1/explainability/${mid}`, { headers: pollHeaders });
+                    const r2 = await apiFetch(`/v1/explainability/${mid}`);
                     if (r2.status === 404) {
                         if (pollCount > 30) { clearInterval(poll); setLoading(false); setError("Timed out waiting for results."); }
                         return;
