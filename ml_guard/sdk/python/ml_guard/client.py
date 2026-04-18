@@ -300,7 +300,9 @@ class MLGuardClient:
         model: Any,
         train_df: Any,
         val_df: Any,
-        target_column: str = "target",
+        label_col: str = "target",
+        model_name: str = "SDK-Uploaded-Model",
+        selected_checks: List[str] = ["drift", "performance", "fairness", "security"],
         query: Optional[str] = None,
         timeout: int = 300,
         retries: int = 3,
@@ -330,7 +332,12 @@ class MLGuardClient:
             "train_file": ("train.csv",  train_buffer, "text/csv"),
             "val_file":   ("val.csv",   val_buffer,  "text/csv"),
         }
-        data = {"target_column": target_column, "query": query or "Automated SDK audit"}
+        data = {
+            "model_name": model_name,
+            "label_col": label_col,
+            "selected": selected_checks,
+            "query": query or "Automated SDK audit"
+        }
 
         url = self._url("audit/run")
         for attempt in range(retries):

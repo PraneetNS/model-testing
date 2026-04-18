@@ -275,12 +275,13 @@ async def run_audit(
         
         encrypted_payload = encrypt_task_payload(
             payload,
-            ["model_path", "train_path", "val_path"]
+            ["model_b64", "train_b64", "val_b64", "policy_override"]
         )
         
         run_governance_audit_task.delay(**encrypted_payload)
         celery_ok = True
-    except Exception:
+    except Exception as e:
+        logger.error(f"failed_to_dispatch_celery error={e}")
         celery_ok = False
 
     if celery_ok:

@@ -19,7 +19,7 @@ import onnxruntime as ort
 logger = logging.getLogger(__name__)
 
 try:
-    from app.services.storage_service import download_artifact, upload_artifact
+    from app.services.storage_service import download_artifact
     _has_storage = True
 except ImportError:
     _has_storage = False
@@ -72,14 +72,31 @@ def _load_model_artifact(object_key: str):
 
 
 @celery_app.task(name="run_comprehensive_scan", bind=True, max_retries=3, default_retry_delay=10)
-async def run_comprehensive_scan(
+def run_comprehensive_scan(
+    self,
     job_id: str,
     model_id: str,
     modules: dict,
     train_path: str,
     test_path: str,
     model_path: str = None,
-    # R2 object keys (optional â€” used when artifacts are in cloud storage)
+    model_artifact_key: str = None,
+    train_dataset_key: str = None,
+    val_dataset_key: str = None,
+):
+    import asyncio
+    return asyncio.run(_run_comprehensive_scan(
+        job_id, model_id, modules, train_path, test_path, 
+        model_path, model_artifact_key, train_dataset_key, val_dataset_key
+    ))
+
+async def _run_comprehensive_scan(
+    job_id: str,
+    model_id: str,
+    modules: dict,
+    train_path: str,
+    test_path: str,
+    model_path: str = None,
     model_artifact_key: str = None,
     train_dataset_key: str = None,
     val_dataset_key: str = None,
@@ -104,7 +121,7 @@ async def run_comprehensive_scan(
     db = SessionLocal()
     job = (await db.execute(select(Job).filter(Job.id == job_id))).scalars().first()
     if not job:
-        db.close()
+        await db.close()
         return
 
     tmp_files = []  # Track temp files for cleanup
@@ -159,6 +176,8 @@ async def run_comprehensive_scan(
 
         except Exception as e:
             raise Exception(f"Failed to load artifacts and initialize ML Core: {e}")
+        finally:
+            await db.close()
 
         # Initialize the mathematical core evaluator
         evaluator = MLEvaluator(
@@ -263,7 +282,7 @@ async def run_comprehensive_scan(
         job.error = str(e)
         await db.commit()
     finally:
-        db.close()
+        await db.close()
         # â”€â”€â”€ Cleanup temporary files â”€â”€â”€
         for tmp_path in tmp_files:
             try:
@@ -471,14 +490,16 @@ def run_governance_audit_task(
 ):
     from app.core.celery_app import decrypt_task_payload
     decrypted = decrypt_task_payload({
-        "train_path": train_path,
-        "val_path": val_path,
-        "model_path": model_path,
-    }, ["train_path", "val_path", "model_path"])
+        "model_b64": model_b64,
+        "train_b64": train_b64,
+        "val_b64": val_b64,
+        "policy_override": policy_override,
+    }, ["model_b64", "train_b64", "val_b64", "policy_override"])
     
-    train_path = decrypted["train_path"]
-    val_path = decrypted["val_path"]
-    model_path = decrypted["model_path"]
+    model_b64 = decrypted["model_b64"]
+    train_b64 = decrypted["train_b64"]
+    val_b64 = decrypted["val_b64"]
+    policy_override = decrypted["policy_override"]
 
     import asyncio
     import base64
@@ -812,7 +833,7 @@ async def cleanup_expired_sandboxes():
     except Exception as e:
         logger.error(f"Sandbox cleanup failed: {e}")
     finally:
-        db.close()
+        await db.close()
 
 @celery_app.task(name="run_red_team_task")
 async def run_red_team_task(model_id: str, profile: str = "standard"):
@@ -879,4 +900,4 @@ async def run_red_team_task(model_id: str, profile: str = "standard"):
         if handle:
             try: handle.shutdown()
             except: pass
-        db.close()
+        await db.close()

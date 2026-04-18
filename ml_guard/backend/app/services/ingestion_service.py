@@ -114,31 +114,29 @@ async def ingest_single(
 
 async def ingest_batch(rows: List[Dict[str, Any]]) -> int:
     """Bulk-insert prediction rows. Uses a fresh DB session (Celery-safe)."""
-    db = SessionLocal()
-    try:
-        logs = []
-        for row in rows:
-            logs.append(PredictionLog(
-                id=uuid.uuid4(),
-                model_id=str(row.get("model_id", "")),
-                features=row.get("features", {}),
-                prediction=str(row.get("prediction", "")),
-                prediction_proba=row.get("prediction_proba"),
-                latency_ms=row.get("latency_ms"),
-                data_source=row.get("data_source", "batch"),
-                environment=row.get("environment", "production"),
-                tags=row.get("tags", {}),
-            ))
-        db.bulk_save_objects(logs)
-        await db.commit()
-        logger.info("batch_ingested", count=len(logs))
-        return len(logs)
-    except Exception as e:
-        db.rollback()
-        logger.error("batch_ingest_failed", error=str(e))
-        raise
-    finally:
-        db.close()
+    async with SessionLocal() as db:
+        try:
+            logs = []
+            for row in rows:
+                logs.append(PredictionLog(
+                    id=uuid.uuid4(),
+                    model_id=str(row.get("model_id", "")),
+                    features=row.get("features", {}),
+                    prediction=str(row.get("prediction", "")),
+                    prediction_proba=row.get("prediction_proba"),
+                    latency_ms=row.get("latency_ms"),
+                    data_source=row.get("data_source", "batch"),
+                    environment=row.get("environment", "production"),
+                    tags=row.get("tags", {}),
+                ))
+            db.add_all(logs)
+            await db.commit()
+            logger.info("batch_ingested", count=len(logs))
+            return len(logs)
+        except Exception as e:
+            await db.rollback()
+            logger.error("batch_ingest_failed", error=str(e))
+            raise
 
 
 # ─────────────────────────────────────────────────────────────────────

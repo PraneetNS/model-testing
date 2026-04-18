@@ -1,6 +1,7 @@
 import uuid
 import datetime
 import json
+import os
 from typing import List, Dict, Optional
 from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -147,5 +148,3 @@ async def delete_sandbox(
     await db.delete(sandbox)
     await db.commit()
     return {"status": "deleted"}
-
-import os
