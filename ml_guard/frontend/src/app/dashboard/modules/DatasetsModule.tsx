@@ -23,6 +23,7 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
     const [lineage, setLineage] = useState<any[]>([]);
     const [showRegister, setShowRegister] = useState(false);
     const [models, setModels] = useState<any[]>([]);
+    const [registering, setRegistering] = useState(false);
     const [newDataset, setNewDataset] = useState<any>({ 
         model_id: "", name: "", type: "training", source: "local",
         config: {} 
@@ -30,6 +31,40 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
     const [openmlQuery, setOpenmlQuery] = useState("");
     const [openmlResults, setOpenmlResults] = useState<any[]>([]);
     const [searchingOpenml, setSearchingOpenml] = useState(false);
+
+    const fetchDatasets = async () => {
+        setLoading(true);
+        try {
+            const res = await apiFetch("/api/v1/datasets");
+            const data = await res.json();
+            setDatasets(data.items || []);
+        } catch (e) {
+            console.error("Failed to fetch datasets", e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchModels = async () => {
+        try {
+            const res = await apiFetch("/api/v1/models");
+            const data = await res.json();
+            setModels(data.items || []);
+        } catch (e) {
+            console.error("Failed to fetch models", e);
+        }
+    };
+
+    const fetchLineage = async (datasetId: string) => {
+        try {
+            const res = await apiFetch(`/api/v1/datasets/${datasetId}/lineage`);
+            const data = await res.json();
+            setLineage(data.lineage || []);
+        } catch (e) {
+            console.error("Failed to fetch lineage", e);
+            setLineage([]);
+        }
+    };
 
     const searchOpenML = async () => {
         if (!openmlQuery) return;
