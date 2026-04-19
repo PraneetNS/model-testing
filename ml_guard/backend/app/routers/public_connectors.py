@@ -8,6 +8,7 @@ from app.db.session import get_db
 from app.core.auth import AuthContext, require_role
 from ml_guard.plugins.data_connectors.factory import get_connector
 from app.tasks.data_connectors import data_connector_fetch_task
+from app.core.celery_app import encrypt_task_payload
 
 logger = logging.getLogger(__name__)
 
@@ -30,15 +31,17 @@ async def fetch_kaggle_data(
     if not valid:
         raise HTTPException(status_code=400, detail={"errors": errors})
 
-    # Trigger Celery task
-    task = data_connector_fetch_task.delay(
-        connector_type="kaggle",
-        config=req.config,
-        source_uri=req.source_uri,
-        model_id=req.model_id,
-        dataset_type=req.dataset_type,
-        dataset_name=req.dataset_name
-    )
+    # Trigger Celery task (encrypted)
+    payload = {
+        "connector_type": "kaggle",
+        "config": req.config,
+        "source_uri": req.source_uri,
+        "model_id": req.model_id,
+        "dataset_type": req.dataset_type,
+        "dataset_name": req.dataset_name
+    }
+    encrypted_payload = encrypt_task_payload(payload, ["config"])
+    task = data_connector_fetch_task.delay(**encrypted_payload)
     
     return {
         "task_id": task.id,
@@ -98,15 +101,17 @@ async def fetch_openml_data(
     if not valid:
         raise HTTPException(status_code=400, detail={"errors": errors})
 
-    # Trigger Celery task
-    task = data_connector_fetch_task.delay(
-        connector_type="openml",
-        config=req.config,
-        source_uri=req.source_uri,
-        model_id=req.model_id,
-        dataset_type=req.dataset_type,
-        dataset_name=req.dataset_name
-    )
+    # Trigger Celery task (encrypted)
+    payload = {
+        "connector_type": "openml",
+        "config": req.config,
+        "source_uri": req.source_uri,
+        "model_id": req.model_id,
+        "dataset_type": req.dataset_type,
+        "dataset_name": req.dataset_name
+    }
+    encrypted_payload = encrypt_task_payload(payload, ["config"])
+    task = data_connector_fetch_task.delay(**encrypted_payload)
     
     return {
         "task_id": task.id,
@@ -131,15 +136,17 @@ async def fetch_roboflow_data(
     if not valid:
         raise HTTPException(status_code=400, detail={"errors": errors})
 
-    # Trigger Celery task
-    task = data_connector_fetch_task.delay(
-        connector_type="roboflow",
-        config=req.config,
-        source_uri=req.source_uri,
-        model_id=req.model_id,
-        dataset_type=req.dataset_type,
-        dataset_name=req.dataset_name
-    )
+    # Trigger Celery task (encrypted)
+    payload = {
+        "connector_type": "roboflow",
+        "config": req.config,
+        "source_uri": req.source_uri,
+        "model_id": req.model_id,
+        "dataset_type": req.dataset_type,
+        "dataset_name": req.dataset_name
+    }
+    encrypted_payload = encrypt_task_payload(payload, ["config"])
+    task = data_connector_fetch_task.delay(**encrypted_payload)
     
     return {
         "task_id": task.id,

@@ -264,42 +264,43 @@ async def ingest_data_profile(
     # Store in a lightweight JSON column in DriftReport or new table
     # For now: persist as metadata in DriftReport scaffold
     async def _store_profile():
-        try:
-            from app.db.models import DriftReport
-            # Store columns summary as a compact feature_results payload
-            col_summaries = []
-            for col_name, col_data in req.columns.items():
-                col_summaries.append({
-                    "feature_name": col_name,
-                    "type": col_data.get("dtype", "unknown"),
-                    "null_pct": round(
-                        col_data.get("null_count", 0) /
-                        max(col_data.get("count", 1), 1) * 100, 2
-                    ),
-                    "drift_detected": False,
-                    "drift_score": 0.0,
-                    "source": "sdk_profile",
-                    "profile_id": req.profile_id,
-                    "stats": {
-                        k: v for k, v in col_data.items()
-                        if k in ("mean", "std", "min", "max", "p50",
-                                 "p95", "cardinality", "top_values")
-                    },
-                })
+        from app.db.session import SessionLocal
+        async with SessionLocal() as db_inner:
+            try:
+                from app.db.models import DriftReport
+                col_summaries = []
+                for col_name, col_data in req.columns.items():
+                    col_summaries.append({
+                        "feature_name": col_name,
+                        "type": col_data.get("dtype", "unknown"),
+                        "null_pct": round(
+                            col_data.get("null_count", 0) /
+                            max(col_data.get("count", 1), 1) * 100, 2
+                        ),
+                        "drift_detected": False,
+                        "drift_score": 0.0,
+                        "source": "sdk_profile",
+                        "profile_id": req.profile_id,
+                        "stats": {
+                            k: v for k, v in col_data.items()
+                            if k in ("mean", "std", "min", "max", "p50",
+                                     "p95", "cardinality", "top_values")
+                        },
+                    })
 
-            record = DriftReport(
-                model_id=req.model_id,
-                feature_results=col_summaries,
-                overall_drift_score=0.0,
-                drift_detected=False,
-                method="sdk_profile",
-                sample_count=req.row_count,
-                alert_triggered=False,
-            )
-            db.add(record)
-            await db.commit()
-        except Exception:
-            pass  # fire-and-forget
+                record = DriftReport(
+                    model_id=req.model_id,
+                    feature_results=col_summaries,
+                    overall_drift_score=0.0,
+                    drift_detected=False,
+                    method="sdk_profile",
+                    sample_count=req.row_count,
+                    alert_triggered=False,
+                )
+                db_inner.add(record)
+                await db_inner.commit()
+            except Exception as e:
+                print(f"FAILED to store profile: {e}")
 
     background_tasks.add_task(_store_profile)
     return {

@@ -13,9 +13,11 @@ from cryptography.fernet import Fernet
 import structlog
 
 # ML Guard core path injection
+_pkg_parent = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
 _repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../"))
-if _repo_root not in sys.path:
-    sys.path.append(_repo_root)
+for p in [_pkg_parent, _repo_root]:
+    if p not in sys.path:
+        sys.path.append(p)
 
 from app.core.config import settings
 

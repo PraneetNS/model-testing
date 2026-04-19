@@ -36,12 +36,12 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def get_db():
+    async with SessionLocal() as db:
+        try:
+            yield db
+        finally:
+            await db.close()
 
 @router.websocket("/stream/{model_id}")
 async def sentinel_stream(websocket: WebSocket, model_id: str):
@@ -51,41 +51,39 @@ async def sentinel_stream(websocket: WebSocket, model_id: str):
     await websocket.accept()
     logger.info("Sentinel agent connected", model_id=model_id)
     
-    db = SessionLocal()
-    try:
-        while True:
-            data = await websocket.receive_json()
-            avg_psi = data.get("avg_psi", 0.0)
-            
-            # 1. Persist to DB
-            record = SentinelRecord(
-                model_id=model_id,
-                avg_psi=avg_psi,
-                feature_psi=data.get("feature_psi"),
-                window_size=data.get("window_size"),
-                threshold=0.2, # Default threshold
-                is_breached=avg_psi > 0.2
-            )
-            db.add(record)
-            await db.commit()
-            
-            # 2. Broadcast to Dashboards
-            await manager.broadcast(model_id, {
-                "type": "SENTINEL_UPDATE",
-                "model_id": model_id,
-                "avg_psi": avg_psi,
-                "timestamp": time.time(),
-                "is_breached": avg_psi > 0.2
-            })
-            
-            # 3. Threshold Evaluation & Webhook
-            if avg_psi > 0.2:
-                await _trigger_webhook(model_id, avg_psi)
+    async with SessionLocal() as db:
+        try:
+            while True:
+                data = await websocket.receive_json()
+                avg_psi = data.get("avg_psi", 0.0)
                 
-    except WebSocketDisconnect:
-        logger.info("Sentinel agent disconnected", model_id=model_id)
-    finally:
-        db.close()
+                # 1. Persist to DB
+                record = SentinelRecord(
+                    model_id=model_id,
+                    avg_psi=avg_psi,
+                    feature_psi=data.get("feature_psi"),
+                    window_size=data.get("window_size"),
+                    threshold=0.2, # Default threshold
+                    is_breached=avg_psi > 0.2
+                )
+                db.add(record)
+                await db.commit()
+                
+                # 2. Broadcast to Dashboards
+                await manager.broadcast(model_id, {
+                    "type": "SENTINEL_UPDATE",
+                    "model_id": model_id,
+                    "avg_psi": avg_psi,
+                    "timestamp": time.time(),
+                    "is_breached": avg_psi > 0.2
+                })
+                
+                # 3. Threshold Evaluation & Webhook
+                if avg_psi > 0.2:
+                    await _trigger_webhook(model_id, avg_psi)
+                    
+        except WebSocketDisconnect:
+            logger.info("Sentinel agent disconnected", model_id=model_id)
 
 @router.websocket("/live/ws/{model_id}")
 async def dashboard_live_stream(websocket: WebSocket, model_id: str):
@@ -102,9 +100,12 @@ async def dashboard_live_stream(websocket: WebSocket, model_id: str):
 @router.get("/{model_id}/live")
 async def get_live_sentinel_data(model_id: str, db: AsyncSession = Depends(get_db)):
     """Return last 100 PSI points for historical plotting."""
-    records = db.query(SentinelRecord).filter(
+    stmt = select(SentinelRecord).filter(
         SentinelRecord.model_id == model_id
-    ).order_by(SentinelRecord.created_at.desc()).limit(100).all()
+    ).order_by(SentinelRecord.created_at.desc()).limit(100)
+    
+    result = await db.execute(stmt)
+    records = result.scalars().all()
     
     return [
         {

@@ -77,10 +77,12 @@ async def evaluate_model(
         # Regression Support - Fetch baseline if needed
         baseline_model = None
         if 'regression' in categories:
-            last_run = db.query(sql_models.TestRun)\
+            stmt = select(sql_models.TestRun)\
                 .filter(sql_models.TestRun.project_id == project_id)\
                 .filter(sql_models.TestRun.deployment_allowed == True)\
-                .order_by(sql_models.TestRun.created_at.desc()).first()
+                .order_by(sql_models.TestRun.created_at.desc())
+            res_baseline = await db.execute(stmt)
+            last_run = res_baseline.scalars().first()
             
             if last_run:
                 # In a real system, we'd load the binary from a registry
@@ -133,11 +135,14 @@ async def evaluate_model(
             profiler = ModelProfiler()
             baselines = profiler.create_baseline(datasets["training"])
             
+            from sqlalchemy import delete
             # Optional: remove existing baselines for this project/version to avoid duplicates
-            db.query(sql_models.FeatureBaseline).filter(
-                sql_models.FeatureBaseline.project_id == project_id,
-                sql_models.FeatureBaseline.model_version == "v1.0.0"
-            ).delete()
+            await db.execute(
+                delete(sql_models.FeatureBaseline).filter(
+                    sql_models.FeatureBaseline.project_id == project_id,
+                    sql_models.FeatureBaseline.model_version == "v1.0.0"
+                )
+            )
             
             for b_data in baselines:
                 db.add(sql_models.FeatureBaseline(

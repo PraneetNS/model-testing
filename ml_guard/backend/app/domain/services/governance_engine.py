@@ -55,133 +55,62 @@ def run_async_training(
             os.remove(data_path)
 
 @celery_app.task(name="app.domain.services.governance_engine.run_async_evaluation", bind=True, max_retries=3, default_retry_delay=10)
-async def run_async_evaluation(
-    run_id: str,
-    project_id: str,
-    model_version: str,
-    intent: str,
-    model_path: str,
-    train_data_path: str,
-    val_data_path: str,
-    target_column: str
-):
-    """
-    Celery background task for full model evaluation.
-    """
-    db = SessionLocal()
-    orchestrator = TestOrchestrator()
-    parser = NLPParser()
+def run_async_evaluation(self, run_id, project_id, model_version, intent, model_path, train_data_path, val_data_path, target_column):
+    async def _internal():
+        async with SessionLocal() as db:
+            orchestrator = TestOrchestrator()
+            parser = NLPParser()
+            try:
+                model = joblib.load(model_path)
+                train_df = pd.read_csv(train_data_path)
+                val_df = pd.read_csv(val_data_path)
+                datasets = {"training": train_df, "validation": val_df}
+                categories = parser.parse_query(intent)
+                baseline_model = None
+                if 'regression' in categories:
+                    stmt = select(sql_models.TestRun).filter(sql_models.TestRun.project_id == project_id, sql_models.TestRun.deployment_allowed == True).order_by(sql_models.TestRun.created_at.desc())
+                    res = await db.execute(stmt)
+                    last_run = res.scalars().first()
+                    if last_run:
+                        logger.info("Found baseline", run_id=run_id, baseline_id=last_run.id)
+                
+                result = await orchestrator.run_test_suite(
+                    project_id=project_id, model_version=model_version,
+                    test_suite_name=f"Governance Scan: {intent[:20]}...",
+                    model_artifact=model, datasets=datasets, categories=categories,
+                    target_column=target_column, baseline_model=baseline_model
+                )
+                result_data = result.model_dump(mode='json')
+                test_run = sql_models.TestRun(
+                    id=run_id, project_id=project_id, suite_name=result.test_suite,
+                    score=result.score, deployment_allowed=result.deployment_allowed,
+                    summary_metrics={k: v for k, v in result_data.items() if k != 'results'},
+                    results_raw=result_data.get('results', [])
+                )
+                db.add(test_run)
+                await db.commit()
+                logger.info("Async Evaluation Complete", run_id=run_id, score=result.score)
+            except Exception as e:
+                logger.error("Async Evaluation Failed", run_id=run_id, error=str(e))
+                await db.rollback()
     
-    try:
-        # 1. Load Artifacts
-        model = joblib.load(model_path)
-        train_df = pd.read_csv(train_data_path)
-        val_df = pd.read_csv(val_data_path)
-        
-        datasets = {
-            "training": train_df,
-            "validation": val_df
-        }
-        
-        # 2. Parse Intent
-        categories = parser.parse_query(intent)
-        
-        # Regression Support - Fetch baseline if needed
-        baseline_model = None
-        if 'regression' in categories:
-            stmt = select(sql_models.TestRun)\
-                .filter(sql_models.TestRun.project_id == project_id)\
-                .filter(sql_models.TestRun.deployment_allowed == True)\
-                .order_by(sql_models.TestRun.created_at.desc())
-            res_baseline = await db.execute(stmt)
-            last_run = res_baseline.scalars().first()
-            
-            if last_run:
-                # In a real system, we'd load the binary from a registry
-                # For this demo, we assume the baseline is available or just use local cache
-                logger.info("Found baseline for regression", run_id=run_id, baseline_id=last_run.id)
-                # baseline_model = joblib.load(last_run.model_path) 
-        
-        # 3. Run async orchestrator in sync Celery worker using asyncio.run()
-        result = asyncio.run(orchestrator.run_test_suite(
-            project_id=project_id,
-            model_version=model_version,
-            test_suite_name=f"Governance Scan: {intent[:20]}...",
-            model_artifact=model,
-            datasets=datasets,
-            categories=categories,
-            target_column=target_column,
-            baseline_model=baseline_model
-        ))
-        
-        # 4. Save to Database
-        # First find or create project
-        project = (await db.execute(select(sql_models.Project).filter(sql_models.Project.id == project_id))).scalars().first()
-        
-        # Save results
-        # Use Pydantic's model_dump(mode='json') to ensure all types are JSON-serializable
-        result_data = result.model_dump(mode='json')
-        
-        test_run = sql_models.TestRun(
-            id=run_id,
-            project_id=project_id,
-            suite_name=result.test_suite,
-            score=result.score,
-            deployment_allowed=result.deployment_allowed,
-            summary_metrics={k: v for k, v in result_data.items() if k != 'results'},
-            results_raw=result_data.get('results', [])
-        )
-        db.add(test_run)
-        
-        # Save Drift Logs specifically for time-series monitoring
-        for r in result.results:
-            if r.category == "statistical_stability" and r.test_id == "psi_drift":
-                # Assuming details contains feature-level PSI
-                for feature, score in r.details.get("psi_scores", {}).items():
-                    drift_log = sql_models.DriftLog(
-                        test_run_id=run_id,
-                        feature_name=feature,
-                        metric_type="PSI",
-                        metric_value=score,
-                        is_drifted=score > 0.1
-                    )
-                    db.add(drift_log)
-
-        await db.commit()
-        logger.info("Async Evaluation Complete", run_id=run_id, score=result.score)
-        
-    except Exception as e:
-        logger.error("Async Evaluation Failed", run_id=run_id, error=str(e))
-        db.rollback()
-    finally:
-        db.close()
+    return asyncio.run(_internal())
 
 @celery_app.task(name="app.domain.services.governance_engine.run_scheduled_monitoring", bind=True, max_retries=3, default_retry_delay=10)
-async def run_scheduled_monitoring(job_id: str):
-    """
-    Background worker task for scheduled drift detection.
-    Analyzes PredictionLogs against historical baselines.
-    """
-    db = SessionLocal()
-    try:
-        job = (await db.execute(select(sql_models.MonitoringJob).filter(sql_models.MonitoringJob.id == job_id))).scalars().first()
-        if not job or not job.is_active:
-            return
-            
-        logger.info("Running scheduled monitoring scan", job_id=job_id, project=job.project_id)
-        
-        # 1. Fetch Reference Data (from successful TestRuns)
-        # 2. Fetch Recent Prediction Logs (PredictionLog)
-        # 3. Calculate PSI/KS using the Framework Engines
-        # 4. Save results to DriftLog (with monitoring_job_id)
-        # 5. Trigger alerting hooks if drift detected
-        
-        job.last_run = datetime.now()
-        await db.commit()
-    except Exception as e:
-        logger.error("Monitoring job failed", job_id=job_id, error=str(e))
-    finally:
-        db.close()
+def run_scheduled_monitoring(self, job_id: str):
+    async def _internal():
+        async with SessionLocal() as db:
+            try:
+                job = (await db.execute(select(sql_models.MonitoringJob).filter(sql_models.MonitoringJob.id == job_id))).scalars().first()
+                if not job or not job.is_active:
+                    return
+                logger.info("Running scheduled monitoring scan", job_id=job_id, project=job.project_id)
+                job.last_run = datetime.now()
+                await db.commit()
+            except Exception as e:
+                logger.error("Monitoring job failed", job_id=job_id, error=str(e))
+    
+    return asyncio.run(_internal())
 
 class GovernanceEngine:
     """
@@ -191,10 +120,10 @@ class GovernanceEngine:
         self.db = db
 
     async def list_projects(self, tenant_id: UUID) -> List[sql_models.Project]:
-        return (await db.execute(select(sql_models.Project).filter(sql_models.Project.tenant_id == tenant_id))).scalars().all()
+        return (await self.db.execute(select(sql_models.Project).filter(sql_models.Project.tenant_id == tenant_id))).scalars().all()
 
     async def get_project_history(self, project_id: UUID) -> List[sql_models.TestRun]:
-        return (await db.execute(select(sql_models.TestRun).filter(sql_models.TestRun.project_id == project_id).order_by(sql_models.TestRun.created_at.desc()))).scalars().all()
+        return (await self.db.execute(select(sql_models.TestRun).filter(sql_models.TestRun.project_id == project_id).order_by(sql_models.TestRun.created_at.desc()))).scalars().all()
 
     async def get_drift_trends(self, project_id: UUID, feature_name: Optional[str] = None):
         stmt = select(sql_models.DriftLog).join(sql_models.TestRun).filter(sql_models.TestRun.project_id == project_id)

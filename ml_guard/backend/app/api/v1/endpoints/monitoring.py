@@ -61,13 +61,14 @@ async def get_drift_history(
     """
     Fetches historical drift metrics for the dashboard.
     """
-    query = db.query(sql_models.DriftLog).join(sql_models.MonitoringJob)\
+    stmt = select(sql_models.DriftLog).join(sql_models.MonitoringJob)\
               .filter(sql_models.MonitoringJob.project_id == project_id)
     
     if feature:
-        query = query.filter(sql_models.DriftLog.feature_name == feature)
+        stmt = stmt.filter(sql_models.DriftLog.feature_name == feature)
     
-    results = query.order_by(sql_models.DriftLog.timestamp.desc()).limit(limit).all()
+    result = await db.execute(stmt.order_by(sql_models.DriftLog.timestamp.desc()).limit(limit))
+    results = result.scalars().all()
     
     return [
         {

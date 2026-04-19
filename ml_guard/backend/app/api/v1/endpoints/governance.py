@@ -11,26 +11,26 @@ from app.domain.services.governance_engine import GovernanceEngine
 router = APIRouter()
 
 @router.get("/projects")
-def get_projects(
+async def get_projects(
     db: AsyncSession = Depends(deps.get_db),
     current_user: sql_models.User = Depends(deps.get_current_active_user)
 ):
     """List all projects for the current tenant."""
     engine = GovernanceEngine(db)
-    return engine.list_projects(current_user.tenant_id)
+    return await engine.list_projects(current_user.tenant_id)
 
 @router.get("/project/{project_id}/history")
-def get_project_history(
+async def get_project_history(
     project_id: str,
     db: AsyncSession = Depends(deps.get_db),
     current_user: sql_models.User = Depends(deps.get_current_active_user)
 ):
     """Get the full evaluation history for a project."""
     engine = GovernanceEngine(db)
-    return engine.get_project_history(project_id)
+    return await engine.get_project_history(project_id)
 
 @router.get("/project/{project_id}/drift")
-def get_drift_trends(
+async def get_drift_trends(
     project_id: str,
     feature_name: Optional[str] = None,
     db: AsyncSession = Depends(deps.get_db),
@@ -38,7 +38,7 @@ def get_drift_trends(
 ):
     """Get time-series drift metrics for the project."""
     engine = GovernanceEngine(db)
-    logs = engine.get_drift_trends(project_id, feature_name)
+    logs = await engine.get_drift_trends(project_id, feature_name)
     
     # Format for charts
     return [
@@ -50,7 +50,7 @@ def get_drift_trends(
     ]
 
 @router.get("/audit-trail")
-def get_audit_trail(
+async def get_audit_trail(
     db: AsyncSession = Depends(deps.get_db),
     current_user: sql_models.User = Depends(deps.get_current_active_user)
 ):
@@ -58,14 +58,15 @@ def get_audit_trail(
     Fetch the audit trail for compliance. 
     Auditors can see all tenant logs, Developers see their own.
     """
-    query = db.query(sql_models.AuditLog)
+    stmt = select(sql_models.AuditLog)
     if current_user.role != "auditor" and current_user.role != "admin":
-        query = query.filter(sql_models.AuditLog.user_id == current_user.id)
+        stmt = stmt.filter(sql_models.AuditLog.user_id == current_user.id)
     else:
         # Join with users to filter by tenant
-        query = query.join(sql_models.User).filter(sql_models.User.tenant_id == current_user.tenant_id)
-        
-    return query.order_by(sql_models.AuditLog.timestamp.desc()).all()
+        stmt = stmt.join(sql_models.User).filter(sql_models.User.tenant_id == current_user.tenant_id)
+    
+    result = await db.execute(stmt.order_by(sql_models.AuditLog.timestamp.desc()))
+    return result.scalars().all()
 
 from pydantic import BaseModel
 

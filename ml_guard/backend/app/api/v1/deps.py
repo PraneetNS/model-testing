@@ -8,19 +8,19 @@ from firebase_admin import auth as firebase_auth
 import structlog
 
 from app.core.config import settings
-from app.infrastructure.database import SessionLocal
+from app.db.session import AsyncSessionLocal as SessionLocal
 from app.infrastructure.persistence import models as sql_models
 
 logger = structlog.get_logger()
 security_bearer = HTTPBearer()
 
-def get_db() -> Generator:
-    """Dependency to get a database session."""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def get_db() -> AsyncSession:
+    """Dependency to get an async database session."""
+    async with SessionLocal() as db:
+        try:
+            yield db
+        finally:
+            await db.close()
 
 async def get_current_user(
     db: AsyncSession = Depends(get_db),
@@ -62,10 +62,12 @@ async def get_current_user(
         email = decoded_token.get('email')
 
         # 2. Lookup user in local database
-        user = db.query(sql_models.User).filter(
+        stmt = select(sql_models.User).filter(
             (sql_models.User.firebase_uid == firebase_uid) | 
             (sql_models.User.email == email)
-        ).first()
+        )
+        result = await db.execute(stmt)
+        user = result.scalars().first()
 
         # 3. Handle Auto-Provisioning (Optional: Adjust based on onboarding flow)
         if not user:

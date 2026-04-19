@@ -178,11 +178,14 @@ async def stream_production(websocket: WebSocket, model_id: str = Query("default
 
     try:
         # Resolve a mock context for the websocket (since WS doesn't easily use Depends(require_role))
-        db_auth = SessionLocal()
-        org = db_auth.query(Organization).first()
-        user = db_auth.query(User).filter(User.org_id == org.id).first() if org else None
-        auth = AuthContext(user=user, org=org) if user and org else None
-        db_auth.close()
+        async with SessionLocal() as db_auth:
+            org_res = await db_auth.execute(select(Organization))
+            org = org_res.scalars().first()
+            user = None
+            if org:
+                user_res = await db_auth.execute(select(User).filter(User.org_id == org.id))
+                user = user_res.scalars().first()
+            auth = AuthContext(user=user, org=org) if user and org else None
 
         while True:
             raw = await websocket.receive_text()
@@ -230,21 +233,22 @@ async def stream_production(websocket: WebSocket, model_id: str = Query("default
                 # Persist to DB periodically (every 100 events)
                 if counter % 100 == 0:
                     try:
-                        db = SessionLocal()
-                        scan_rec = ScanRecord(
-                            model_id=model_id if model_id != "default" else None,
-                            scan_type="stream",
-                            checks_run=["rolling_psi", "rolling_jsd", "rolling_calibration", "rolling_stability"],
-                            results_json=snapshot,
-                            governance_score=None,
-                            gate_status="MONITORING",
-                            trigger_source="stream",
-                        )
-                        db.add(scan_rec)
-                        await db.commit()
-                        if auth:
-                            log_action(db, auth, "stream.persist", resource_type="model", resource_id=model_id, details={"window_size": window.count})
-                        db.close()
+                        async with SessionLocal() as db:
+                            scan_rec = ScanRecord(
+                                model_id=model_id if model_id != "default" else None,
+                                scan_type="stream",
+                                checks_run=["rolling_psi", "rolling_jsd", "rolling_calibration", "rolling_stability"],
+                                results_json=snapshot,
+                                governance_score=None,
+                                gate_status="MONITORING",
+                                trigger_source="stream",
+                            )
+                            db.add(scan_rec)
+                            await db.commit()
+                            if auth:
+                                # log_action is usually async or should be awaited if it interacts with DB
+                                # assuming log_action(db, auth, ...) needs await if it's the standard implementation
+                                await log_action(db, auth, "stream.persist", resource_type="model", resource_id=model_id, details={"window_size": window.count})
                     except Exception:
                         pass
 

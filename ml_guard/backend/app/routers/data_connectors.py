@@ -81,7 +81,10 @@ async def fetch_data(
     payload = {
         "connector_type": req.connector_type,
         "config": req.config,
-        "source_uri": req.source_uri
+        "source_uri": req.source_uri,
+        "model_id": req.model_id,
+        "dataset_type": req.dataset_type,
+        "dataset_name": req.dataset_name
     }
     encrypted_payload = encrypt_task_payload(payload, ["config"])
     
