@@ -1,0 +1,246 @@
+# ML GUARD: COMPREHENSIVE API INPUT REFERENCE
+# This file contains example inputs and curl commands for all major features.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 1. MODEL AUDITING & QUALITY GATES
+# ─────────────────────────────────────────────────────────────────────────────
+
+### Feature: Synchronous Quality Gate
+# Endpoint: POST /api/v1/quality-gate
+# Description: Upload model artifacts and datasets for an instant governance scan.
+curl -X POST "http://localhost:8000/api/v1/quality-gate" \
+     -H "Authorization: Bearer <TOKEN>" \
+     -F "project_id=PROJ-123" \
+     -F "model_file=@model.pkl" \
+     -F "train_file=@training_data.csv" \
+     -F "val_file=@validation_data.csv" \
+     -F "target_column=churn" \
+     -F "query=Check for accuracy and feature drift"
+
+### Feature: CI/CD Deterministic Gate
+# Endpoint: POST /api/v1/ci_cd
+# Description: Same as above but returns HTTP 406 on failure to break pipelines.
+curl -X POST "http://localhost:8000/api/v1/ci_cd" \
+     -H "Authorization: Bearer <TOKEN>" \
+     -F "project_id=CI-PROD-99" \
+     -F "model_file=@model.pkl" \
+     -F "train_file=@train.csv" \
+     -F "val_file=@val.csv" \
+     -F "target_column=label"
+
+### Feature: Comprehensive Multi-Module Audit
+# Endpoint: POST /api/v1/audit/run
+# Description: Run performance, drift, fairness, and security checks.
+curl -X POST "http://localhost:8000/api/v1/audit/run" \
+     -H "Authorization: Bearer <TOKEN>" \
+     -F "model_name=CreditRiskDetector" \
+     -F "label_col=target" \
+     -F "model_file=@model.joblib" \
+     -F "val_file=@validation.csv" \
+     -F "selected=performance" \
+     -F "selected=drift" \
+     -F "selected=fairness" \
+     -F "selected=security"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 2. LIVE PREDICTION INGESTION
+# ─────────────────────────────────────────────────────────────────────────────
+
+### Feature: Single Prediction Logging
+# Endpoint: POST /api/v1/predict
+# Payload:
+{
+  "model_id": "model-uuid-here",
+  "features": {
+    "age": 34,
+    "income": 55000,
+    "credit_score": 720
+  },
+  "prediction": 1,
+  "prediction_proba": 0.88,
+  "latency_ms": 12.4,
+  "environment": "production"
+}
+
+### Feature: Batch Prediction Ingestion (High Volume)
+# Endpoint: POST /api/v1/batch
+# Payload:
+{
+  "rows": [
+    {
+      "model_id": "m1",
+      "features": {"f1": 1.0},
+      "prediction": 0
+    },
+    {
+      "model_id": "m1",
+      "features": {"f1": 2.5},
+      "prediction": 1
+    }
+  ]
+}
+
+### Feature: Ground Truth Label Stitching
+# Endpoint: POST /api/v1/label
+# Description: Updates ingested logs with actual outcomes for performance tracking.
+{
+  "log_ids": ["log-uuid-1", "log-uuid-2"],
+  "ground_truths": [1, 0]
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 3. STATISTICAL MONITORING & DRIFT
+# ─────────────────────────────────────────────────────────────────────────────
+
+### Feature: Privacy-Preserving Data Profiles
+# Endpoint: POST /api/v1/profile
+# Description: Ingest statistical summaries from SDK without sending raw data.
+{
+  "profile_id": "prof-99",
+  "model_id": "m1",
+  "row_count": 1000,
+  "columns": {
+    "income": {
+      "dtype": "float64",
+      "count": 1000,
+      "mean": 50000.0,
+      "std": 12000.0,
+      "min": 15000.0,
+      "max": 250000.0
+    }
+  }
+}
+
+### Feature: Embedding Drift Ingestion
+# Endpoint: POST /api/v1/drift/{model_id}/embedding-ingest
+# Description: Track drift in unstructured data (LLMs, Images) using vector embeddings.
+{
+  "embeddings": [
+    [0.12, -0.44, 0.88],
+    [0.05, 0.11, -0.23]
+  ],
+  "batch_id": "batch-001"
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 4. ENTERPRISE DATA CONNECTORS
+# ─────────────────────────────────────────────────────────────────────────────
+
+### Feature: S3 Connector Fetch
+# Endpoint: POST /api/v1/connectors/fetch
+{
+  "connector_type": "s3",
+  "config": {
+    "aws_access_key": "YOUR_KEY",
+    "aws_secret_key": "YOUR_SECRET",
+    "region": "us-east-1"
+  },
+  "source_uri": "s3://my-bucket/data/v1.csv",
+  "model_id": "m1",
+  "dataset_name": "prod_eval_set"
+}
+
+### Feature: Snowflake Connector Fetch
+# Endpoint: POST /api/v1/connectors/fetch
+{
+  "connector_type": "snowflake",
+  "config": {
+    "account": "xy12345",
+    "user": "ADMIN",
+    "password": "PASSWORD",
+    "database": "ML_GOV",
+    "schema": "PUBLIC"
+  },
+  "source_uri": "SELECT * FROM PREDICTIONS_LIVE",
+  "model_id": "m1"
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 5. REAL-TIME SENTINEL (WEBSOCKETS)
+# ─────────────────────────────────────────────────────────────────────────────
+
+### Feature: Sentinel Agent Stream
+# Protocol: WebSocket
+# Endpoint: ws://localhost:8000/api/v1/stream/{model_id}
+# Description: Sidecar agents stream low-latency PSI updates.
+# Message Format (JSON):
+# ─────────────────────────────────────────────────────────────────────────────
+# 6. AI LIABILITY INSURANCE & RISK SCORING
+# ─────────────────────────────────────────────────────────────────────────────
+
+### Feature: Get Actuarial Insurance Report
+# Endpoint: GET /api/v1/governance/{model_id}/insurance-score
+# Description: Returns a multi-dimensional risk assessment used for premium calculation.
+curl -X GET "http://localhost:8000/api/v1/governance/M-uuid-1/insurance-score" \
+     -H "Authorization: Bearer <TOKEN>"
+
+### Feature: Generate PDF Insurance Certificate
+# Endpoint: GET /api/v1/governance/{model_id}/insurance-score/pdf
+# Description: Generates a professionally formatted PDF actuarial report.
+curl -X GET "http://localhost:8000/api/v1/governance/M-uuid-1/insurance-score/pdf" \
+     -H "Authorization: Bearer <TOKEN>" --output insurance_report.pdf
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 7. ADVERSARIAL RED-TEAMING
+# ─────────────────────────────────────────────────────────────────────────────
+
+### Feature: Schedule Continuous Pentesting
+# Endpoint: POST /api/v1/red-team/{model_id}/schedule
+# Payload:
+{
+  "schedule_cron": "0 2 * * *",
+  "attack_profile": "exhaustive",
+  "notification_on_regression": true,
+  "enabled": true
+}
+
+### Feature: Trigger Instant Red-Team Run
+# Endpoint: POST /api/v1/red-team/{model_id}/run-now
+curl -X POST "http://localhost:8000/api/v1/red-team/M-uuid-1/run-now" \
+     -H "Authorization: Bearer <TOKEN>" \
+     -d '{"profile": "quick"}'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 8. SECURITY & API MANAGEMENT (Admin)
+# ─────────────────────────────────────────────────────────────────────────────
+
+### Feature: Issue New API Key
+# Endpoint: POST /api/v1/auth/apikey
+# Description: Generates a scoped API key for CI/CD or Sidecars.
+{
+  "label": "CI/CD Pipeline Key",
+  "scopes": ["read", "write", "audit"],
+  "expires_in_days": 90,
+  "rate_limit_rpm": 600
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 9. RAG OBSERVABILITY & HALLUCINATION DETECTION
+# ─────────────────────────────────────────────────────────────────────────────
+
+### Feature: Log RAG Trace
+# Endpoint: POST /api/v1/rag-eval/{model_id}/log
+# Description: Captures query -> retrieval -> answer flow for hallucination risk analysis.
+{
+  "query": "What is the capital of France?",
+  "retrieved_chunks": [
+    "France is a country in Europe. Its capital is Paris.",
+    "Paris is known for the Eiffel Tower."
+  ],
+  "retrieved_doc_ids": ["doc_1", "doc_2"],
+  "answer": "The capital of France is Paris.",
+  "latency_ms": 450.5
+}
+
+### Feature: Batch RAG Evaluation (JSONL)
+# Endpoint: POST /api/v1/rag-eval/{model_id}/evaluate-batch
+# Description: Upload a .jsonl file for bulk RAG metric computation.
+curl -X POST "http://localhost:8000/api/v1/rag-eval/LLM-v1/evaluate-batch" \
+     -H "Authorization: Bearer <TOKEN>" \
+     -F "file=@rag_traces.jsonl"

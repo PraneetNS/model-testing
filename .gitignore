@@ -1,70 +1,30 @@
-# ── Python ──────────────────────────────────────────────────
+﻿
+# ML Guard: Main Git Ignore
+
+# --- Python ---
 venv/
 .venv/
-streamlit_venv/
 __pycache__/
-*.py[cod]
-*$py.class
 *.pyc
-*.pyo
-*.pyd
-.Python
-*.egg-info/
-dist/
-build/
-*.egg
-*.pkl
 *.joblib
-*.h5
-*.onnx
-*.pt
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-htmlcov/
-.coverage
-coverage.xml
-*.spec
-
-# ── Environment variables ───────────────────────────────────
 .env
 .env.*
 !.env.example
-!.env.production.template
 
-# ── Node / Next.js ──────────────────────────────────────────
+# --- Node ---
 node_modules/
 .next/
-out/
-.turbo/
-*.tsbuildinfo
 
-# ── MinIO / Object Storage ──────────────────────────────────
-minio-data/
-
-# ── Database ────────────────────────────────────────────────
+# --- DB ---
 *.db
 *.sqlite
-*.sqlite3
+ml_guard.db*
 
-# ── IDE ─────────────────────────────────────────────────────
+# --- IDE ---
 .idea/
-*.iml
-*.suo
-*.user
-*.swp
-.DS_Store
-Thumbs.db
+.vscode/
 
-# ── Docker ──────────────────────────────────────────────────
+# --- Logs ---
 *.log
-venv/
-.venv/
-streamlit_venv/
-__pycache__/
-*.pyc
-.env
-.next/
-node_modules/
+artifacts/
 
-scratch/
