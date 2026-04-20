@@ -78,7 +78,7 @@ export default function ForecastPanel({ model_id }: { model_id: string }) {
         const fetchForecast = async () => {
             try {
                 const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/v1/forecast/${model_id}`);
-                const json = await res.json();
+                const json = await safeJson(res);
                 setData(json);
                 // Set first successful metric as active
                 const firstMetric = Object.keys(json.forecasts).find(k => json.forecasts[k].status === "SUCCESS");

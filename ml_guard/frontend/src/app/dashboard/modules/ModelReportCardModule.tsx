@@ -1,5 +1,5 @@
 "use client";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, safeJson } from "@/lib/api";
 import React, { useState, useEffect } from "react";
 import {
     FileText, ShieldCheck, Printer, Download, Share2, AlertTriangle, AlertCircle,
@@ -48,7 +48,7 @@ export default function ModelReportCard({ state, setState, onAction }: any) {
 
     useEffect(() => {
         apiFetch(`/api/v1/history?limit=25`)
-            .then(r => r.json())
+            .then(r => safeJson<any>(r))
             .then(d => {
                 const list = Array.isArray(d) ? d : [];
                 setScans(list);
@@ -63,7 +63,7 @@ export default function ModelReportCard({ state, setState, onAction }: any) {
         setLoading(true);
         try {
             const r = await apiFetch(`/api/v1/history/${id}`);
-            const d = await r.json();
+            const d = await safeJson<any>(r);
             setReport(d);
         } catch { }
         setLoading(false);

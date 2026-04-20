@@ -239,19 +239,29 @@ async def run_audit(
     # --- Read uploaded file bytes eagerly ---
     m_bytes = await model_file.read()
 
+    # --- Gracefully handle missing validation data by falling back to training data ---
+    v_bytes = None
     if val_file and val_file.filename:
         v_bytes = await val_file.read()
     elif val_dataset_url:
         v_bytes = download_from_url(val_dataset_url)
-    else:
-        raise HTTPException(400, "Provide a validation file or validation_dataset_url.")
-
+    
+    t_bytes = None
     if train_file and train_file.filename:
         t_bytes = await train_file.read()
     elif train_dataset_url:
         t_bytes = download_from_url(train_dataset_url)
-    else:
-        t_bytes = v_bytes  # use val as surrogate train
+
+    # Cross-fill if one is missing
+    if v_bytes is None and t_bytes is not None:
+        v_bytes = t_bytes
+        print("Audit: No validation data provided, using training data as surrogate.")
+    elif t_bytes is None and v_bytes is not None:
+        t_bytes = v_bytes
+        print("Audit: No training data provided, using validation data as surrogate.")
+    
+    if v_bytes is None or t_bytes is None:
+        raise HTTPException(400, "Provide at least one dataset (Training or Validation).")
 
     # --- Try Celery; fall back to inline if unavailable ---
     celery_ok = False
@@ -328,8 +338,10 @@ async def run_audit(
 
         if getattr(model_obj, "feature_names_in_", None) is not None:
             expected = list(model_obj.feature_names_in_)
+            # Ensure all expected features exist in the DFs
             for f in expected:
-                X_train_df.setdefault(f, 0); X_val_df.setdefault(f, 0)
+                if f not in X_train_df.columns: X_train_df[f] = 0
+                if f not in X_val_df.columns: X_val_df[f] = 0
             X_train = X_train_df[expected]; X_val = X_val_df[expected]
         else:
             X_train = X_train_df
@@ -454,14 +466,26 @@ async def run_audit(
             "fingerprint": fingerprint, "complexity": complexity,
         }
 
-    except Exception as exc:
-        logger.exception("Inline audit failed")
+    except Exception as e:
+        import traceback
+        from datetime import datetime
+        error_msg = f"Audit failed for job {job_id}: {str(e)}\n{traceback.format_exc()}"
+        logger.error(error_msg)
+        # Log to a persistent file we can inspect
+        with open("audit_crash.log", "a") as f:
+            f.write(f"\n--- {datetime.now()} ---\n{error_msg}\n")
+        
+        # Rollback is handled by the caller or context manager often, but let's be safe
+        try:
+            await db.rollback()
+        except:
+            pass
         job_rec = (await db.execute(select(Job).filter(Job.id == job_id))).scalar_one_or_none()
         if job_rec:
             job_rec.status = "FAILED"
-            job_rec.error = str(exc)
+            job_rec.error = str(e)
             await db.commit()
-        raise HTTPException(500, f"Audit failed: {exc}")
+        raise HTTPException(500, f"Audit failed: {e}")
     finally:
         for p in tmp_files:
             try:

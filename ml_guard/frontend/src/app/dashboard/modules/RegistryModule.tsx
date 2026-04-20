@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { Package, ShieldCheck, ChevronRight, Activity, Clock, User, HardDrive } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, safeJson } from "@/lib/api";
 
 const Card = ({ children, className = "" }: any) => (
     <div className={`bg-[#0E1014] border border-white/[0.07] rounded-2xl ${className}`}>{children}</div>
@@ -22,7 +22,7 @@ export default function ModelRegistryModule({ state, setState, onAction }: any) 
         setLoading(true);
         try {
             const res = await apiFetch(`/api/v1/models`);
-            const d = await res.json();
+            const d = await safeJson(res);
             setModels(d.items || []);
         } catch (e) { } finally { setLoading(false); }
     };
@@ -31,12 +31,12 @@ export default function ModelRegistryModule({ state, setState, onAction }: any) 
         setExplanation(null);
         try {
             const res = await apiFetch(`/api/v1/models/${modelId}/versions`);
-            const d = await res.json();
+            const d = await safeJson(res);
             setVersions(d.versions || []);
             
             const expRes = await apiFetch(`/api/v1/performance/${modelId}/explanation`);
             if (expRes.ok) {
-                const expD = await expRes.json();
+                const expD = await safeJson(expRes);
                 if (expD.feature_importances?.length > 0) setExplanation(expD);
             }
         } catch (e) { }
@@ -65,7 +65,7 @@ export default function ModelRegistryModule({ state, setState, onAction }: any) 
     const handleDeploy = async (versionId: string) => {
         try {
             const res = await apiFetch(`/api/v1/deployments/promote?version_id=${versionId}&target_environment=DEV`, { method: "POST" });
-            const d = await res.json();
+            const d = await safeJson(res);
             if (!res.ok) throw new Error(d.detail || "Promotion failed");
             alert("Model version promoted to DEV environment");
             if (selectedModel) fetchVersionsAndExplanation(selectedModel.model_id || selectedModel.id);

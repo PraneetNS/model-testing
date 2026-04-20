@@ -26,7 +26,7 @@ export default function SentinelLiveMonitor({ model_id }: { model_id: string }) 
         const fetchRecent = async () => {
             try {
                 const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/v1/sentinel/${model_id}/live`);
-                const data = await res.json();
+                const data = await safeJson(res);
                 setPoints(data);
                 if (data.length > 0) setLastPsi(data[data.length - 1].avg_psi);
             } catch (err) {

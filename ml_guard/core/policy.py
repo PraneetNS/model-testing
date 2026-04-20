@@ -15,6 +15,7 @@ DEFAULT_POLICY = {
     "max_psi":              0.20,
     "max_jsd":              0.10,
     "min_accuracy":         0.80,
+    "min_r2":               0.80,
     "max_overfit_gap":      0.08,
     "max_brier_score":      0.20,
     "min_stability_score":  0.90,
@@ -71,6 +72,19 @@ def evaluate_policy(
             actual_value=acc,
             status=status,
             message=f"Accuracy {acc:.4f} {'≥' if status == 'PASSED' else '<'} policy min {threshold:.2f}",
+        ))
+
+    # --- R2 (Regression) ---
+    if metrics and "r2_score" in metrics:
+        r2 = float(metrics["r2_score"])
+        threshold = pol.get("min_r2", 0.80)
+        status = "PASSED" if r2 >= threshold else "CRITICAL"
+        checks.append(PolicyCheckResult(
+            name="R2 Score",
+            policy_value=threshold,
+            actual_value=r2,
+            status=status,
+            message=f"R2 Score {r2:.4f} {'≥' if status == 'PASSED' else '<'} policy min {threshold:.2f}",
         ))
 
     # --- PSI Drift ---

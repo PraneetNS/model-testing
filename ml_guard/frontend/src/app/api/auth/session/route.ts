@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { safeJson } from '@/lib/api';
 
 export async function POST(request: Request) {
   try {
-    const { token, api_key } = await request.json();
+    const bodyText = await request.text();
+    const { token, api_key } = bodyText ? JSON.parse(bodyText) : {};
     const cookieStore = await cookies();
     
     // 1. Session Token (Firebase ID Token)

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, safeJson } from "@/lib/api";
 import { ShieldCheck, ChevronDown, ChevronRight, Download, AlertTriangle, XCircle, CheckCircle2 } from "lucide-react";
 
 export default function CompliancePage() {
@@ -16,7 +16,7 @@ export default function CompliancePage() {
     useEffect(() => {
         setLoading(true);
         apiFetch(`/api/v1/report/${modelId}/compliance?framework=${filter}`)
-            .then(res => res.json())
+            .then(res => safeJson(res))
             .then(data => {
                 setResults(data.results || []);
                 setLoading(false);

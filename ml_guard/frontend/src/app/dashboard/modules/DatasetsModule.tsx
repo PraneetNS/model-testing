@@ -1,5 +1,5 @@
 "use client";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, safeJson } from "@/lib/api";
 import React, { useState, useEffect } from "react";
 import { FileText, Database, ShieldCheck, ChevronRight, HardDrive, Filter, Clock } from "lucide-react";
 
@@ -36,7 +36,7 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
         setLoading(true);
         try {
             const res = await apiFetch("/api/v1/datasets");
-            const data = await res.json();
+            const data = await safeJson(res);
             setDatasets(data.items || []);
         } catch (e) {
             console.error("Failed to fetch datasets", e);
@@ -48,7 +48,7 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
     const fetchModels = async () => {
         try {
             const res = await apiFetch("/api/v1/models");
-            const data = await res.json();
+            const data = await safeJson(res);
             setModels(data.items || []);
         } catch (e) {
             console.error("Failed to fetch models", e);
@@ -58,7 +58,7 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
     const fetchLineage = async (datasetId: string) => {
         try {
             const res = await apiFetch(`/api/v1/datasets/${datasetId}/lineage`);
-            const data = await res.json();
+            const data = await safeJson(res);
             setLineage(data.lineage || []);
         } catch (e) {
             console.error("Failed to fetch lineage", e);
@@ -71,7 +71,7 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
         setSearchingOpenml(true);
         try {
             const res = await apiFetch(`/api/plugins/openml/search?query=${encodeURIComponent(openmlQuery)}&limit=5`);
-            const d = await res.json();
+            const d = await safeJson(res);
             setOpenmlResults(d);
         } catch (e) { } finally { setSearchingOpenml(false); }
     };
@@ -116,7 +116,7 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
                 setNewDataset({ model_id: "", name: "", type: "training", source: "local", config: {} });
                 fetchDatasets();
             } else {
-                const err = await res.json();
+                const err = await safeJson(res);
                 alert(`Error: ${JSON.stringify(err.detail || err)}`);
             }
         } catch (e) { 

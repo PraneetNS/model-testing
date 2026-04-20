@@ -1,5 +1,5 @@
 "use client";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, safeJson } from "@/lib/api";
 import React, { useState, useEffect } from "react";
 import { GitBranch, GitPullRequest, ShieldCheck, Activity, Terminal, ExternalLink, Play, CheckCircle2, AlertTriangle, AlertCircle, Loader2, Key, Copy, Github, Sliders, Info, Server } from "lucide-react";
 
@@ -18,8 +18,8 @@ export default function CIModule({ state, setState, onAction }: any) {
                 apiFetch(`/api/v1/ci/integrations`),
                 apiFetch(`/api/v1/auth/apikeys`)
             ]);
-            setIntegrations(await intRes.json());
-            setApiKeys(await keysRes.json());
+            setIntegrations(await safeJson(intRes));
+            setApiKeys(await safeJson(keysRes));
         } catch (e) { } finally { setLoading(false); }
     };
 
@@ -33,7 +33,7 @@ export default function CIModule({ state, setState, onAction }: any) {
         setCreatingKey(true);
         try {
             const res = await apiFetch(`/api/v1/auth/apikey?label=${newKeyLabel}`, { method: "POST" });
-            const d = await res.json();
+            const d = await safeJson(res);
             setGeneratedKey(d.api_key);
             fetchData();
         } catch (e) { } finally { setCreatingKey(false); }
@@ -54,7 +54,7 @@ export default function CIModule({ state, setState, onAction }: any) {
                     pipeline_metadata: { repo: "ml-guard-demo", branch: "main", commit: "a1b2c3d4" }
                 })
             });
-            const d = await res.json();
+            const d = await safeJson(res);
             setTestResult(d);
         } catch (e) { } finally { setTesting(false); }
     };

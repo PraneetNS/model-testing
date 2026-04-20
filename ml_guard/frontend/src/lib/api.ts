@@ -50,7 +50,9 @@ export async function apiGet<T>(path: string): Promise<T> {
     const err = await res.text();
     throw new Error(`GET ${path} failed ${res.status}: ${err}`);
   }
-  return res.json();
+  if (res.status === 204) return {} as T;
+  const text = await res.text();
+  return text ? JSON.parse(text) : ({} as T);
 }
 
 export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
@@ -62,7 +64,9 @@ export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
     const err = await res.text();
     throw new Error(`POST ${path} failed ${res.status}: ${err}`);
   }
-  return res.json();
+  if (res.status === 204) return {} as T;
+  const text = await res.text();
+  return text ? JSON.parse(text) : ({} as T);
 }
 
 export async function apiDelete<T>(path: string): Promise<T> {
@@ -70,6 +74,14 @@ export async function apiDelete<T>(path: string): Promise<T> {
     method: "DELETE",
   });
   if (!res.ok) throw new Error(`DELETE ${path} failed ${res.status}`);
-  return res.json();
+  if (res.status === 204) return {} as T;
+  const text = await res.text();
+  return text ? JSON.parse(text) : ({} as T);
+}
+
+export async function safeJson<T>(res: Response): Promise<T> {
+    if (res.status === 204) return {} as T;
+    const text = await res.text();
+    return text ? JSON.parse(text) : ({} as T);
 }
 

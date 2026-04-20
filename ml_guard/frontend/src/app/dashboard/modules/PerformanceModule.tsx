@@ -1,5 +1,5 @@
 "use client";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, safeJson } from "@/lib/api";
 import React, { useState, useEffect } from "react";
 import { Activity, TrendingUp, TrendingDown, Target, Clock, BarChart3, AlertCircle, ShieldCheck, Zap, Server, ChevronRight, Info } from "lucide-react";
 
@@ -40,8 +40,8 @@ export default function PerformanceModule({ state, setState, onAction }: any) {
                 apiFetch(`/api/v1/predictions/stats`),
                 apiFetch(`/api/v1/predictions/logs?limit=50`)
             ]);
-            setStats(await statsRes.json());
-            setLogs((await logsRes.json()).logs || []);
+            setStats(await safeJson(statsRes));
+            setLogs((await safeJson(logsRes)).logs || []);
         } catch (e) { } finally { setLoading(false); }
     };
 

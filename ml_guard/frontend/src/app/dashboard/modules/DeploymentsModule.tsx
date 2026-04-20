@@ -1,5 +1,5 @@
 "use client";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, safeJson } from "@/lib/api";
 import React, { useState, useEffect } from "react";
 import { Zap, Activity, HardDrive, ShieldCheck, ChevronRight, Layout, Server, Database, TrendingUp, AlertTriangle, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 
@@ -28,8 +28,8 @@ export default function DeploymentsModule({ state, setState, onAction }: any) {
                 apiFetch(`/api/v1/deployments/environments`),
                 apiFetch(`/api/v1/deployments?per_page=50`)
             ]);
-            setEnvironments(await envsRes.json());
-            setDeployments((await deploysRes.json()).items || []);
+            setEnvironments(await safeJson(envsRes));
+            setDeployments((await safeJson(deploysRes)).items || []);
         } catch (e) { } finally { setLoading(false); }
     };
 

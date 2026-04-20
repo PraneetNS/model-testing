@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
+from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, mean_squared_error, r2_score
 from .exceptions import MetricComputationError
 
 def compute_accuracy(y_true, y_pred, y_prob=None):
@@ -27,3 +27,29 @@ def compute_roc_auc(y_true, y_pred, y_prob=None):
             return float(roc_auc_score(y_true, y_prob, multi_class="ovr"))
     except Exception as e:
         raise MetricComputationError(f"Failed to compute ROC-AUC: {str(e)}")
+
+def compute_mse(y_true, y_pred):
+    try:
+        return float(mean_squared_error(y_true, y_pred))
+    except Exception as e:
+        raise MetricComputationError(f"Failed to compute MSE: {str(e)}")
+
+def compute_rmse(y_true, y_pred):
+    try:
+        return float(np.sqrt(mean_squared_error(y_true, y_pred)))
+    except Exception as e:
+        raise MetricComputationError(f"Failed to compute RMSE: {str(e)}")
+
+def compute_r2(y_true, y_pred):
+    try:
+        return float(r2_score(y_true, y_pred))
+    except Exception as e:
+        raise MetricComputationError(f"Failed to compute R2: {str(e)}")
+
+def detect_task_type(y_true):
+    """Simple heuristic to detect classification vs regression."""
+    y = np.array(y_true)
+    unique_vals = np.unique(y[~np.isnan(y)])
+    if len(unique_vals) <= 20 and np.all(unique_vals.astype(float) == unique_vals.astype(int)):
+        return "classification"
+    return "regression"

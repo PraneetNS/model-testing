@@ -5,7 +5,7 @@ from .exceptions import (
     SchemaError,
     MetricComputationError,
 )
-from .metrics import compute_accuracy, compute_f1
+from .metrics import compute_accuracy, compute_f1, compute_mse, compute_rmse, compute_r2, detect_task_type
 from .drift import compute_psi, compute_ks, compute_jsd, compute_target_drift, compute_feature_drift_report
 from .constraints import Constraint, PredictorValidationRule
 from .evaluator import MLEvaluator

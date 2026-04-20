@@ -4,7 +4,7 @@ import {
     FileText, Play, Loader2, CheckCircle, 
     Download, ExternalLink, AlertTriangle 
 } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, safeJson } from "@/lib/api";
 
 export default function ReportCardTrigger({ model_id }: { model_id: string }) {
     const [status, setStatus] = useState<"IDLE" | "PENDING" | "SUCCESS" | "FAILED">("IDLE");
@@ -15,7 +15,7 @@ export default function ReportCardTrigger({ model_id }: { model_id: string }) {
         setStatus("PENDING");
         try {
             const res = await apiFetch(`/api/v1/reports/${model_id}/generate`, { method: "POST" });
-            const data = await res.json();
+            const data = await safeJson(res);
             setTaskId(data.task_id);
             pollStatus(data.task_id);
         } catch (err) {
@@ -27,7 +27,7 @@ export default function ReportCardTrigger({ model_id }: { model_id: string }) {
     const pollStatus = async (id: string) => {
         const interval = setInterval(async () => {
             const res = await apiFetch(`/api/v1/reports/status/${id}`);
-            const data = await res.json();
+            const data = await safeJson(res);
             if (data.status === "SUCCESS") {
                 setCertHash(data.cert_hash);
                 setStatus("SUCCESS");

@@ -1,5 +1,5 @@
 "use client";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, safeJson } from "@/lib/api";
 import React, { useState, useEffect, useCallback } from "react";
 import { Eye, Zap, Info, ArrowRight, BarChart3, AlertCircle, FileText, Upload, Database, Loader2, History } from "lucide-react";
 
@@ -24,7 +24,7 @@ export default function ExplainabilityModule({ state, setState, onAction }: any)
     const fetchHistory = useCallback(async () => {
         try {
             const res = await apiFetch(`/v1/history?scan_type=explainability&limit=10`);
-            const d = await res.json();
+            const d = await safeJson<any>(res);
             if (Array.isArray(d)) setHistoryScans(d);
         } catch (e) { console.error("History fetch failed:", e); }
     }, []);
@@ -36,7 +36,7 @@ export default function ExplainabilityModule({ state, setState, onAction }: any)
         try {
             // Get full detail from history endpoint
             const res = await apiFetch(`/v1/history/${scanId}`);
-            const d = await res.json();
+            const d = await safeJson<any>(res);
             
             if (d.results_json) {
                 // Map ScanRecord format to the UI's results format
@@ -63,7 +63,7 @@ export default function ExplainabilityModule({ state, setState, onAction }: any)
 
         try {
             const res = await apiFetch(`/v1/explainability/compute`, { method: "POST", body: fd });
-            const d = await res.json();
+            const d = await safeJson<any>(res);
             if (!res.ok) throw new Error(d.detail || "Computation failed.");
 
             const mid = d.model_id; 
@@ -78,7 +78,7 @@ export default function ExplainabilityModule({ state, setState, onAction }: any)
                         if (pollCount > 30) { clearInterval(poll); setLoading(false); setError("Timed out waiting for results."); }
                         return;
                     }
-                    const d2 = await r2.json();
+                    const d2 = await safeJson<any>(r2);
                     if (d2.results && d2.results.length > 0) {
                         const latest = d2.results[d2.results.length - 1];
                         setResults({

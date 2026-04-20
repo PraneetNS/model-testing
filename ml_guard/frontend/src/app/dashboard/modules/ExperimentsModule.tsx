@@ -1,5 +1,5 @@
 "use client";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, safeJson } from "@/lib/api";
 import React, { useState, useEffect } from "react";
 import { FlaskConical, Beaker, BarChart3, Clock, ChevronRight, Zap, Target, Sliders } from "lucide-react";
 
@@ -24,7 +24,7 @@ export default function ExperimentsModule({ state, setState, onAction }: any) {
         setLoading(true);
         try {
             const res = await apiFetch(`/api/v1/experiments`);
-            const d = await res.json();
+            const d = await safeJson(res);
             setExperiments(d.items || []);
         } catch (e) { } finally { setLoading(false); }
     };

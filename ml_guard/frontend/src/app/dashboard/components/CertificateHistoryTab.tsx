@@ -25,7 +25,7 @@ export default function CertificateHistoryTab({ model_id }: { model_id: string }
     const fetchHistory = async () => {
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/v1/reports/${model_id}/history`);
-            const data = await res.json();
+            const data = await safeJson(res);
             setReports(data);
         } catch (err) {
             console.error("Failed to fetch certificate history", err);

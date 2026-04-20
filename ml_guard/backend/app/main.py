@@ -119,6 +119,32 @@ async def lifespan(app: FastAPI):
                 await db.commit()
                 structlog.get_logger().warning("REMEDIATED_LEAKED_KEY", key_id=str(k_entry.id))
 
+        # 2b. Ensure Default Dev Key exists if no keys
+        if len(active_keys) == 0:
+            from app.core.security import get_password_hash
+            from app.db.models import Organization
+            
+            # Ensure at least one org exists
+            org_stmt = select(Organization).limit(1)
+            org = (await db.execute(org_stmt)).scalars().first()
+            if not org:
+                org = Organization(name="Default Organization", slug="default")
+                db.add(org)
+                await db.commit()
+                await db.refresh(org)
+                structlog.get_logger().info("INITIALIZED_DEFAULT_ORG", name=org.name)
+
+            dev_key = APIKey(
+                org_id=org.id,
+                label="Default Developer Key", # Models says 'label', not 'name'
+                key_hash=get_password_hash("dev-secret-key"),
+                is_active=True,
+                scopes=["admin", "ml_engineer", "auditor", "viewer"]
+            )
+            db.add(dev_key)
+            await db.commit()
+            structlog.get_logger().info("INITIALIZED_DEFAULT_DEV_KEY", label=dev_key.label)
+
     # FIX 5: Startup env validation
     if not settings.SECRET_KEY or "CHANGE_ME" in settings.SECRET_KEY:
         raise RuntimeError(

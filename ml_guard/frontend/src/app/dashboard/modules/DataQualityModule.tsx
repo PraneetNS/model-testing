@@ -1,5 +1,5 @@
 "use client";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, safeJson } from "@/lib/api";
 import React, { useState } from "react";
 import { ShieldCheck, AlertCircle, CheckCircle2, Search, Database, Upload, Loader2, BarChart3, Info } from "lucide-react";
 
@@ -24,7 +24,7 @@ export default function DataQualityModule({ state, setState, onAction }: any) {
 
         try {
             const res = await apiFetch(`/api/v1/data-quality/validate`, { method: "POST", body: fd });
-            const d = await res.json();
+            const d = await safeJson(res);
             if (!res.ok) throw new Error(d.detail || "Validation failed.");
             setResults(d);
         } catch (e: any) { setError(e.message); } finally { setLoading(false); }

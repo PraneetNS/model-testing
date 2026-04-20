@@ -36,7 +36,7 @@ export default function VerifyPage() {
     fetch(`${API_BASE}/api/v1/governance/verify/${cert_hash}`)
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
+        return safeJson(r);
       })
       .then((d) => setData(d))
       .catch((e) => setError(e.message))

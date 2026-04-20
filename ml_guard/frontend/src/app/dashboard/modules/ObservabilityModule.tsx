@@ -1,5 +1,5 @@
 "use client";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, safeJson } from "@/lib/api";
 import React, { useState, useEffect, useCallback } from "react";
 import {
     Activity, TrendingDown, TrendingUp, Minus, AlertTriangle, CheckCircle2,
@@ -228,7 +228,7 @@ export default function ObservabilityModule({ state, setState, onAction }: any) 
     const loadFeed = useCallback(async () => {
         try {
             const r = await apiFetch(`/api/v1/observe/feed`);
-            const d = await r.json();
+            const d = await safeJson<any>(r);
             setFeedData(d.models || []);
             if (!modelId && d.models?.[0]) setModelId(d.models[0].model_id);
         } catch { }
@@ -238,7 +238,7 @@ export default function ObservabilityModule({ state, setState, onAction }: any) 
     const loadModels = useCallback(async () => {
         try {
             const r = await apiFetch(`/api/v1/models`);
-            const d = await r.json();
+            const d = await safeJson<any>(r);
             // Handle both flat array and paginated items object
             const items = Array.isArray(d) ? d : (d.items || []);
             setModels(items);
@@ -255,10 +255,10 @@ export default function ObservabilityModule({ state, setState, onAction }: any) 
         setLoading(true);
         try {
             const [ov, dr, pt, er] = await Promise.allSettled([
-                apiFetch(`/api/v1/observe/${modelId}/overview`).then(r => r.json()),
-                apiFetch(`/api/v1/observe/drift/${modelId}/report`).then(r => r.json()),
-                apiFetch(`/api/v1/observe/performance/${modelId}/timeline?limit=24`).then(r => r.json()),
-                apiFetch(`/api/v1/drift/${modelId}/embedding-report`).then(r => r.json())
+                apiFetch(`/api/v1/observe/${modelId}/overview`).then(r => safeJson<any>(r)),
+                apiFetch(`/api/v1/observe/drift/${modelId}/report`).then(r => safeJson<any>(r)),
+                apiFetch(`/api/v1/observe/performance/${modelId}/timeline?limit=24`).then(r => safeJson<any>(r)),
+                apiFetch(`/api/v1/drift/${modelId}/embedding-report`).then(r => safeJson<any>(r))
             ]);
             if (ov.status === "fulfilled") setOverview(ov.value);
             if (dr.status === "fulfilled") setDriftReport(dr.value);

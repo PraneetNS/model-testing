@@ -27,7 +27,7 @@ import ObservabilityModule from "./modules/ObservabilityModule";
 import GovernanceModule from "./modules/GovernanceModule";
 import NotificationsBell from "./components/NotificationsBell";
 import HuggingFacePluginModal from "./components/HuggingFaceModal";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, safeJson } from "@/lib/api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "";
 
@@ -316,18 +316,25 @@ function ModelAuditPage({ state, setState, onAction }: any) {
     });
 
     useEffect(() => {
-        if (!activePolicy) {
+        if (!activePolicy || activePolicy.error) {
             apiFetch(`/api/v1/policies/active`)
-                .then(r => r.json())
-                .then(d => setAuditState({ activePolicy: d }))
-                .catch(() => { });
+                .then(r => safeJson<any>(r))
+                .then(d => {
+                    if (d && !d.error) {
+                        setAuditState({ activePolicy: d });
+                    } else {
+                        console.error("Failed to load active policy, using defaults", d);
+                        // Optional: Set a dummy policy or keep waiting
+                    }
+                })
+                .catch(e => console.error("Policy fetch error", e));
         }
     }, [activePolicy]);
 
     const onModelUpload = async (f: File) => {
         setAuditState({ modelFile: f, modelMeta: null, error: null });
         const fd = new FormData(); fd.append("model_file", f);
-        try { const res = await apiFetch(`/api/v1/audit/inspect-model`, { method: "POST", body: fd }); const d = await res.json(); if (!res.ok) { setAuditState({ error: d.detail }); return; } setAuditState({ modelMeta: d }); } catch (e: any) { setAuditState({ error: e.message }); }
+        try { const res = await apiFetch(`/api/v1/audit/inspect-model`, { method: "POST", body: fd }); const d = await safeJson<any>(res); if (!res.ok) { setAuditState({ error: d.detail }); return; } setAuditState({ modelMeta: d }); } catch (e: any) { setAuditState({ error: e.message }); }
     };
 
     const [trainSrc, setTrainSrc] = useState<"upload" | "url">("upload");
@@ -338,7 +345,7 @@ function ModelAuditPage({ state, setState, onAction }: any) {
     const onTrainUpload = async (f: File) => {
         setAuditState({ trainFile: f, trainSum: null });
         const fd = new FormData(); fd.append("csv_file", f);
-        try { const res = await apiFetch(`/api/v1/audit/dataset-summary`, { method: "POST", body: fd }); const d = await res.json(); if (res.ok) setAuditState({ trainSum: d.dataset_summary }); } catch { }
+        try { const res = await apiFetch(`/api/v1/audit/dataset-summary`, { method: "POST", body: fd }); const d = await safeJson<any>(res); if (res.ok) setAuditState({ trainSum: d.dataset_summary }); } catch { }
     };
     const setValFile = (f: File) => setAuditState({ valFile: f });
     const setLabelCol = (v: string) => setAuditState({ labelCol: v });
@@ -388,7 +395,7 @@ function ModelAuditPage({ state, setState, onAction }: any) {
 
         try {
             const res = await apiFetch(`/api/v1/audit/run`, { method: "POST", body: fd });
-            const d = await res.json();
+            const d = await safeJson<any>(res);
             if (!res.ok) throw new Error(d.detail || "Audit failed.");
 
             if (d.status === "pending" && d.job_id) {
@@ -396,15 +403,15 @@ function ModelAuditPage({ state, setState, onAction }: any) {
                 let attempts = 0;
                 const poll = setInterval(async () => {
                     attempts++;
-                    if (attempts > 30) {
+                    if (attempts > 120) { // Up to 6 minutes (120 * 3s)
                         clearInterval(poll);
                         setLoading(false);
-                        setError("Audit timed out in background. Check history later.");
+                        setError("Audit execution taking longer than expected. Please check 'Scan History' in a few minutes.");
                         return;
                     }
                     try {
                         const jobRes = await apiFetch(`/api/v1/gate/result/${d.submission_token}`);
-                        const jobData = await jobRes.json();
+                        const jobData = await safeJson<any>(jobRes);
                         if (jobData.status === "COMPLETED") {
                             clearInterval(poll);
                             setResults(jobData);
@@ -584,7 +591,7 @@ function BehaviorTestingPage({ state, setState, onAction }: any) {
         
         try {
             const res = await apiFetch(`/api/v1/behavior/test`, { method: "POST", body: fd });
-            const d = await res.json();
+            const d = await safeJson(res);
             if (!res.ok) throw new Error(d.detail || "Failed.");
             setResults(d);
             onAction();
@@ -810,15 +817,15 @@ function EnterprisePage({ state, setState, onAction }: any) {
         try {
             const [summRes, scansRes, modelsRes, policiesRes, logsRes, dbRes,
                 orgsRes, rulesRes, eventsRes] = await Promise.all([
-                    apiFetch(`/api/v1/enterprise/summary`).then(r => r.json()),
-                    apiFetch(`/api/v1/enterprise/scans?page=${scanPage}&per_page=15`).then(r => r.json()),
-                    apiFetch(`/api/v1/enterprise/models?page=${modelsPage}&per_page=15`).then(r => r.json()),
-                    apiFetch(`/api/v1/enterprise/policies`).then(r => r.json()),
-                    apiFetch(`/api/v1/enterprise/audit-logs?page=${logsPage}&per_page=25`).then(r => r.json()),
-                    apiFetch(`/api/v1/health/db`).then(r => r.json()),
-                    apiFetch(`/api/v1/orgs`).then(r => r.json()),
-                    apiFetch(`/api/v1/alerts/rules`).then(r => r.json()),
-                    apiFetch(`/api/v1/alerts/events`).then(r => r.json()),
+                    apiFetch(`/api/v1/enterprise/summary`).then(r => safeJson(r)),
+                    apiFetch(`/api/v1/enterprise/scans?page=${scanPage}&per_page=15`).then(r => safeJson(r)),
+                    apiFetch(`/api/v1/enterprise/models?page=${modelsPage}&per_page=15`).then(r => safeJson(r)),
+                    apiFetch(`/api/v1/enterprise/policies`).then(r => safeJson(r)),
+                    apiFetch(`/api/v1/enterprise/audit-logs?page=${logsPage}&per_page=25`).then(r => safeJson(r)),
+                    apiFetch(`/api/v1/health/db`).then(r => safeJson(r)),
+                    apiFetch(`/api/v1/orgs`).then(r => safeJson(r)),
+                    apiFetch(`/api/v1/alerts/rules`).then(r => safeJson(r)),
+                    apiFetch(`/api/v1/alerts/events`).then(r => safeJson(r)),
                 ]);
             setSummary(summRes);
             setScansData(scansRes);
@@ -852,7 +859,7 @@ function EnterprisePage({ state, setState, onAction }: any) {
 
     const runCompare = async () => {
         if (!scanA || !scanB) return;
-        try { const r = await apiFetch(`/api/v1/compare?scan_a=${scanA}&scan_b=${scanB}`); setComparison(await r.json()); } catch { }
+        try { const r = await apiFetch(`/api/v1/compare?scan_a=${scanA}&scan_b=${scanB}`); setComparison(await safeJson(r)); } catch { }
     };
 
     // ─── PATCH policy ───
@@ -1123,7 +1130,7 @@ function StreamingMonitorPage({ state, setState, onAction }: any) {
     const setStreamModels = (v: any) => setSState({ streamModels: v });
 
     useEffect(() => {
-        apiFetch(`/api/v1/stream/models`).then(r => r.json()).then(d => setStreamModels(d.streaming_models || [])).catch(() => { });
+        apiFetch(`/api/v1/stream/models`).then(r => safeJson(r)).then(d => setStreamModels(d.streaming_models || [])).catch(() => { });
     }, [eventCount]);
 
     const connect = () => {
@@ -1187,7 +1194,7 @@ function StreamingMonitorPage({ state, setState, onAction }: any) {
     };
 
     const pollStatus = async () => {
-        try { const r = await apiFetch(`/api/v1/stream/status/${modelId}`); setMetrics(await r.json()); } catch { }
+        try { const r = await apiFetch(`/api/v1/stream/status/${modelId}`); setMetrics(await safeJson(r)); } catch { }
     };
 
     const statusColor = wsStatus === "connected" ? "text-emerald-400" : wsStatus === "error" ? "text-red-400" : "text-slate-600";
@@ -1304,7 +1311,7 @@ function AIAdvisoryPage({ state, setState, onAction }: any) {
             const r = await apiFetch(`/api/v1/${endpoint}`, {
                 method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
             });
-            const d = await r.json();
+            const d = await safeJson(r);
             if (!r.ok) throw new Error(d.detail || "Advisory failed.");
             setAdvisory(d);
             onAction();
@@ -1411,7 +1418,7 @@ function FairnessAnalysisPage({ state, setState, onAction }: any) {
         fd.append("sensitive_column", sensitiveCol); fd.append("label_col", labelCol);
         try {
             const r = await apiFetch(`/api/v1/fairness/analyze`, { method: "POST", body: fd });
-            const d = await r.json();
+            const d = await safeJson(r);
             if (!r.ok) throw new Error(d.detail || "Fairness analysis failed.");
             setFState({ results: d });
             onAction();
@@ -1594,7 +1601,7 @@ function LLMGovernancePage({ state, setState, onAction }: any) {
             const r = await fetch(`${API_BASE}/api/v1/llm/evaluate`, {
                 method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
             });
-            const d = await r.json();
+            const d = await safeJson(r);
             if (!r.ok) throw new Error(d.detail || "LLM evaluation failed.");
             setLState({ results: d });
 
@@ -1609,7 +1616,7 @@ function LLMGovernancePage({ state, setState, onAction }: any) {
 
             onAction();
             fetchRag();
-            apiFetch(`/api/v1/llm/history`).then(r => r.json()).then(h => setLState({ history: h })).catch(() => { });
+            apiFetch(`/api/v1/llm/history`).then(r => safeJson(r)).then(h => setLState({ history: h })).catch(() => { });
         } catch (e: any) { setLState({ error: e.message }); }
         finally { setLState({ loading: false }); }
     };
@@ -1617,13 +1624,13 @@ function LLMGovernancePage({ state, setState, onAction }: any) {
     const fetchRag = () => {
         if (!modelName) return;
         apiFetch(`/api/v1/rag-eval/${modelName}/report`)
-            .then(r => r.json())
+            .then(r => safeJson(r))
             .then(d => setLState({ ragReport: d.error ? null : d }))
             .catch(() => setLState({ ragReport: null }));
     };
 
     useEffect(() => {
-        apiFetch(`/api/v1/llm/history`).then(r => r.json()).then(h => setLState({ history: h })).catch(() => { });
+        apiFetch(`/api/v1/llm/history`).then(r => safeJson(r)).then(h => setLState({ history: h })).catch(() => { });
         fetchRag();
     }, [modelName]);
 
@@ -2062,13 +2069,13 @@ export default function DashboardPage() {
     const refreshEnterprise = async () => {
         try {
             const [ro, rp, rh, rar, rae, ral, rm] = await Promise.all([
-                apiFetch(`/api/v1/orgs`).then(r => r.json()),
-                apiFetch(`/api/v1/policies`).then(r => r.json()),
-                apiFetch(`/api/v1/history`).then(r => r.json()),
-                apiFetch(`/api/v1/alerts/rules`).then(r => r.json()),
-                apiFetch(`/api/v1/alerts/events`).then(r => r.json()),
-                apiFetch(`/api/v1/audit-logs?limit=40`).then(r => r.json()),
-                apiFetch(`/api/v1/models`).then(r => r.json()),
+                apiFetch(`/api/v1/orgs`).then(r => safeJson(r)),
+                apiFetch(`/api/v1/policies`).then(r => safeJson(r)),
+                apiFetch(`/api/v1/history`).then(r => safeJson(r)),
+                apiFetch(`/api/v1/alerts/rules`).then(r => safeJson(r)),
+                apiFetch(`/api/v1/alerts/events`).then(r => safeJson(r)),
+                apiFetch(`/api/v1/audit-logs?limit=40`).then(r => safeJson(r)),
+                apiFetch(`/api/v1/models`).then(r => safeJson(r)),
             ]);
             const isArr = (v: any) => Array.isArray(v) ? v : [];
             setEnterpriseState(prev => ({
@@ -2121,9 +2128,9 @@ export default function DashboardPage() {
                                     <button
                                         key={n.id}
                                         onClick={() => setActive(n.id)}
-                                        className={`w-full group flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 relative overflow-hidden ${active === n.id
-                                            ? "bg-white/[0.04] text-white shadow-[0_0_20px_rgba(255,255,255,0.02)]"
-                                            : "text-slate-500 hover:text-slate-300 hover:bg-white/[0.02]"
+                                        className={`w-full group flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 relative overflow-hidden cursor-pointer ${active === n.id
+                                            ? "bg-white/[0.06] text-white shadow-[0_0_20px_rgba(255,255,255,0.02)]"
+                                            : "text-slate-500 hover:text-slate-300 hover:bg-white/[0.04]"
                                             }`}
                                     >
                                         {active === n.id && (

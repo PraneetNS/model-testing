@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { Search, Globe, ShieldAlert, ShieldCheck, Loader2, Download, Zap, X, Info, ExternalLink } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, safeJson } from "@/lib/api";
 
 interface HFModel {
   repo_id: string;
@@ -56,7 +56,7 @@ export default function HuggingFacePluginModal({ isOpen, onClose, onModelSelecte
       try {
         const res = await apiFetch(`/api/plugins/huggingface/search?query=${encodeURIComponent(query)}&limit=8`);
         if (res.ok) {
-          const data = await res.json();
+          const data = await safeJson(res);
           setResults(data);
         }
       } catch (e) {
@@ -77,7 +77,7 @@ export default function HuggingFacePluginModal({ isOpen, onClose, onModelSelecte
     try {
       const res = await apiFetch(`/api/plugins/huggingface/model-card-risks?repo_id=${encodeURIComponent(repoId)}`);
       if (res.ok) {
-        setRisks(await res.json());
+        setRisks(await safeJson(res));
       }
     } catch (e) {
       console.error("HF Risks failed", e);
@@ -104,7 +104,7 @@ export default function HuggingFacePluginModal({ isOpen, onClose, onModelSelecte
           hf_token: hfToken || null
         })
       });
-      const data = await res.json();
+      const data = await safeJson(res);
       if (!res.ok) throw new Error(data.detail || "Pull failed");
       
       onModelSelected?.(data);
@@ -132,7 +132,7 @@ export default function HuggingFacePluginModal({ isOpen, onClose, onModelSelecte
           hf_token: hfToken || null
         })
       });
-      const data = await res.json();
+      const data = await safeJson(res);
       if (!res.ok) throw new Error(data.detail || "Audit failed");
       
       onAuditStarted?.(data);

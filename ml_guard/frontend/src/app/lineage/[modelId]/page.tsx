@@ -36,7 +36,7 @@ export default function LineagePage() {
     fetch(`http://127.0.0.1:8000/api/lineage/${modelId}/graph`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch graph");
-        return res.json();
+        return safeJson(res);
       })
       .then((d) => {
         setData(d);

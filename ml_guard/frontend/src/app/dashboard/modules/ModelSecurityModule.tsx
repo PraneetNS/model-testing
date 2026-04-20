@@ -1,5 +1,5 @@
 "use client";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, safeJson } from "@/lib/api";
 import React, { useState, useEffect } from "react";
 import { ShieldCheck, ShieldAlert, Shield, Lock, Unlock, AlertTriangle, AlertCircle, CheckCircle2, Search, Loader2, Info, EyeOff } from "lucide-react";
 
@@ -37,7 +37,7 @@ export default function ModelSecurityModule({ state, setState, onAction }: any) 
         try {
             const res = await apiFetch(`/api/v1/security/scans`);
             if (!res.ok) throw new Error("Failed to fetch history");
-            const d = await res.json();
+            const d = await safeJson(res);
             const scans = Array.isArray(d) ? d : [];
             setHistoricalScans(scans);
             if (scans.length > 0 && !results) {

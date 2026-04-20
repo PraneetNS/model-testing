@@ -10,9 +10,14 @@ from app.core.celery_app import celery_app
 from app.db.session import SessionLocal
 from app.core.config import settings
 import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 from app.db.models import Job, PreflightResult, DriftResult, PerformanceResult, FairnessResult, LLMResult, GovernanceResult, ExplainabilityResult, Model as ModelRecord
-from ml_guard.core import MLEvaluator, Constraint, compute_accuracy, compute_f1, ONNXModelWrapper
+from ml_guard.core import (
+    MLEvaluator, Constraint, compute_accuracy, compute_f1, 
+    compute_mse, compute_rmse, compute_r2, detect_task_type,
+    ONNXModelWrapper
+)
 from ml_guard.core.aibom import generate_aibom
 import onnxruntime as ort
 
@@ -507,103 +512,108 @@ def run_governance_audit_task(
 
     async def _internal():
         db = SessionLocal()
-        from app.domain.services.risk_engine import RiskEngine
-        from app.domain.services.drift_engine import DriftEngine
-        from app.domain.services.governance_engine import GovernanceEngine
-        from ml_guard.core.governance_score import compute_governance_score, compute_model_fingerprint
-        from ml_guard.core.policy import evaluate_policy
-        
         try:
-            # 0. Update Status
-            from app.db.models import Job as JobModel
-            job = await db.get(JobModel, job_id)
-            if job:
-                job.status = "RUNNING"
-                await db.commit()
-
-            # 1. Reconstruct Data from Base64
-            if model_b64:
-                suffix = ".onnx" if model_filename.lower().endswith(".onnx") else ".pkl"
-                tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
-                tmp.write(base64.b64decode(model_b64))
-                tmp.close()
-                model_path = tmp.name
-                tmp_files.append(model_path)
-                
-            if val_b64:
-                suffix = ".parquet" if val_filename.lower().endswith(".parquet") else ".csv"
-                tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
-                tmp.write(base64.b64decode(val_b64))
-                tmp.close()
-                val_path = tmp.name
-                tmp_files.append(val_path)
-                
-            if train_b64:
-                suffix = ".parquet" if train_filename.lower().endswith(".parquet") else ".csv"
-                tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
-                tmp.write(base64.b64decode(train_b64))
-                tmp.close()
-                train_path = tmp.name
-                tmp_files.append(train_path)
-
-            # 2. Load data
-            if train_path.lower().endswith(".parquet"):
-                df_train = pd.read_parquet(train_path)
-            else:
-                try:
-                    df_train = pd.read_csv(train_path)
-                except (UnicodeDecodeError, pd.errors.ParserError):
-                    df_train = pd.read_csv(train_path, encoding='latin-1')
-
-            if val_path.lower().endswith(".parquet"):
-                df_val = pd.read_parquet(val_path)
-            else:
-                try:
-                    df_val = pd.read_csv(val_path)
-                except (UnicodeDecodeError, pd.errors.ParserError):
-                    df_val = pd.read_csv(val_path, encoding='latin-1')
+            from app.domain.services.risk_engine import RiskEngine
+            from app.domain.services.drift_engine import DriftEngine
+            from app.domain.services.governance_engine import GovernanceEngine
+            from ml_guard.core.governance_score import compute_governance_score, compute_model_fingerprint
+            from ml_guard.core.policy import evaluate_policy
             
-            # Load model and unpack if it's a dictionary wrapper
-            if model_path.lower().endswith(".onnx"):
-                model_obj = ONNXModelWrapper(model_path)
-            else:
-                model_obj = joblib.load(model_path)
-            if isinstance(model_obj, dict):
-                # Extract the actual estimator
-                model_obj = model_obj.get("model", model_obj.get("pipeline", model_obj.get("classifier", list(model_obj.values())[0])))
+            try:
+                # 0. Update Status
+                from app.db.models import Job as JobModel
+                job = await db.get(JobModel, job_id)
+                if job:
+                    job.status = "RUNNING"
+                    await db.commit()
 
-            feature_names = [c for c in df_train.columns if c != label_col]
-            
-            # 1. Use get_dummies naturally
-            X_train_df = pd.get_dummies(df_train[feature_names])
-            X_val_df = pd.get_dummies(df_val[feature_names])
-            
-            # Align validation columns to training columns
-            X_val_df = X_val_df.reindex(columns=X_train_df.columns, fill_value=0)
-        
-            # 2. Strict Feature Alignment based on Model's expectations
-            if getattr(model_obj, "feature_names_in_", None) is not None:
-                expected_feats = list(model_obj.feature_names_in_)
-                # Ensure all expected features exist, padding with 0s if missing
-                for f in expected_feats:
-                    if f not in X_train_df.columns:
-                        X_train_df[f] = 0
-                    if f not in X_val_df.columns:
-                        X_val_df[f] = 0
-                # Strictly select ONLY the expected features in the correct order
-                X_train = X_train_df[expected_feats]
-                X_val = X_val_df[expected_feats]
-            else:
-                # Fallback if the model doesn't specify expected features
-                # but ensure they are in the same order
-                X_train = X_train_df
-                X_val = X_val_df.reindex(columns=X_train.columns, fill_value=0)
+                # 1. Reconstruct Data from Base64
+                if model_b64:
+                    suffix = ".onnx" if model_filename.lower().endswith(".onnx") else ".pkl"
+                    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+                    tmp.write(base64.b64decode(model_b64))
+                    tmp.close()
+                    model_path = tmp.name
+                    tmp_files.append(model_path)
+                    
+                if val_b64:
+                    suffix = ".parquet" if val_filename.lower().endswith(".parquet") else ".csv"
+                    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+                    tmp.write(base64.b64decode(val_b64))
+                    tmp.close()
+                    val_path = tmp.name
+                    tmp_files.append(val_path)
+                    
+                if train_b64:
+                    suffix = ".parquet" if train_filename.lower().endswith(".parquet") else ".csv"
+                    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+                    tmp.write(base64.b64decode(train_b64))
+                    tmp.close()
+                    train_path = tmp.name
+                    tmp_files.append(train_path)
+
+                # 2. Load data
+                if train_path.lower().endswith(".parquet"):
+                    df_train = pd.read_parquet(train_path)
+                else:
+                    try:
+                        df_train = pd.read_csv(train_path)
+                    except (UnicodeDecodeError, pd.errors.ParserError):
+                        df_train = pd.read_csv(train_path, encoding='latin-1')
+
+                if val_path.lower().endswith(".parquet"):
+                    df_val = pd.read_parquet(val_path)
+                else:
+                    try:
+                        df_val = pd.read_csv(val_path)
+                    except (UnicodeDecodeError, pd.errors.ParserError):
+                        df_val = pd.read_csv(val_path, encoding='latin-1')
                 
-            y_train = df_train[label_col].values
-            y_val = df_val[label_col].values
+                # Load model and unpack if it's a dictionary wrapper
+                if model_path.lower().endswith(".onnx"):
+                    model_obj = ONNXModelWrapper(model_path)
+                else:
+                    model_obj = joblib.load(model_path)
+                if isinstance(model_obj, dict):
+                    # Extract the actual estimator
+                    model_obj = model_obj.get("model", model_obj.get("pipeline", model_obj.get("classifier", list(model_obj.values())[0])))
+
+                feature_names = [c for c in df_train.columns if c != label_col]
+                
+                # 1. Use get_dummies naturally
+                X_train_df = pd.get_dummies(df_train[feature_names])
+                X_val_df = pd.get_dummies(df_val[feature_names])
+                
+                # Align validation columns to training columns
+                X_val_df = X_val_df.reindex(columns=X_train_df.columns, fill_value=0)
+            
+                # 2. Strict Feature Alignment based on Model's expectations
+                if getattr(model_obj, "feature_names_in_", None) is not None:
+                    expected_feats = list(model_obj.feature_names_in_)
+                    # Ensure all expected features exist, padding with 0s if missing
+                    for f in expected_feats:
+                        if f not in X_train_df.columns:
+                            X_train_df[f] = 0
+                        if f not in X_val_df.columns:
+                            X_val_df[f] = 0
+                    # Strictly select ONLY the expected features in the correct order
+                    X_train = X_train_df[expected_feats]
+                    X_val = X_val_df[expected_feats]
+                else:
+                    # Fallback if the model doesn't specify expected features
+                    # but ensure they are in the same order
+                    X_train = X_train_df
+                    X_val = X_val_df.reindex(columns=X_train.columns, fill_value=0)
+                    
+                y_train = df_train[label_col].values
+                y_val = df_val[label_col].values
+            except KeyError as e:
+                raise ValueError(f"Identity mismatch: Label column '{label_col}' not found in dataset. Detected columns: {list(df_train.columns)}")
+            except Exception as e:
+                raise ValueError(f"Data mapping alignment error: {str(e)}")
 
             results = {"checks_run": checks}
-            
+                
             # --- AIBOM Integration ---
             try:
                 import importlib
@@ -635,6 +645,7 @@ def run_governance_audit_task(
                 
                 for cve in aibom_data.get("cve_alerts", []):
                     alert = SecurityAlert(
+                        model_id=model_id,
                         alert_type="supply_chain_cve",
                         details={
                             "cve_id": cve["cve_id"],
@@ -647,34 +658,80 @@ def run_governance_audit_task(
             except Exception as e:
                 logger.error(f"AIBOM generation failed in audit pipeline: {e}")
 
-            # 3. Metrics (Sync logic from router)
+            # 3. Metrics & Task Type Detection
+            task_type = detect_task_type(y_train)
             train_preds = model_obj.predict(X_train.values)
             val_preds = model_obj.predict(X_val.values)
-            train_acc = compute_accuracy(y_train, train_preds)
-            val_acc = compute_accuracy(y_val, val_preds)
-            metrics = {"accuracy": float(val_acc), "train_accuracy": float(train_acc)}
-            results["metrics"] = metrics
             
-            # 3. Drift
+            if task_type == "classification":
+                train_acc = compute_accuracy(y_train, train_preds)
+                val_acc = compute_accuracy(y_val, val_preds)
+                metrics = {"accuracy": float(val_acc), "train_accuracy": float(train_acc)}
+                ov_gap = {"accuracy_gap": float(train_acc - val_acc)}
+            else:
+                train_r2 = compute_r2(y_train, train_preds)
+                val_r2 = compute_r2(y_val, val_preds)
+                metrics = {"r2_score": float(val_r2), "train_r2": float(train_r2)}
+                ov_gap = {"r2_gap": float(train_r2 - val_r2)}
+                
+            results["metrics"] = metrics
+            results["task_type"] = task_type
+            
+            # 4. Drift
             from ml_guard.core.drift import compute_feature_drift_report
             drift_report, _ = compute_feature_drift_report(X_train, X_val)
             results["drift"] = drift_report
 
-            # 4. Governance Score
-            ov_gap = {"accuracy_gap": float(train_acc - val_acc)}
+            # 5. Governance Score
             gov = compute_governance_score(drift_report=drift_report, overfitting_gap=ov_gap)
             results["governance"] = gov
 
-            # 5. Policy
+            # 6. Policy Evaluation
             gov_engine = GovernanceEngine(db)
-            eval_context = {"metrics": metrics, "drift": drift_report, "overfitting_gap": ov_gap, "governance_score": gov["governance_score"]}
+            eval_context = {
+                "metrics": metrics, 
+                "drift": drift_report, 
+                "overfitting_gap": ov_gap, 
+                "governance_score": gov["governance_score"],
+                "task_type": task_type
+            }
             if policy_override:
                 policy_result = evaluate_policy(**eval_context, policy=policy_override)
             else:
                 policy_result = await gov_engine.evaluate_active_policy(metrics=eval_context, org_id=org_id)
             results["policy"] = policy_result
 
-            # 6. Save ScanRecord
+            # 7. Specialized Result Records (for focused dashboard tabs)
+            from app.db.models import PerformanceResult, DriftResult, GovernanceResult
+            
+            perf_rec = PerformanceResult(
+                model_id=model_id,
+                job_id=job_id,
+                computed_metrics_json=metrics,
+                severity_counts={}, # detailed counts can be added later
+                status="PASSED" if metrics.get("accuracy", metrics.get("r2_score", 0)) > 0.5 else "FAILED"
+            )
+            db.add(perf_rec)
+            
+            drift_rec = DriftResult(
+                model_id=model_id,
+                job_id=job_id,
+                computed_metrics_json=drift_report,
+                severity_counts={},
+                status="PASSED" if not any(d.get("drift_flag") for d in drift_report.values() if isinstance(d, dict)) else "FAILED"
+            )
+            db.add(drift_rec)
+            
+            gov_res_rec = GovernanceResult(
+                model_id=model_id,
+                job_id=job_id,
+                computed_metrics_json=gov,
+                severity_counts={},
+                status="APPROVED" if gov["deployment_allowed"] else "REJECTED"
+            )
+            db.add(gov_res_rec)
+
+            # 8. Final ScanRecord (Global history)
             from app.db.models import ScanRecord, Job as JobModel
             job = await db.get(JobModel, job_id)
             scan_rec = ScanRecord(
@@ -689,8 +746,10 @@ def run_governance_audit_task(
                 trigger_source="celery_worker"
             )
             db.add(scan_rec)
+            
             if job:
                 job.status = "COMPLETED"
+            
             await db.commit()
             return {"status": "success", "scan_id": str(scan_rec.id)}
         finally:

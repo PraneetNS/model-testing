@@ -3,7 +3,8 @@ import { cookies } from 'next/headers';
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
 
-async function handleRequest(request: Request, { params }: { params: { path: string[] } }) {
+async function handleRequest(request: Request, props: { params: Promise<{ path: string[] }> }) {
+  const params = await props.params;
   const fullPath = params.path.join('/');
   const searchParams = new URL(request.url).search;
   
@@ -28,15 +29,22 @@ async function handleRequest(request: Request, { params }: { params: { path: str
   headers.delete('host');
 
   try {
+    const body = request.method !== 'GET' && request.method !== 'HEAD' 
+      ? await request.arrayBuffer() 
+      : undefined;
+
     const response = await fetch(url, {
       method: request.method,
       headers: headers,
-      body: request.method !== 'GET' ? await request.blob() : undefined,
+      body: body,
       cache: 'no-store',
     });
 
+    console.log(`Proxy: ${request.method} ${url} -> ${response.status}`);
+
     if (response.status === 401) {
       // Clear session cookies if backend says unauthorized
+      console.warn("Proxy: 401 Unauthorized from backend.");
       const res = NextResponse.json({ error: 'Session expired' }, { status: 401 });
       res.cookies.delete('session_token');
       res.cookies.delete('backend_api_key');
@@ -44,7 +52,7 @@ async function handleRequest(request: Request, { params }: { params: { path: str
       return res;
     }
 
-    const data = await response.blob();
+    const data = await response.arrayBuffer();
     return new NextResponse(data, {
       status: response.status,
       headers: {

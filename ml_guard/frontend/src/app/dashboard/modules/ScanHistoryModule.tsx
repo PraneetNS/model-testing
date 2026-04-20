@@ -5,7 +5,7 @@ import {
     ChevronDown, ChevronUp, CheckCircle2, AlertCircle, AlertTriangle, Clock, Filter,
     ArrowUpRight, ArrowDownRight
 } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, safeJson } from "@/lib/api";
 
 // ─── Primitives ───
 const Card = ({ children, className = "" }: any) => (
@@ -67,7 +67,7 @@ function ComparePanel({ scanA, scanB }: { scanA: any; scanB: any }) {
         if (!scanA || !scanB) return;
         setLoading(true);
         apiFetch(`/api/v1/compare?scan_a=${scanA.id}&scan_b=${scanB.id}`)
-            .then(r => r.json())
+            .then(r => safeJson<any>(r))
             .then(d => { setComparison(d); setLoading(false); })
             .catch(() => setLoading(false));
     }, [scanA, scanB]);
@@ -159,7 +159,7 @@ export default function ScanHistoryPage({ state, setState, onAction }: any) {
             const params = new URLSearchParams({ limit: "50" });
             if (typeFilter) params.set("scan_type", typeFilter);
             const r = await apiFetch(`/api/v1/history?${params}`);
-            const d = await r.json();
+            const d = await safeJson<any>(r);
             const list = Array.isArray(d) ? d : [];
             setScans(list);
 
@@ -169,7 +169,7 @@ export default function ScanHistoryPage({ state, setState, onAction }: any) {
             await Promise.all(modelIds.map(async (mid: string) => {
                 try {
                     const tr = await apiFetch(`/api/v1/history/trajectory/${mid}`);
-                    const td = await tr.json();
+                    const td = await safeJson<any>(tr);
                     if (td.data_points) {
                         trajMap[mid] = td.data_points.map((p: any) => p.score).filter((s: any) => s != null);
                     }
@@ -189,7 +189,7 @@ export default function ScanHistoryPage({ state, setState, onAction }: any) {
         }
         try {
             const r = await apiFetch(`/api/v1/history/${scanId}`);
-            const d = await r.json();
+            const d = await safeJson<any>(r);
             setScanDetails(prev => ({ ...prev, [scanId]: d }));
             setExpandedScan(scanId);
         } catch { }

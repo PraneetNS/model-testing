@@ -45,7 +45,7 @@ export default function RedTeamModule({ model_id }: { model_id: string }) {
         setLoading(true);
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/v1/redteam/start?model_id=${model_id}`, { method: "POST" });
-            const data = await res.json();
+            const data = await safeJson(res);
             setRunning(true);
             pollStatus(data.session_id);
         } catch (err) {
@@ -58,7 +58,7 @@ export default function RedTeamModule({ model_id }: { model_id: string }) {
     const pollStatus = async (sessionId: string) => {
         const fetchReport = async () => {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/v1/redteam/${sessionId}/report`);
-            const data = await res.json();
+            const data = await safeJson(res);
             setReport(data);
             if (data.status === "COMPLETED" || data.status === "FAILED") {
                 setRunning(false);

@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from typing import Optional
 from app.db.session import get_db
 from app.db.models import PolicyVersion, PolicyRule, AuditLog, utcnow
+from app.core.auth import AuthContext, get_auth_context, require_role
 
 router = APIRouter()
 
@@ -111,7 +112,8 @@ async def create_policy(body: PolicyCreate, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/policies/active")
-async def get_active_policy(org_id: str = "", db: AsyncSession = Depends(get_db)):
+async def get_active_policy(db: AsyncSession = Depends(get_db), auth: AuthContext = Depends(get_auth_context)):
+    org_id = auth.org_id
     # 1. First try the new PolicyRule model
     stmt_rule = select(PolicyRule).filter(PolicyRule.is_active == True)
     if org_id:

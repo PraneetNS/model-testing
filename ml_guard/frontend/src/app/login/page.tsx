@@ -9,6 +9,7 @@ import {
     onAuthStateChanged
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { useAuth } from '@/context/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Shield, ChevronLeft, Github } from 'lucide-react';
 import Link from 'next/link';
@@ -16,6 +17,7 @@ import { motion } from 'framer-motion';
 
 function LoginContent() {
     const searchParams = useSearchParams();
+    const { user, token, loading: authLoading } = useAuth();
     const router = useRouter();
     const [isLogin, setIsLogin] = useState(!searchParams.get('signup'));
     const [email, setEmail] = useState('');
@@ -24,13 +26,10 @@ function LoginContent() {
     const [error, setError] = useState('');
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            if (user) {
-                router.push('/dashboard');
-            }
-        });
-        return () => unsubscribe();
-    }, [router]);
+        if (!authLoading && user && token) {
+            router.push('/dashboard');
+        }
+    }, [user, token, authLoading, router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -43,10 +42,9 @@ function LoginContent() {
             } else {
                 await createUserWithEmailAndPassword(auth, email, password);
             }
-            router.push('/dashboard');
+            // Redirection is now handled by useEffect above
         } catch (err: any) {
             setError(mapAuthError(err.code));
-        } finally {
             setLoading(false);
         }
     };
@@ -57,10 +55,9 @@ function LoginContent() {
         try {
             const provider = new GoogleAuthProvider();
             await signInWithPopup(auth, provider);
-            router.push('/dashboard');
+            // Redirection is now handled by useEffect above
         } catch (err: any) {
             setError(mapAuthError(err.code));
-        } finally {
             setLoading(false);
         }
     };
@@ -156,13 +153,24 @@ function LoginContent() {
                         </button>
                     </form>
 
-                    <div className="mt-10 text-center">
+                    <div className="mt-10 flex flex-col gap-4 text-center">
                         <button
                             onClick={() => setIsLogin(!isLogin)}
                             className="text-[10px] font-black text-slate-500 hover:text-orange-500 transition-all uppercase tracking-[0.2em]"
                         >
                             {isLogin ? "Request Enterprise Seat" : "Internal Login Protocol"}
                         </button>
+                        
+                        {process.env.NODE_ENV === 'development' && (
+                            <button
+                                onClick={() => {
+                                    window.location.href = '/dashboard?bypass=true';
+                                }}
+                                className="text-[9px] font-black text-orange-500/50 hover:text-orange-500 transition-all uppercase tracking-[0.3em] border border-orange-500/10 py-2 rounded-xl mt-4"
+                            >
+                                ⚡ System Bypass (Offline Dev Mode) ⚡
+                            </button>
+                        )}
                     </div>
                 </div>
 

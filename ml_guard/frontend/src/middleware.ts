@@ -7,10 +7,11 @@ export function middleware(request: NextRequest) {
   // CSP Header with nonce
   const cspHeader = `
     default-src 'self';
-    script-src 'self' 'nonce-${nonce}' 'strict-dynamic';
+    script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://apis.google.com https://www.gstatic.com;
     style-src 'self' 'unsafe-inline';
-    img-src 'self' data:;
-    connect-src 'self' http://localhost:8000;
+    img-src 'self' data: https://*.googleusercontent.com https://*.githubusercontent.com;
+    connect-src 'self' http://localhost:8000 https://*.googleapis.com https://*.firebaseapp.com https://*.firebaseio.com;
+    frame-src 'self' https://*.firebaseapp.com;
     frame-ancestors 'none';
     base-uri 'self';
     form-action 'self';
@@ -29,7 +30,10 @@ export function middleware(request: NextRequest) {
   response.headers.set('Content-Security-Policy', cspHeader);
 
   // CSRF Protection for state-changing internal API routes
-  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method) && request.nextUrl.pathname.startsWith('/api/')) {
+  const isApiAction = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method) && request.nextUrl.pathname.startsWith('/api/');
+  const isSessionInit = request.nextUrl.pathname === '/api/auth/session';
+
+  if (isApiAction && !isSessionInit) {
     const csrfToken = request.cookies.get('csrf_token')?.value;
     const headerCsrfToken = request.headers.get('x-csrf-token');
 
