@@ -134,9 +134,32 @@ async def get_gate_result(submission_token: str, db: Depends = Depends(get_db)):
         if not scan:
             return {"status": "FAILED", "error": "Job is marked COMPLETED but no underlying artifact scan was correctly generated. Retry scan."}
             
+        import json
+        try:
+            results_data = json.loads(scan.results_json) if isinstance(scan.results_json, str) else scan.results_json
+        except Exception:
+            results_data = {}
+
         return {
             "status": "COMPLETED",
+            "scan_id": str(scan.id),
+            "job_id": str(job.id),
             "model_id": str(job.model_id),
+            "governance": results_data.get("governance", {"governance_score": scan.governance_score}),
+            "risk_score": scan.risk_score,
+            "risk_level": scan.risk_level,
+            "metrics": results_data.get("metrics", {}),
+            "drift": results_data.get("drift", {}),
+            "top_drifted_ranked": results_data.get("top_drifted_ranked", []),
+            "top5_drifted_features": results_data.get("top5_drifted_features", []),
+            "overfitting_gap": results_data.get("overfitting_gap", {}),
+            "target_drift": results_data.get("target_drift", {}),
+            "calibration": results_data.get("calibration", {}),
+            "leakage": results_data.get("leakage", {}),
+            "policy": results_data.get("policy", {}),
+            "advisories": results_data.get("advisories", []),
+            "fingerprint": results_data.get("fingerprint"),
+            "complexity": results_data.get("complexity", {}),
             "score": scan.governance_score,
             "verdict": scan.gate_status,
             "breach_count": len(scan.checks_run) if scan.checks_run else 0

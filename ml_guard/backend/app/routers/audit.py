@@ -288,8 +288,10 @@ async def run_audit(
             ["model_b64", "train_b64", "val_b64", "policy_override"]
         )
         
-        run_governance_audit_task.delay(**encrypted_payload)
-        celery_ok = True
+        # run_governance_audit_task.delay(**encrypted_payload)
+        # celery_ok = True
+        logger.info("Bypassing Celery: Forcing inline execution for audit task")
+        celery_ok = False
     except Exception as e:
         logger.error(f"failed_to_dispatch_celery error={e}")
         celery_ok = False
@@ -402,11 +404,16 @@ async def run_audit(
         gov = compute_governance_score(drift_report=drift_report, overfitting_gap=ov_gap)
 
         from app.domain.services.risk_engine import RiskEngine
-        risk_result = RiskEngine().compute(
-            drift_report=drift_report, overfitting_gap=ov_gap,
-            governance_score=gov["governance_score"],
-            security_checks={}, performance_metrics=metrics,
-        )
+        max_psi = max([v.get("PSI", 0) for v in drift_report.values() if isinstance(v, dict)], default=0.0)
+        drifted_count = sum(1 for v in drift_report.values() if isinstance(v, dict) and v.get("drift_flag", False))
+        re_metrics = {
+             "accuracy_delta": ov_gap.get("accuracy_gap", 0.0),
+             "psi": max_psi,
+             "brier_score": calibration.get("brier_score", 0.0) if calibration else 0.0,
+             "drifted_features_count": drifted_count,
+             "calibration_flag": calibration.get("overconfident_flag", False) if calibration else False
+        }
+        risk_result = RiskEngine().calculate_risk_score(re_metrics)
 
         from app.domain.services.governance_engine import GovernanceEngine
         eval_ctx = {"metrics": metrics, "drift": drift_report, "overfitting_gap": ov_gap,

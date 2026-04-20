@@ -67,7 +67,7 @@ async def fetch_data(
             connector_type=req.connector_type,
             label=req.save_config_label,
             encrypted_config=encrypted,
-            created_by_key_id=auth.key_id if hasattr(auth, "key_id") else None
+            created_by_key_id=auth.api_key_id if hasattr(auth, "api_key_id") else None
         )
         db.add(new_conf)
         await db.flush()

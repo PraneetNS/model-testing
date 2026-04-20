@@ -12,7 +12,7 @@ from fastapi.security import APIKeyHeader
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from app.db.session import get_db
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, List
 import uuid
 import structlog
@@ -28,15 +28,21 @@ api_key_header = APIKeyHeader(
 @dataclass
 class AuthContext:
     """Consolidated authentication and authorization context."""
-    user_id: Optional[uuid.UUID]
-    api_key_id: Optional[uuid.UUID]
-    org_id: Optional[uuid.UUID]
-    role: str
-    scopes: List[str]
+    user_id: Optional[uuid.UUID] = None
+    api_key_id: Optional[uuid.UUID] = None
+    org_id: Optional[uuid.UUID] = None
+    role: str = "viewer"
+    scopes: List[str] = field(default_factory=list)
 
     def can(self, min_role: str) -> bool:
         """Role hierarchy check (admin > viewer)."""
-        ROLE_HIERARCHY = {"admin": 4, "ml_engineer": 3, "auditor": 2, "viewer": 1}
+        ROLE_HIERARCHY = {
+            "admin": 4, 
+            "administrator": 4, 
+            "ml_engineer": 3, 
+            "auditor": 2, 
+            "viewer": 1
+        }
         return ROLE_HIERARCHY.get(self.role, 0) >= ROLE_HIERARCHY.get(min_role, 0)
 
     def assert_role(self, min_role: str):
@@ -73,8 +79,9 @@ async def get_auth_context(
         org_id = org.id if org else None
         return AuthContext(
             user_id="dev-user",
+            api_key_id=None,
             org_id=org_id,
-            role="administrator",
+            role="admin",
             scopes=["admin", "ml_engineer", "auditor", "viewer"]
         )
     

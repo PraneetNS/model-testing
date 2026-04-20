@@ -185,7 +185,13 @@ async def stream_production(websocket: WebSocket, model_id: str = Query("default
             if org:
                 user_res = await db_auth.execute(select(User).filter(User.org_id == org.id))
                 user = user_res.scalars().first()
-            auth = AuthContext(user=user, org=org) if user and org else None
+            auth = AuthContext(
+                user_id=user.id,
+                api_key_id=None,
+                org_id=org.id,
+                role=user.role,
+                scopes=["admin", "ml_engineer", "auditor", "viewer"]
+            ) if user and org else None
 
         while True:
             raw = await websocket.receive_text()
