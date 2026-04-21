@@ -1138,7 +1138,7 @@ function StreamingMonitorPage({ state, setState, onAction }: any) {
 
         // Robust construction of the WebSocket URL
         // Strip trailing slash first, then normalize protocol
-        const base = (API_BASE || "http://127.0.0.1:8090").replace(/\/$/, "");
+        const base = (API_BASE || "http://127.0.0.1:8000").replace(/\/$/, "");
         let wsUrl = base.replace(/^http/, "ws");
 
         // Ensure /api/v1 is present exactly once
