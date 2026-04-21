@@ -10,7 +10,7 @@ export function middleware(request: NextRequest) {
     script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://apis.google.com https://www.gstatic.com;
     style-src 'self' 'unsafe-inline';
     img-src 'self' data: https://*.googleusercontent.com https://*.githubusercontent.com;
-    connect-src 'self' http://localhost:8000 https://*.googleapis.com https://*.firebaseapp.com https://*.firebaseio.com;
+    connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 ws://localhost:8000 ws://127.0.0.1:8000 https://*.googleapis.com https://*.firebaseapp.com https://*.firebaseio.com;
     frame-src 'self' https://*.firebaseapp.com;
     frame-ancestors 'none';
     base-uri 'self';
