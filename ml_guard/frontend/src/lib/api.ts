@@ -22,6 +22,7 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
   const headers: Record<string, string> = {
     ...(isFormData ? {} : { "Content-Type": "application/json" }),
     ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
+    "X-API-Key": process.env.NEXT_PUBLIC_API_KEY || "",
     ...(init.headers as Record<string, string> | undefined ?? {}),
   };
 

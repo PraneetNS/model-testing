@@ -1,53 +1,149 @@
 # 🛡️ ML Guard Enterprise — v8.5
 
-## Enterprise AI Governance & Safety Platform
+## Enterprise AI Governance, Safety & Observability Platform
 
 ML Guard is a high-performance, multi-tenant platform designed for technical AI governance. It provides a comprehensive suite of tools for offline model auditing, real-time streaming drift detection, LLM safety evaluation, and automated quality gates.
 
 ---
 
-## 🚀 Recent Updates (v8.5)
-- **Live Streaming Drift Monitor**: Real-time PSI, JSD, and stability tracking via WebSockets and REST ingestion.
-- **LLM Guard & Safety**: Automated evaluation of prompt/response pairs for toxicity, injection, and hallucination.
-- **Production Performance Probes**: Monitoring endpoint health, latency (p95), and error rates in enterprise environments.
-- **Enhanced Security Middleware**: Integrated CSP management and injection detection for robust production deployments.
+## 🏗️ Architecture Overview
 
----
-
-## 🏗️ Architecture
+ML Guard follows a modern distributed architecture designed for low-latency analysis and high-throughput background processing.
 
 ```mermaid
 graph TD
-    subgraph Frontend [Next.js 15 Dashboard]
-        A[Governance Control Center]
-        B[Real-time Stream Monitor]
-        C[LLM Safety Guard]
-        D[Audit & History]
+    subgraph Client_Layer [Frontend - Next.js 15]
+        A["Governance Control Center (React)"]
+        B["Real-time Stream Monitor (WebSockets)"]
+        C["LLM Safety Guard UI"]
+        D["System Admin & Policy Dashboard"]
     end
 
-    subgraph Backend [FastAPI + Celery + Redis]
-        E[Audit API]
-        F[Streaming Router]
-        G[LLM Eval Engine]
-        H[Task Orchestrator]
+    subgraph Service_Layer [Backend - FastAPI]
+        E["Ingestion API (Sync/Async)"]
+        F["Streaming Engine (Rolling Windows)"]
+        G["LLM Evaluation Engine (Pattern Matching)"]
+        H["Policy Enforcement Gate"]
     end
 
-    subgraph Core [Governance Engine]
-        I[Statistical Drift (PSI/JSD)]
-        J[Safety Patterns]
-        K[Risk Calibration]
+    subgraph Worker_Layer [Task Orchestration - Celery]
+        I["Governance Audit Worker"]
+        J["Statistical Analysis Tasks"]
+        K["Alerting & Notification Engine"]
     end
 
-    subgraph Data [Storage]
-        L[PostgreSQL]
-        M[Redis]
-        N[Object Storage]
+    subgraph Data_Layer [Persistence & State]
+        L[("PostgreSQL (Metadata & Results)")]
+        M[("Redis (Queue & Real-time State)")]
+        N[("Object Storage (Model Artifacts/PDFs)")]
     end
 
-    Frontend -->|REST/WebSockets| Backend
-    Backend -->|Async Tasks| Backend
-    Backend -->|Analyzes| Core
-    Backend -->|Persists| Data
+    Client_Layer -->|REST/WS| Service_Layer
+    Service_Layer -->|Broker| M
+    M -->|Task Queue| Worker_Layer
+    Service_Layer -->|CRUD| L
+    Worker_Layer -->|Persists| L
+    Worker_Layer -->|Stores| N
+```
+
+---
+
+## 🔄 Core Workflows
+
+### 1. Model Audit Lifecycle
+The model audit workflow ensures that every model deployment meets enterprise standards for accuracy, fairness, and robustness.
+
+```mermaid
+sequenceDiagram
+    participant User as ML Engineer
+    participant API as Backend API
+    participant Worker as Celery Worker
+    participant DB as Database
+    
+    User->>API: Upload Model & Datasets (/api/v1/audit/run)
+    API->>DB: Create ScanRecord (Status: PENDING)
+    API->>Worker: Dispatch Governance Task
+    API-->>User: Return Submission Token
+    Worker->>Worker: Run Accuracy/F1 Tests
+    Worker->>Worker: Calculate PSI/JSD Drift
+    Worker->>Worker: Run Security Scans (Poisoning/Extraction)
+    Worker->>Worker: Evaluate Governance Score
+    Worker->>DB: Update ScanRecord (Status: COMPLETED)
+    User->>API: Poll for Results (/api/v1/gate/result/{token})
+    API-->>User: Return Detailed Report & Deployment Status
+```
+
+### 2. Real-time Streaming Drift
+ML Guard monitors live production traffic and detects distribution shifts before they impact business value.
+
+```mermaid
+graph LR
+    P[Production App] -->|POST /stream/production| I[Ingestion Engine]
+    I --> W[Rolling Window Manager]
+    W --> S[Statistical Engine]
+    S -->|Calculates| D[PSI / JSD / Stability]
+    D --> G{Policy Check}
+    G -->|Threshold Exceeded| A[Alert Event]
+    A --> WS[WebSocket Dashboard]
+    A --> SL[Slack/Email Notification]
+```
+
+---
+
+## 🛡️ Security & Authentication
+
+ML Guard uses a robust **X-API-Key** based authentication system with SHA-256 hashing for all protected resources.
+
+### Using the API Key
+Every request to the backend must include the `X-API-Key` header.
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/llm/evaluate" \
+     -H "X-API-Key: YOUR_API_KEY_HERE" \
+     -H "Content-Type: application/json" \
+     -d '{...}'
+```
+
+> [!IMPORTANT]
+> In local development mode, use the key: `mlg_K0njzcPf5hS7AKtccxdePVglpJMiZnZX`
+
+---
+
+## 🔧 Getting Started
+
+### Quick Start (Windows)
+We provide a helper script to launch all services simultaneously:
+
+1. Open PowerShell and navigate to the project root.
+2. Run the startup script:
+   ```powershell
+   .\ml_guard\start_services.bat
+   ```
+This will start the **Redis Server**, **FastAPI Backend**, **Celery Worker**, and **Next.js Frontend**.
+
+### Manual Installation
+
+#### 1. Backend Setup
+```bash
+cd backend
+python -m venv venv
+.\venv\Scripts\activate
+pip install -r requirements.txt
+python -m uvicorn app.main:app --reload --port 8000
+```
+
+#### 2. Celery Worker Setup
+```bash
+cd backend
+.\venv\Scripts\activate
+celery -A app.core.celery_app worker --loglevel=info -P solo
+```
+
+#### 3. Frontend Setup
+```bash
+cd frontend
+npm install
+npm run dev
 ```
 
 ---
@@ -60,88 +156,8 @@ graph TD
 | **Streaming Drift** | Live | ✅ **Stable** | Rolling PSI, JSD, Stability Score, Brier Score |
 | **LLM Guard** | GenAI | ✅ **Stable** | Toxicity, Injection, Hallucination, Stability |
 | **Performance Probe**| Infra | ✅ **Stable** | p95 Latency, Error Rate, CPU/Memory Utilization |
-| **CI/CD Integration**| Automation | ✅ Enhanced | Blocking Quality Gates, Polling Status |
+| **Red Teaming** | Adversarial | ✅ **Stable** | Jailbreak Success, Vulnerability Mapping |
 | **SHAP Explainer** | Transparency | ✅ Stable | Global/Local Feature Importance |
-
----
-
-## 📡 API Usage Guide
-
-### 1. Streaming Drift Ingestion
-Submit live predictions to track distribution drift in real-time.
-- **Endpoint**: `POST /api/v1/stream/production?model_id={model_id}`
-- **Payload**:
-```json
-{
-  "prediction": 0.82,
-  "confidence": 0.95,
-  "actual": 1.0,
-  "features": [1.4, 0.45, 2.1]
-}
-```
-
-### 2. LLM Safety Evaluation
-Audit LLM interactions for governance and safety violations.
-- **Endpoint**: `POST /api/v1/llm/evaluate`
-- **Payload**:
-```json
-{
-  "prompt": "Summarize the financial logs.",
-  "response": "The report shows a 5% revenue growth.",
-  "model_name": "gpt-4o-secure"
-}
-```
-
-### 3. Production Health Probes
-Log performance metrics from production inference endpoints.
-- **Endpoint**: `POST /api/v1/monitoring/log`
-- **Payload**:
-```json
-{
-  "endpoint_url": "/api/v1/predict/v1",
-  "status": "HEALTHY",
-  "avg_latency_ms": 114.5,
-  "p95_latency_ms": 156.2,
-  "error_rate_pct": 0.01,
-  "probe_count": 1000
-}
-```
-
----
-
-## 🔧 Getting Started
-
-### Prerequisites
-- **Python 3.10+** (Backend)
-- **Node.js 20+** (Frontend)
-- **Redis** & **PostgreSQL**
-
-### Installation
-1. **Clone & Setup**:
-   ```bash
-   git clone https://github.com/PraneetNS/model-testing.git
-   cd ml_guard
-   ```
-
-2. **Backend**:
-   ```bash
-   cd backend
-   pip install -r requirements.txt
-   uvicorn app.main:app --reload --port 8000
-   ```
-
-3. **Frontend**:
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
-
-4. **Celery Worker**:
-   ```bash
-   cd backend
-   celery -A app.core.celery_app worker --loglevel=info -P solo
-   ```
 
 ---
 

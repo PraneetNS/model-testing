@@ -8,7 +8,7 @@ API_URL = "http://localhost:8000"
 
 model_path = "fair_loan_model.pkl"
 data_path = "fair_loan_test.csv"
-api_key = "mlg_QpAlNI9_NQYbfFIQA9hHpMujRthXpIogfxb4OMtTEW4"
+api_key = "mlg_PeNfpwQSOtJkWr1Tow62Kr5luLuEugGi"
 
 files = {
     "model_file": (os.path.basename(model_path), open(model_path, 'rb')),

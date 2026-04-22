@@ -27,7 +27,7 @@ import ObservabilityModule from "./modules/ObservabilityModule";
 import GovernanceModule from "./modules/GovernanceModule";
 import NotificationsBell from "./components/NotificationsBell";
 import HuggingFacePluginModal from "./components/HuggingFaceModal";
-import { apiFetch, safeJson } from "@/lib/api";
+import { apiFetch, safeJson, apiPost, apiGet } from "@/lib/api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "";
 
@@ -1598,19 +1598,14 @@ function LLMGovernancePage({ state, setState, onAction }: any) {
         if (additionalResponses?.trim()) body.additional_responses = additionalResponses.split("\n---\n").filter(Boolean);
         if (referenceFacts?.trim()) body.reference_facts = referenceFacts.split("\n").filter(Boolean);
         try {
-            const r = await fetch(`${API_BASE}/api/v1/llm/evaluate`, {
-                method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
-            });
-            const d = await safeJson(r);
-            if (!r.ok) throw new Error(d.detail || "LLM evaluation failed.");
+            const d = await apiPost(`/api/v1/llm/evaluate`, body);
             setLState({ results: d });
 
             // Also log RAG if chunks provided
             if (retrievedChunks?.trim()) {
                 const ragChunks = retrievedChunks.split("\n---\n").filter(Boolean);
-                await fetch(`${API_BASE}/api/v1/rag-eval/${modelName || 'default'}/log`, {
-                    method: "POST", headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ query: prompt, answer: response, retrieved_chunks: ragChunks, retrieved_doc_ids: [] })
+                await apiPost(`/api/v1/rag-eval/${modelName || 'default'}/log`, {
+                    query: prompt, answer: response, retrieved_chunks: ragChunks, retrieved_doc_ids: []
                 });
             }
 
