@@ -25,6 +25,7 @@ import ScanHistoryPage from "./modules/ScanHistoryModule";
 import ModelReportCardModule from "./modules/ModelReportCardModule";
 import ObservabilityModule from "./modules/ObservabilityModule";
 import GovernanceModule from "./modules/GovernanceModule";
+import ComplianceModule from "./modules/ComplianceModule";
 import NotificationsBell from "./components/NotificationsBell";
 import HuggingFacePluginModal from "./components/HuggingFaceModal";
 import { apiFetch, safeJson, apiPost, apiGet } from "@/lib/api";
@@ -1948,6 +1949,7 @@ const NAV_CATEGORIES = [
         icon: ShieldCheck,
         items: [
             { id: "audit", label: "Model Audit", sub: "Core compliance & risk", icon: ShieldCheck },
+            { id: "compliance", label: "Compliance Packs", sub: "Vertical regulations", icon: ShieldCheck },
             { id: "governance-score", label: "Governance Score", sub: "Live score · cert · gate", icon: ShieldCheck },
             { id: "report", label: "Report Card", sub: "Compliance certificates", icon: FileText },
             { id: "fairness", label: "Fairness", sub: "Bias & equity metrics", icon: Scale },
@@ -2060,6 +2062,7 @@ export default function DashboardPage() {
     const [reportCardState, setReportCardState] = useState({});
     const [observabilityState, setObservabilityState] = useState({ modelId: "" });
     const [governanceState, setGovernanceState] = useState<{ selectedModelId: string }>({ selectedModelId: "" });
+    const [complianceState, setComplianceState] = useState({});
 
     const refreshEnterprise = async () => {
         try {

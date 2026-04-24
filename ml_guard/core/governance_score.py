@@ -84,6 +84,7 @@ def compute_governance_score(
     stability_score: float = None,
     fairness_subscore: float = None,
     agent_violations: list = None,
+    compliance_score: float = None,
     weights: dict = None,
 ) -> dict:
     """
@@ -148,6 +149,8 @@ def compute_governance_score(
         component_scores["fairness_score"] = round(Sf * 100, 2)
     if agent_violations is not None:
         component_scores["agent_score"] = round(Sa * 100, 2)
+    if compliance_score is not None:
+        component_scores["compliance_score"] = round(compliance_score, 2)
 
     return {
         "governance_score": round(gov_score, 2),

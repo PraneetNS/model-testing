@@ -368,6 +368,9 @@ app.include_router(red_team_api.router,
     prefix="/api/v1", tags=["red-team"])
 app.include_router(insurance_api.router,
     prefix="/api/v1", tags=["insurance"])
+from app.api.v1.endpoints import compliance as compliance_api
+app.include_router(compliance_api.router,
+    prefix="/api/compliance", tags=["compliance"])
 
 # ── Lifecycle Extensions ───────────────────────────
 app.include_router(model_registry.router,

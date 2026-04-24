@@ -52,3 +52,94 @@ async def export_audit_pdf(run_id: str):
     In production, this would use a library like ReportLab or WeasyPrint.
     """
     return {"message": "PDF Export initialized. Template: Enterprise Audit v1.0"}
+
+import hashlib
+from fastapi.responses import Response
+
+@router.get("/{model_id}/pack/{pack_name}")
+async def get_compliance_pack(model_id: str, pack_name: str, db: AsyncSession = Depends(deps.get_db)):
+    checks = []
+    import sys
+    import os
+    _repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../../"))
+    if _repo_root not in sys.path:
+        sys.path.append(_repo_root)
+        
+    if pack_name == "sr_11_7":
+        from ml_guard.core.compliance_packs.sr_11_7 import generate_sr117_report
+        checks = await generate_sr117_report(model_id, db)
+    elif pack_name == "eu_ai_act":
+        from ml_guard.core.compliance_packs.eu_ai_act import generate_eu_ai_act_report
+        checks = await generate_eu_ai_act_report(model_id, db)
+    elif pack_name == "rbi_mlrg":
+        from ml_guard.core.compliance_packs.rbi_mlrg import generate_rbi_mlrg_report
+        checks = await generate_rbi_mlrg_report(model_id, db)
+    elif pack_name == "fda_ai":
+        from ml_guard.core.compliance_packs.fda_ai_guidance import generate_fda_ai_guidance_report
+        checks = await generate_fda_ai_guidance_report(model_id, db)
+    else:
+        raise HTTPException(status_code=404, detail="Pack not found")
+        
+    passed_checks = sum(1 for c in checks if c["status"] == "pass")
+    total = len(checks)
+    score = (passed_checks / total * 100) if total > 0 else 0
+    status = "compliant" if score == 100 else ("partial" if score > 0 else "non_compliant")
+    
+    return {"status": status, "score": score, "checks": checks}
+
+@router.get("/{model_id}/pack/{pack_name}/pdf")
+async def get_compliance_pack_pdf(model_id: str, pack_name: str, db: AsyncSession = Depends(deps.get_db)):
+    pack_data = await get_compliance_pack(model_id, pack_name, db)
+    checks = pack_data["checks"]
+    score = pack_data["score"]
+    
+    import tempfile
+    from app.services.report_card.pdf import PDFGenerator
+    from app.db.models import Model
+    import datetime
+    import os
+    import json
+    
+    model = await db.get(Model, model_id)
+    model_name = model.name if model else model_id
+    
+    metric_snapshots = {c["title"]: (100 if c["status"] == "pass" else 0) for c in checks}
+    
+    report_data = {
+        "model_name": model_name,
+        "overall_score": score,
+        "verdict": "COMPLIANT" if pack_data["status"] == "compliant" else "NON-COMPLIANT",
+        "issued_at": datetime.datetime.utcnow().isoformat(),
+        "cert_hash": "CompliancePackPDF",
+        "metric_snapshots": metric_snapshots,
+        "executive_summary": f"Compliance Pack: {pack_name.upper()}. Status: {pack_data['status'].upper()}.",
+        "include_compliance": False
+    }
+    
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp_pdf:
+        tmp_path = tmp_pdf.name
+        
+    pdf_gen = PDFGenerator(tmp_path)
+    pdf_gen.generate(report_data)
+    
+    with open(tmp_path, "rb") as f:
+        pdf_bytes = f.read()
+    
+    os.remove(tmp_path)
+    pdf_hash = hashlib.sha256(pdf_bytes).hexdigest()
+    
+    headers = {
+        "Content-Disposition": f"attachment; filename=compliance_{pack_name}_{model_id}.pdf",
+        "X-Report-Hash": pdf_hash
+    }
+    return Response(content=pdf_bytes, media_type="application/pdf", headers=headers)
+
+@router.get("/packs/available")
+async def get_available_packs():
+    return [
+        {"name": "sr_11_7", "framework": "SR 11-7", "jurisdiction": "US", "version": "1.0", "check_count": 4},
+        {"name": "eu_ai_act", "framework": "EU AI Act", "jurisdiction": "EU", "version": "1.0", "check_count": 5},
+        {"name": "rbi_mlrg", "framework": "RBI MLRG", "jurisdiction": "India", "version": "1.0", "check_count": 4},
+        {"name": "fda_ai", "framework": "FDA AI Guidance", "jurisdiction": "US", "version": "1.0", "check_count": 3}
+    ]
+

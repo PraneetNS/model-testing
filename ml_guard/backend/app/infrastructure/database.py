@@ -5,7 +5,7 @@ from app.core.config import settings
 
 
 def _build_engine():
-    uri = settings.SQLALCHEMY_DATABASE_URI
+    uri = getattr(settings, "SQLALCHEMY_DATABASE_URI", getattr(settings, "DATABASE_URL", None))
 
     if uri and uri.startswith("sqlite"):
         # SQLite: disable pool (StaticPool) and allow WAL mode for concurrency
