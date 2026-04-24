@@ -1025,3 +1025,28 @@ class RedTeamRun(Base):
     robustness_score = Column(Float)
     attack_results  = Column(PortableJSON) # Details per attack
     regressions_detected = Column(Boolean, default=False)
+
+# ══════════════════════════════════════════════════════════
+# AUTOMATED RETRAINING TRIGGERS
+# ══════════════════════════════════════════════════════════
+
+class RetrainingPolicy(Base):
+    __tablename__ = "retraining_policies"
+    id = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    model_id = Column(String(255), index=True, unique=True, nullable=False)
+    enabled = Column(Boolean, default=False)
+    trigger_conditions = Column(PortableJSON, nullable=False)
+    retrain_action = Column(PortableJSON, nullable=False)
+    last_triggered_at = Column(DateTime, nullable=True)
+    trigger_count = Column(Integer, default=0)
+
+class RetrainingEvent(Base):
+    __tablename__ = "retraining_events"
+    id = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    policy_id = Column(UUID(), ForeignKey("retraining_policies.id", ondelete="CASCADE"), index=True, nullable=False)
+    model_id = Column(String(255), index=True, nullable=False)
+    triggered_at = Column(DateTime, default=utcnow)
+    triggered_conditions = Column(PortableJSON, nullable=False)
+    action_type = Column(String(50), nullable=False)
+    action_result = Column(String(50), nullable=False) # "success" or "failed"
+    action_error = Column(Text, nullable=True)

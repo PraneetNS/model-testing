@@ -99,6 +99,11 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.observability.run_performance_snapshot",
         "schedule": crontab(minute=0, hour="*/6"),  # Every 6 hours
     },
+    # Automated Retraining: Evaluate triggers every hour
+    "evaluate-retraining-triggers": {
+        "task": "app.tasks.retraining.evaluate_all_retraining_policies",
+        "schedule": crontab(minute=0),  # Every hour
+    },
 }
 
 celery_app.conf.timezone = "UTC"
@@ -126,6 +131,7 @@ ALLOWED_TASKS = {
     "app.domain.services.governance_engine.run_async_evaluation",
     "app.domain.services.governance_engine.run_scheduled_monitoring",
     "app.domain.services.llm_evaluator.tasks.run_llm_evaluation_task",
+    "app.tasks.retraining.evaluate_all_retraining_policies",
     "test_task",
 }
 

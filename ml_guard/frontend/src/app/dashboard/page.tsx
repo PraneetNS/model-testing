@@ -26,6 +26,7 @@ import ModelReportCardModule from "./modules/ModelReportCardModule";
 import ObservabilityModule from "./modules/ObservabilityModule";
 import GovernanceModule from "./modules/GovernanceModule";
 import ComplianceModule from "./modules/ComplianceModule";
+import RetrainingModule from "./modules/RetrainingModule";
 import NotificationsBell from "./components/NotificationsBell";
 import HuggingFacePluginModal from "./components/HuggingFaceModal";
 import { apiFetch, safeJson, apiPost, apiGet } from "@/lib/api";
@@ -1987,6 +1988,7 @@ const NAV_CATEGORIES = [
         items: [
             { id: "ci", label: "CI/CD Gate", sub: "Pipeline governance", icon: GitBranch },
             { id: "deployments", label: "Deployments", sub: "Environments · Promo", icon: Layout },
+            { id: "retraining", label: "Auto Retraining", sub: "Trigger rules & hooks", icon: Activity },
             { id: "security", label: "Security", sub: "Vulnerability audit", icon: ShieldAlert },
         ]
     },
@@ -2232,6 +2234,7 @@ export default function DashboardPage() {
                             {active === "report" && <ModelReportCardModule state={reportCardState} setState={setReportCardState} onAction={refreshEnterprise} />}
                             {active === "observe" && <ObservabilityModule state={observabilityState} setState={setObservabilityState} onAction={refreshEnterprise} />}
                             {active === "governance-score" && <GovernanceModule state={governanceState} setState={setGovernanceState} onAction={refreshEnterprise} />}
+                            {active === "retraining" && <RetrainingModule modelId={""} />}
                         </div>
                     </div>
                 </div>
