@@ -27,6 +27,7 @@ import ObservabilityModule from "./modules/ObservabilityModule";
 import GovernanceModule from "./modules/GovernanceModule";
 import ComplianceModule from "./modules/ComplianceModule";
 import RetrainingModule from "./modules/RetrainingModule";
+import GuardrailModule from "./modules/GuardrailModule";
 import NotificationsBell from "./components/NotificationsBell";
 import HuggingFacePluginModal from "./components/HuggingFaceModal";
 import { apiFetch, safeJson, apiPost, apiGet } from "@/lib/api";
@@ -1997,7 +1998,8 @@ const NAV_CATEGORIES = [
         label: "AI Safety",
         icon: Brain,
         items: [
-            { id: "llm", label: "LLM Guard", sub: "Prompt & response safety", icon: Brain },
+            { id: "llm", label: "LLM Eval", sub: "Prompt & response safety", icon: Brain },
+            { id: "guardrail", label: "Real-time Guardrail", sub: "Active input/output proxy", icon: ShieldCheck },
             { id: "advisory", label: "AI Advisor", sub: "Governance copilot", icon: Eye },
         ]
     },
@@ -2065,6 +2067,7 @@ export default function DashboardPage() {
     const [observabilityState, setObservabilityState] = useState({ modelId: "" });
     const [governanceState, setGovernanceState] = useState<{ selectedModelId: string }>({ selectedModelId: "" });
     const [complianceState, setComplianceState] = useState({});
+    const [guardrailState, setGuardrailState] = useState({});
 
     const refreshEnterprise = async () => {
         try {
@@ -2235,6 +2238,7 @@ export default function DashboardPage() {
                             {active === "observe" && <ObservabilityModule state={observabilityState} setState={setObservabilityState} onAction={refreshEnterprise} />}
                             {active === "governance-score" && <GovernanceModule state={governanceState} setState={setGovernanceState} onAction={refreshEnterprise} />}
                             {active === "retraining" && <RetrainingModule modelId={""} />}
+                            {active === "guardrail" && <GuardrailModule state={guardrailState} setState={setGuardrailState} onAction={refreshEnterprise} />}
                         </div>
                     </div>
                 </div>

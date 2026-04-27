@@ -45,6 +45,8 @@ from app.routers import fairness
 from app.routers import llm_eval
 from app.routers import rag_eval
 from app.routers import governance
+from app.routers import guardrail
+
 
 # ── Enterprise Platform Routers ────────────────────
 from app.routers import enterprise
@@ -407,6 +409,8 @@ app.include_router(public_connectors.kaggle_router, prefix="/api/plugins/kaggle"
 app.include_router(public_connectors.openml_router, prefix="/api/plugins/openml", tags=["openml"])
 app.include_router(public_connectors.roboflow_router, prefix="/api/plugins/roboflow", tags=["roboflow"])
 app.include_router(contact.router, prefix="/api/v1", tags=["contact"])
+app.include_router(guardrail.router, prefix="/api", tags=["guardrail"])
+
 
 if __name__ == "__main__":
     import uvicorn

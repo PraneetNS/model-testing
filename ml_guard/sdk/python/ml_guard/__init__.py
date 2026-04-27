@@ -40,7 +40,8 @@ Quick Start:
     def deploy_to_prod():
         ...
 """
-from .client import MLGuardClient, Guard
+from .client import MLGuardClient, Guard, GuardrailBlockedError
+
 from . import profile
 from .suite import Suite, tests
 from .decorators import monitor, gate, profile_input, trace_prediction
@@ -72,4 +73,6 @@ __all__ = [
     "wrap_xgboost",
     # Utilities
     "PredictionLogger",
+    "GuardrailBlockedError",
 ]
+

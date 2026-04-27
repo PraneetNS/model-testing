@@ -352,6 +352,55 @@ class MLGuardClient:
                 time.sleep(2 ** attempt)
 
         raise RuntimeError(f"Evaluation failed after {retries} attempts.")
+    
+    def evaluate_guardrail(
+        self,
+        guardrail_id: str,
+        prompt: str,
+        response: Optional[str] = None,
+        context_chunks: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Evaluate a prompt and/or response against a real-time guardrail.
+        
+        Args:
+            guardrail_id: The UUID of the guardrail configuration.
+            prompt: The user input prompt.
+            response: (Optional) The LLM response to check.
+            context_chunks: (Optional) Context used for grounding checks.
+            
+        Returns:
+            GuardrailDecision dict.
+            
+        Raises:
+            GuardrailBlockedError if the action is 'block'.
+        """
+        payload = {
+            "prompt": prompt,
+            "response": response,
+            "context_chunks": context_chunks,
+        }
+        # Note: Guardrail endpoint is at /api/guardrail/... (no v1)
+        url = f"{self.host}/api/guardrail/{guardrail_id}/evaluate"
+        try:
+            r = self._session.post(url, json=payload, timeout=5)
+            r.raise_for_status()
+            decision = r.json()
+            
+            if decision.get("action") == "block":
+                raise GuardrailBlockedError(
+                    message=decision.get("blocked_reason", "LLM request blocked by guardrail"),
+                    decision=decision
+                )
+            return decision
+        except requests.HTTPError as e:
+            raise RuntimeError(f"Guardrail evaluation failed: {e.response.text}") from e
+
+class GuardrailBlockedError(Exception):
+    def __init__(self, message: str, decision: Dict[str, Any]):
+        super().__init__(message)
+        self.decision = decision
+
 
 
 # ── Backwards-compat alias ─────────────────────────────────────────────────

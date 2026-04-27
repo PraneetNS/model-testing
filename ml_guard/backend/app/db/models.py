@@ -1050,3 +1050,42 @@ class RetrainingEvent(Base):
     action_type = Column(String(50), nullable=False)
     action_result = Column(String(50), nullable=False) # "success" or "failed"
     action_error = Column(Text, nullable=True)
+
+
+# ══════════════════════════════════════════════════════════
+# REAL-TIME GUARDRAILS (v8.0)
+# ══════════════════════════════════════════════════════════
+
+class GuardrailConfigModel(Base):
+    """Configuration for real-time LLM input/output filtering."""
+    __tablename__ = "guardrail_configs"
+    id                  = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    model_id            = Column(UUID(), ForeignKey("models.id", ondelete="CASCADE"), index=True, nullable=False)
+    name                = Column(String(255), nullable=False)
+    enabled_input_checks = Column(PortableJSON, nullable=False) # list of str
+    enabled_output_checks = Column(PortableJSON, nullable=False) # list of str
+    action_on_block     = Column(String(50), default="return_error") # return_error | return_fallback_response
+    fallback_response   = Column(Text, nullable=True)
+    allowed_topics      = Column(PortableJSON, nullable=False) # list of str
+    blocked_topics      = Column(PortableJSON, nullable=False) # list of str
+    created_at          = Column(DateTime, default=utcnow)
+    
+    model               = relationship("Model", backref=backref("guardrail_config", uselist=False, cascade="all, delete-orphan"))
+
+
+class GuardrailTrace(Base):
+    """Audit trail for every real-time guardrail evaluation."""
+    __tablename__ = "guardrail_traces"
+    id              = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    guardrail_id    = Column(UUID(), ForeignKey("guardrail_configs.id", ondelete="CASCADE"), index=True, nullable=False)
+    trace_id        = Column(String(36), index=True, nullable=False)
+    timestamp       = Column(DateTime, default=utcnow, index=True)
+    input_hash      = Column(String(64), nullable=True)
+    output_hash     = Column(String(64), nullable=True)
+    action          = Column(String(50), nullable=False)
+    latency_ms      = Column(Integer, nullable=False)
+    checks_summary  = Column(PortableJSON, nullable=False) # Simplified summary: {injection: bool, pii: bool, ...}
+    full_results    = Column(PortableJSON, nullable=False) # Complete JSON from GuardrailDecision
+    
+    config          = relationship("GuardrailConfigModel", backref="traces")
+
