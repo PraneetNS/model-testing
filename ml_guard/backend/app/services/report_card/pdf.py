@@ -117,6 +117,12 @@ class PDFGenerator:
         
         self.elements.append(Spacer(1, 0.5*inch))
         self.elements.append(Paragraph(f"Model: {report_data.get('model_name', 'M-ID-XXXX')}", self.styles['Normal']))
+        risk_tier = report_data.get('risk_tier', 'N/A').upper()
+        risk_color = colors.red if risk_tier == "CRITICAL" else colors.orange if risk_tier == "HIGH" else colors.yellow if risk_tier == "MEDIUM" else colors.green
+        risk_style = ParagraphStyle('RiskBadge', parent=self.styles['Normal'], backColor=risk_color, textColor=colors.white if risk_tier in ["CRITICAL", "HIGH"] else colors.black, alignment=0, borderPadding=4)
+        self.elements.append(Spacer(1, 0.1*inch))
+        self.elements.append(Paragraph(f"RISK TIER: {risk_tier}", risk_style))
+        self.elements.append(Spacer(1, 0.2*inch))
         self.elements.append(Paragraph(f"Audit Date: {report_data.get('issued_at', '')}", self.styles['Normal']))
         self.elements.append(Paragraph(f"Certificate Hash: {report_data.get('cert_hash', '')[:16]}...", self.styles['Normal']))
         

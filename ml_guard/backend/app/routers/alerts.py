@@ -11,7 +11,7 @@ from sqlalchemy import desc
 from pydantic import BaseModel
 from typing import List, Optional
 from app.db.session import get_db
-from app.db.models import AlertRule, AlertEvent, ScanRecord, AuditLog, utcnow
+from app.db.models import AlertRule, AlertEvent, ScanRecord, AuditLog, Model, utcnow
 
 router = APIRouter()
 
@@ -176,12 +176,38 @@ async def evaluate_alerts(scan_id: str, db: AsyncSession = Depends(get_db)):
 
 @router.get("/alerts/events")
 async def list_events(limit: int = 50, db: AsyncSession = Depends(get_db)):
-    events = (await db.execute(select(AlertEvent).order_by(desc(AlertEvent.created_at)).limit(limit))).scalars().all()
+    """List recent alerts, ordered by model risk tier (Critical first)."""
+    # Use a CASE statement for custom sorting of risk tiers
+    from sqlalchemy import case
+    
+    risk_order = case(
+        (Model.risk_tier == 'critical', 1),
+        (Model.risk_tier == 'high', 2),
+        (Model.risk_tier == 'medium', 3),
+        (Model.risk_tier == 'low', 4),
+        else_=5
+    )
+
+    stmt = (
+        select(AlertEvent, Model.risk_tier, Model.name.label("model_name"))
+        .outerjoin(ScanRecord, AlertEvent.scan_id == ScanRecord.id)
+        .outerjoin(Model, ScanRecord.model_id == Model.id)
+        .order_by(risk_order, desc(AlertEvent.created_at))
+        .limit(limit)
+    )
+    
+    results = (await db.execute(stmt)).all()
+    
     return [
         {
-            "id": str(e.id), "rule_id": str(e.rule_id),
-            "severity": e.severity, "message": e.message,
-            "delivered": e.delivered, "created_at": str(e.created_at),
+            "id": str(e.id), 
+            "rule_id": str(e.rule_id),
+            "severity": e.severity, 
+            "message": e.message,
+            "delivered": e.delivered, 
+            "created_at": str(e.created_at),
+            "risk_tier": risk_tier or "unassigned",
+            "model_name": model_name or "Unknown"
         }
-        for e in events
+        for e, risk_tier, model_name in results
     ]

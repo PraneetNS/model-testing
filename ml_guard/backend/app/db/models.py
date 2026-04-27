@@ -127,6 +127,20 @@ class Model(Base):
     complexity  = Column(PortableJSON, nullable=True)
     version     = Column(Integer, default=1)
     parent_model_id = Column(UUID(), ForeignKey("models.id"), nullable=True)  # for version chains
+    # ─── Risk Management & Inventory (v7.5) ──────────────────────────────────
+    risk_tier                = Column(String(20), nullable=True) # low, medium, high, critical
+    risk_tier_justification  = Column(Text, nullable=True)
+    use_case_category        = Column(String(100), nullable=True) # credit_scoring, fraud_detection, etc.
+    business_owner           = Column(String(255), nullable=True)
+    technical_owner          = Column(String(255), nullable=True)
+    deployment_environment   = Column(String(50), default="development") # production, staging, development, deprecated
+    first_deployed_at        = Column(DateTime, nullable=True)
+    regulatory_jurisdictions = Column(PortableJSON, default=list) # ["US", "EU", "India", etc.]
+    model_type               = Column(String(50), nullable=True) # nlp, llm, classification, etc.
+    training_data_sensitivity = Column(String(50), default="internal") # public, internal, confidential, restricted
+    last_validated_at        = Column(DateTime, nullable=True)
+    next_validation_due_at   = Column(DateTime, nullable=True)
+    validation_frequency_days = Column(Integer, default=365)
     # ─── Cloud Storage Fields ────────────────────────────────────────────────
     artifact_url             = Column(String(1024), nullable=True)  # R2 object key / URL
     artifact_size            = Column(BigInteger, nullable=True)     # bytes

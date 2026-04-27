@@ -57,6 +57,7 @@ from app.routers import ci
 from app.routers import reports
 from app.routers import ingest
 from app.routers import observe
+from app.routers import inventory
 
 # ── Infrastructure Routers ─────────────────────────
 from app.routers import jobs
@@ -410,6 +411,7 @@ app.include_router(public_connectors.openml_router, prefix="/api/plugins/openml"
 app.include_router(public_connectors.roboflow_router, prefix="/api/plugins/roboflow", tags=["roboflow"])
 app.include_router(contact.router, prefix="/api/v1", tags=["contact"])
 app.include_router(guardrail.router, prefix="/api", tags=["guardrail"])
+app.include_router(inventory.router)
 
 
 if __name__ == "__main__":

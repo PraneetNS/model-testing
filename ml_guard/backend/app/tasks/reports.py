@@ -72,7 +72,8 @@ async def generate_governance_report(model_id: str):
             "cert_hash": cert_hash,
             "metric_snapshots": audit_data,
             "executive_summary": summary,
-            "parent_score_data": parent_score_data
+            "parent_score_data": parent_score_data,
+            "risk_tier": builder.model.risk_tier or "N/A"
         }
         
         pdf_gen = PDFGenerator(tmp_path)

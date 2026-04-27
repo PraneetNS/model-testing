@@ -6,7 +6,7 @@ import {
     Building2, Users, FolderOpen, KeyRound, Bell, GitBranch, BarChart3,
     Clock, ArrowUpDown, TrendingUp, TrendingDown, Minus, Shield, Eye, LogOut, User,
     Scale, Brain, Zap, Package, FlaskConical, Target, Sliders, Database, Layout,
-    Search, ShieldAlert, MonitorCheck, Globe, ExternalLink, Star
+    Search, ShieldAlert, MonitorCheck, Globe, ExternalLink, Star, LayoutGrid
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip as ReTooltip, ResponsiveContainer } from "recharts";
@@ -28,6 +28,7 @@ import GovernanceModule from "./modules/GovernanceModule";
 import ComplianceModule from "./modules/ComplianceModule";
 import RetrainingModule from "./modules/RetrainingModule";
 import GuardrailModule from "./modules/GuardrailModule";
+import InventoryModule from "./modules/InventoryModule";
 import NotificationsBell from "./components/NotificationsBell";
 import HuggingFacePluginModal from "./components/HuggingFaceModal";
 import { apiFetch, safeJson, apiPost, apiGet } from "@/lib/api";
@@ -1957,6 +1958,7 @@ const NAV_CATEGORIES = [
             { id: "fairness", label: "Fairness", sub: "Bias & equity metrics", icon: Scale },
             { id: "explainability", label: "Explainability", sub: "SHAP & importance", icon: Zap },
             { id: "behavior", label: "Behavior Test", sub: "Scenario robustness", icon: Activity },
+            { id: "inventory", label: "Model Inventory", sub: "Risk & lineage tracking", icon: LayoutGrid },
         ]
     },
     {
@@ -2068,6 +2070,7 @@ export default function DashboardPage() {
     const [governanceState, setGovernanceState] = useState<{ selectedModelId: string }>({ selectedModelId: "" });
     const [complianceState, setComplianceState] = useState({});
     const [guardrailState, setGuardrailState] = useState({});
+    const [inventoryState, setInventoryState] = useState({});
 
     const refreshEnterprise = async () => {
         try {
@@ -2237,8 +2240,9 @@ export default function DashboardPage() {
                             {active === "report" && <ModelReportCardModule state={reportCardState} setState={setReportCardState} onAction={refreshEnterprise} />}
                             {active === "observe" && <ObservabilityModule state={observabilityState} setState={setObservabilityState} onAction={refreshEnterprise} />}
                             {active === "governance-score" && <GovernanceModule state={governanceState} setState={setGovernanceState} onAction={refreshEnterprise} />}
-                            {active === "retraining" && <RetrainingModule modelId={""} />}
-                            {active === "guardrail" && <GuardrailModule state={guardrailState} setState={setGuardrailState} onAction={refreshEnterprise} />}
+                            { active === "retraining" && <RetrainingModule modelId={""} /> }
+                            { active === "guardrail" && <GuardrailModule state={guardrailState} setState={setGuardrailState} onAction={refreshEnterprise} /> }
+                            { active === "inventory" && <InventoryModule /> }
                         </div>
                     </div>
                 </div>

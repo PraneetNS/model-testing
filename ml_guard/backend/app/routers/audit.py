@@ -454,6 +454,11 @@ async def run_audit(
             trigger_source="inline",
         )
         db.add(scan)
+        
+        # --- Auto-Tiering (v7.5) ---
+        if not model.risk_tier:
+            from app.services.inventory_service import auto_tier_model_logic
+            await auto_tier_model_logic(str(model.id), db)
 
         job_rec = (await db.execute(select(Job).filter(Job.id == job_id))).scalar_one_or_none()
         if job_rec:
