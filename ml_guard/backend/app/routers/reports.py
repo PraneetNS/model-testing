@@ -6,6 +6,9 @@ from app.db.models import Model, ReportCard
 from app.tasks.reports import generate_governance_report
 from datetime import datetime
 import structlog
+from app.billing.metering import record_usage
+from app.billing.enforcement import check_billing_limits
+from app.core.auth import AuthContext, require_role
 
 # Optional: slowapi for rate limiting (needs installation)
 # from slowapi import Limiter
@@ -16,12 +19,20 @@ logger = structlog.get_logger()
 # limiter = Limiter(key_func=get_remote_address)
 
 @router.post("/{model_id}/generate")
-async def start_report_generation(model_id: str, db: AsyncSession = Depends(get_db)):
+async def start_report_generation(
+    model_id: str, 
+    db: AsyncSession = Depends(get_db),
+    auth: AuthContext = Depends(require_role("ml_engineer")),
+    _billing: None = Depends(check_billing_limits)
+):
     """Async trigger for governance report card synthesis."""
     model = await db.get(Model, model_id)
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
         
+    # Record usage
+    record_usage(auth.org_id, getattr(auth, "key_id", None), "governance_report_generated")
+    
     task = generate_governance_report.delay(model_id)
     return {"task_id": task.id, "status": "PENDING", "estimated_seconds": 20}
 

@@ -39,6 +39,8 @@ from app.domain.services.risk_engine import RiskEngine
 from app.domain.services.drift_engine import DriftEngine
 from app.domain.services.governance_engine import GovernanceEngine
 from app.core.config import settings
+from app.billing.metering import record_usage
+from app.billing.enforcement import check_billing_limits
 
 storage_service = None
 try:
@@ -210,7 +212,8 @@ async def run_audit(
     selected: list = Form(["drift", "performance", "fairness", "security"]),
     policy_override: str = Form(None),
     db: AsyncSession = Depends(get_db),
-    auth: AuthContext = Depends(require_role("ml_engineer"))
+    auth: AuthContext = Depends(require_role("ml_engineer")),
+    _billing: None = Depends(check_billing_limits)
 ):
     from app.services.storage_service import download_from_url
     from app.db.models import Model, Project
@@ -227,6 +230,9 @@ async def run_audit(
         model = Model(name=model_name, project_id=project.id, created_by=auth.user_id)
         db.add(model)
         await db.flush()
+
+    # Record usage for the audit
+    record_usage(auth.org_id, getattr(auth, "key_id", None), "model_audited")
 
     import uuid
     submission_token = str(uuid.uuid4())
@@ -513,6 +519,8 @@ async def run_audit(
 async def get_default_policy():
     from ml_guard.core.policy import DEFAULT_POLICY
     return {"policy": DEFAULT_POLICY}
+
+
 # ════════════════════════════════════════════
 # ENDPOINT 5: Latest Security Scans
 # ════════════════════════════════════════════

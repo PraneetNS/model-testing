@@ -56,9 +56,15 @@ class Organization(Base):
     id          = Column(UUID(), primary_key=True, default=uuid.uuid4)
     name        = Column(String(255), unique=True, nullable=False)
     slug        = Column(String(255), unique=True, nullable=False, index=True)
-    plan        = Column(String(50), default="free")  # free, pro, enterprise
+    plan        = Column(String(50), default="free")  # DEPRECATED: use plan_id
+    stripe_customer_id      = Column(String(255), nullable=True, index=True)
+    stripe_subscription_id  = Column(String(255), nullable=True)
+    subscription_status     = Column(String(50), default="active") # active, past_due, canceled, trialing
+    plan_id                 = Column(UUID(), ForeignKey("subscription_plans.id"), nullable=True)
     settings    = Column(PortableJSON, default=dict)
     created_at  = Column(DateTime, default=utcnow)
+
+    subscription_plan = relationship("SubscriptionPlan")
 
     users       = relationship("User", back_populates="organization", cascade="all, delete-orphan")
     projects    = relationship("Project", back_populates="organization", cascade="all, delete-orphan")
@@ -854,6 +860,43 @@ class ModelContract(Base):
             f"<ModelContract(id={self.id}, model_id={self.model_id!r}, "
             f"name={self.name!r}, active={self.is_active})>"
         )
+
+
+# ══════════════════════════════════════════════════════════
+# BILLING + METERING MODELS (v7.5)
+# ══════════════════════════════════════════════════════════
+
+class SubscriptionPlan(Base):
+    """Tiered pricing and usage limits."""
+    __tablename__ = "subscription_plans"
+    id                  = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    name                = Column(String(50), nullable=False, unique=True)
+    slug                = Column(String(50), nullable=False, unique=True) # free, pro, enterprise
+    price_monthly_usd   = Column(Integer, default=0)
+    predictions_per_month = Column(Integer, default=1000)
+    models_limit        = Column(Integer, default=2) # -1 for unlimited
+    reports_per_month   = Column(Integer, default=1)
+    compliance_packs_limit = Column(Integer, default=0)
+    guardrail_eval_limit = Column(Integer, default=0)
+    is_custom_price     = Column(Boolean, default=False)
+    created_at          = Column(DateTime, default=utcnow)
+
+class UsageEvent(Base):
+    """Granular event log for metered billing."""
+    __tablename__ = "usage_events"
+    id              = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    org_id          = Column(UUID(), ForeignKey("organizations.id", ondelete="CASCADE"), index=True, nullable=False)
+    api_key_id      = Column(UUID(), ForeignKey("api_keys.id", ondelete="SET NULL"), nullable=True)
+    event_type      = Column(String(100), nullable=False, index=True)
+    # prediction_logged, governance_report_generated, compliance_pack_run, 
+    # compliance_certificate_issued, red_team_run, guardrail_evaluated, 
+    # aibom_generated, model_audited
+    quantity        = Column(Integer, default=1)
+    metadata_json   = Column(PortableJSON, default=dict)
+    timestamp       = Column(DateTime, default=utcnow, index=True, nullable=False)
+
+    organization    = relationship("Organization")
+    api_key         = relationship("APIKey")
 
 
 class ContractBreach(Base):

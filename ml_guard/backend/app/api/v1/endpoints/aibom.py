@@ -10,6 +10,8 @@ from app.db.session import get_db
 from app.db.models import AIBOM, Model
 from app.core.auth import AuthContext, require_role
 from app.workers.tasks import generate_aibom_task
+from app.billing.metering import record_usage
+from app.billing.enforcement import check_billing_limits
 
 router = APIRouter()
 
@@ -20,13 +22,17 @@ async def generate_aibom_endpoint(
     model_file: UploadFile = File(...),
     dataset_files: List[UploadFile] = File([]),
     db: AsyncSession = Depends(get_db),
-    auth: AuthContext = Depends(require_role("ml_engineer"))
+    auth: AuthContext = Depends(require_role("ml_engineer")),
+    _billing: None = Depends(check_billing_limits)
 ):
     # Check if model exists
     result = await db.execute(select(Model).filter(Model.id == model_id))
     model = result.scalars().first()
     if not model:
         raise HTTPException(404, "Model not found")
+
+    # Record usage
+    record_usage(auth.org_id, getattr(auth, "key_id", None), "aibom_generated")
 
     try:
         meta_dict = json.loads(metadata)

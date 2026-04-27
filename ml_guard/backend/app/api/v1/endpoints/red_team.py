@@ -8,6 +8,8 @@ from app.db.session import get_db
 from app.db.models import RedTeamSchedule, RedTeamRun, Model
 from app.core.auth import AuthContext, require_role
 from app.workers.tasks import run_red_team_task
+from app.billing.metering import record_usage
+from app.billing.enforcement import check_billing_limits
 
 router = APIRouter()
 
@@ -46,9 +48,13 @@ async def run_red_team_now(
     model_id: str,
     profile: str = Body("standard", embed=True),
     db: AsyncSession = Depends(get_db),
-    auth: AuthContext = Depends(require_role("ml_engineer"))
+    auth: AuthContext = Depends(require_role("ml_engineer")),
+    _billing: None = Depends(check_billing_limits)
 ):
     """Triggers an immediate background red teaming run."""
+    # Record usage
+    record_usage(auth.org_id, getattr(auth, "key_id", None), "red_team_run", metadata={"profile": profile})
+    
     task = run_red_team_task.delay(model_id, profile)
     return {"task_id": task.id, "status": "queued"}
 

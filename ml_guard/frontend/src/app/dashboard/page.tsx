@@ -6,7 +6,7 @@ import {
     Building2, Users, FolderOpen, KeyRound, Bell, GitBranch, BarChart3,
     Clock, ArrowUpDown, TrendingUp, TrendingDown, Minus, Shield, Eye, LogOut, User,
     Scale, Brain, Zap, Package, FlaskConical, Target, Sliders, Database, Layout,
-    Search, ShieldAlert, MonitorCheck, Globe, ExternalLink, Star, LayoutGrid
+    Search, ShieldAlert, MonitorCheck, Globe, ExternalLink, Star, LayoutGrid, CreditCard, DollarSign
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip as ReTooltip, ResponsiveContainer } from "recharts";
@@ -29,6 +29,7 @@ import ComplianceModule from "./modules/ComplianceModule";
 import RetrainingModule from "./modules/RetrainingModule";
 import GuardrailModule from "./modules/GuardrailModule";
 import InventoryModule from "./modules/InventoryModule";
+import BillingModule from "./modules/BillingModule";
 import NotificationsBell from "./components/NotificationsBell";
 import HuggingFacePluginModal from "./components/HuggingFaceModal";
 import { apiFetch, safeJson, apiPost, apiGet } from "@/lib/api";
@@ -2011,6 +2012,7 @@ const NAV_CATEGORIES = [
         icon: Building2,
         items: [
             { id: "enterprise", label: "Enterprise Hub", sub: "Org · Policies · Audit", icon: Building2 },
+            { id: "billing", label: "Billing & Usage", sub: "Plans · Metering · Payments", icon: CreditCard },
         ]
     }
 ];
@@ -2071,6 +2073,7 @@ export default function DashboardPage() {
     const [complianceState, setComplianceState] = useState({});
     const [guardrailState, setGuardrailState] = useState({});
     const [inventoryState, setInventoryState] = useState({});
+    const [billingState, setBillingState] = useState({});
 
     const refreshEnterprise = async () => {
         try {
@@ -2243,6 +2246,7 @@ export default function DashboardPage() {
                             { active === "retraining" && <RetrainingModule modelId={""} /> }
                             { active === "guardrail" && <GuardrailModule state={guardrailState} setState={setGuardrailState} onAction={refreshEnterprise} /> }
                             { active === "inventory" && <InventoryModule /> }
+                            { active === "billing" && <BillingModule /> }
                         </div>
                     </div>
                 </div>

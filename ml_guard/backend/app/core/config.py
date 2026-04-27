@@ -37,6 +37,12 @@ class Settings(BaseSettings):
     # Anthropic (optional - for LLM summaries)
     ANTHROPIC_API_KEY: str = ""
     
+    # Stripe (Billing)
+   
+
+    STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY") # Placeholder test key
+    STRIPE_WEBHOOK_SECRET: str = "whsec_..."
+    
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore"

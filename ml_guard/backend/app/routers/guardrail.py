@@ -11,6 +11,8 @@ from app.db.session import get_db
 from app.db.models import GuardrailConfigModel, GuardrailTrace, Model
 from app.core.auth import AuthContext, get_auth_context, log_action
 from ml_guard.core.guardrail import GuardrailEngine, GuardrailConfig, GuardrailDecision
+from app.billing.metering import record_usage
+from app.billing.enforcement import check_billing_limits
 
 router = APIRouter()
 
@@ -71,7 +73,9 @@ async def create_guardrail_config(
 async def evaluate_guardrail(
     guardrail_id: str,
     payload: Dict[str, Any],
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    auth: AuthContext = Depends(get_auth_context),
+    _billing: None = Depends(check_billing_limits)
 ):
     """
     Real-time guardrail evaluation.
@@ -105,6 +109,9 @@ async def evaluate_guardrail(
     
     decision = engine.evaluate(prompt, response, context_chunks)
     
+    # Record usage
+    record_usage(auth.org_id, getattr(auth, "key_id", None), "guardrail_evaluated")
+
     # 4. Log trace asynchronously (we'll do it before returning to stay within sync context but it's fast)
     # Note: The requirement says "no Celery, all synchronous" for the response.
     

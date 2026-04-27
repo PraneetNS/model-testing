@@ -132,6 +132,7 @@ ALLOWED_TASKS = {
     "app.domain.services.governance_engine.run_scheduled_monitoring",
     "app.domain.services.llm_evaluator.tasks.run_llm_evaluation_task",
     "app.tasks.retraining.evaluate_all_retraining_policies",
+    "app.tasks.billing.record_usage_task",
     "test_task",
 }
 

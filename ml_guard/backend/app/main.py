@@ -88,6 +88,7 @@ from app.routers import contracts
 
 # ── API/Tasks Router ───────────────────────────────
 from app.api.routers import tasks
+from app.api.routers import billing
 
 # ─── Lifespan Management ───
 @asynccontextmanager
@@ -412,6 +413,7 @@ app.include_router(public_connectors.roboflow_router, prefix="/api/plugins/robof
 app.include_router(contact.router, prefix="/api/v1", tags=["contact"])
 app.include_router(guardrail.router, prefix="/api", tags=["guardrail"])
 app.include_router(inventory.router)
+app.include_router(billing.router, prefix="/api/billing", tags=["billing"])
 
 
 if __name__ == "__main__":

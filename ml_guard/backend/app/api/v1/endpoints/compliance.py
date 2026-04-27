@@ -8,6 +8,9 @@ from app.domain.services.compliance import ComplianceService
 from app.domain.models.test_suite import QualityGateResult
 
 logger = structlog.get_logger(__name__)
+from app.billing.metering import record_usage
+from app.billing.enforcement import check_billing_limits
+from app.core.auth import AuthContext, require_role
 router = APIRouter()
 compliance_service = ComplianceService()
 
@@ -57,7 +60,15 @@ import hashlib
 from fastapi.responses import Response
 
 @router.get("/{model_id}/pack/{pack_name}")
-async def get_compliance_pack(model_id: str, pack_name: str, db: AsyncSession = Depends(deps.get_db)):
+async def get_compliance_pack(
+    model_id: str, 
+    pack_name: str, 
+    db: AsyncSession = Depends(deps.get_db),
+    auth: AuthContext = Depends(require_role("viewer")),
+    _billing: None = Depends(check_billing_limits)
+):
+    # Record usage
+    record_usage(auth.org_id, getattr(auth, "key_id", None), "compliance_pack_run")
     checks = []
     import sys
     import os
@@ -88,8 +99,16 @@ async def get_compliance_pack(model_id: str, pack_name: str, db: AsyncSession = 
     return {"status": status, "score": score, "checks": checks}
 
 @router.get("/{model_id}/pack/{pack_name}/pdf")
-async def get_compliance_pack_pdf(model_id: str, pack_name: str, db: AsyncSession = Depends(deps.get_db)):
-    pack_data = await get_compliance_pack(model_id, pack_name, db)
+async def get_compliance_pack_pdf(
+    model_id: str, 
+    pack_name: str, 
+    db: AsyncSession = Depends(deps.get_db),
+    auth: AuthContext = Depends(require_role("ml_engineer")),
+    _billing: None = Depends(check_billing_limits)
+):
+    # Record usage for certificate issuance
+    record_usage(auth.org_id, getattr(auth, "key_id", None), "compliance_certificate_issued")
+    pack_data = await get_compliance_pack(model_id, pack_name, db, auth, _billing)
     checks = pack_data["checks"]
     score = pack_data["score"]
     

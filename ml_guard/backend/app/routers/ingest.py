@@ -21,6 +21,8 @@ from sqlalchemy.future import select
 from app.db.models import PredictionLog
 from app.db.session import get_db
 from app.services.ingestion_service import ingest_single, stitch_labels
+from app.core.auth import AuthContext, get_auth_context
+from app.billing.metering import record_usage
 
 router = APIRouter()
 
@@ -77,6 +79,7 @@ async def _background_ingest(req: PredictRequest, log_id: str) -> None:
 async def ingest_single_prediction(
     req: PredictRequest,
     background_tasks: BackgroundTasks,
+    auth: AuthContext = Depends(get_auth_context)
 ):
     """
     Accepts a single prediction and writes it asynchronously.
@@ -84,11 +87,16 @@ async def ingest_single_prediction(
     """
     log_id = str(uuid.uuid4())
     background_tasks.add_task(_background_ingest, req, log_id)
+    # Record usage
+    record_usage(auth.org_id, getattr(auth, "key_id", None), "prediction_logged")
     return {"log_id": log_id, "status": "accepted"}
 
 
 @router.post("/batch", status_code=202)
-async def ingest_batch_predictions(req: BatchPredictRequest):
+async def ingest_batch_predictions(
+    req: BatchPredictRequest,
+    auth: AuthContext = Depends(get_auth_context)
+):
     """
     Accepts a batch of predictions (max 10,000) and dispatches
     a Celery task for DB bulk-insert.
@@ -110,6 +118,9 @@ async def ingest_batch_predictions(req: BatchPredictRequest):
         from app.services.ingestion_service import ingest_batch
         await ingest_batch(rows)
         task_id = "sync-fallback"
+
+    # Record usage
+    record_usage(auth.org_id, getattr(auth, "key_id", None), "prediction_logged", quantity=len(rows))
 
     return {"task_id": task_id, "count": len(rows), "status": "dispatched"}
 
