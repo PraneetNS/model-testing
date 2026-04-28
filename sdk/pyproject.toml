@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "niyantrana"
+version = "0.1.0"
+description = "Open-source AI governance SDK — drift detection, fairness, explainability, and LLM guardrails"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+dependencies = [
+    "pandas>=1.3.0",
+    "numpy>=1.21.0",
+    "scipy>=1.7.0",
+    "scikit-learn>=1.0.0",
+    "pydantic>=2.0.0"
+]
+
+[project.optional-dependencies]
+platform = ["httpx>=0.24.0"]
+llm = ["openai>=1.0.0"] # Or whatever is needed for LLM guardrails
+explain = ["shap>=0.42.0", "lime>=0.2.0"]
+all = ["httpx>=0.24.0", "shap>=0.42.0", "lime>=0.2.0", "openai>=1.0.0"]
+
+[project.urls]
+"Homepage" = "https://github.com/niyantrana/niyantrana"
+"Bug Tracker" = "https://github.com/niyantrana/niyantrana/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["niyantrana*"]
