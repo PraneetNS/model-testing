@@ -65,6 +65,9 @@ class PullDatasetRequest(BaseModel):
     split: str = "test"
     max_rows: int = Field(10_000, ge=1, le=100_000)
     hf_token: Optional[str] = Field(None, description="Ephemeral HF token — never stored.")
+    model_id: Optional[str] = None
+    dataset_type: str = "training"
+    dataset_name: Optional[str] = None
 
     @field_validator("repo_id")
     @classmethod
@@ -196,12 +199,12 @@ async def pull_model_from_hf(
 @router.post("/huggingface/pull-dataset", tags=["huggingface"])
 async def pull_dataset_from_hf(
     req: PullDatasetRequest,
+    db: AsyncSession = Depends(get_db),
     auth: AuthContext = Depends(require_role("ml_engineer")),
 ):
     """
-    Load a dataset from HuggingFace Datasets, convert to CSV.
-
-    HF token is used only for this request and discarded.
+    Load a dataset from HuggingFace Datasets, convert to CSV,
+    and register in the ML Guard lineage store if model_id is provided.
     """
     plugin = _get_plugin(req.hf_token)
 
@@ -217,7 +220,63 @@ async def pull_dataset_from_hf(
         logger.exception("HF dataset pull failed")
         raise HTTPException(status_code=502, detail=f"HuggingFace dataset pull failed: {e}")
 
-    return result
+    # Register in DB if requested
+    dataset_id = None
+    if req.model_id:
+        from app.db.models import Dataset, DatasetVersion, Model
+        from sqlalchemy.future import select
+
+        model = await db.get(Model, req.model_id)
+        if not model:
+            raise HTTPException(404, "Target model not found.")
+
+        name = req.dataset_name or f"HF: {req.repo_id} ({req.split})"
+        
+        # Compute SHA-256 for the new CSV
+        import hashlib
+        h = hashlib.sha256()
+        with open(result["local_csv_path"], "rb") as f:
+            for chunk in iter(lambda: f.read(8192), b""):
+                h.update(chunk)
+        sha256 = h.hexdigest()
+
+        dataset = Dataset(
+            model_id=req.model_id,
+            type=req.dataset_type,
+            metadata_json={
+                "name": name,
+                "source": "huggingface_hub",
+                "repo_id": req.repo_id,
+                "split": req.split,
+            },
+            row_count=result["row_count"],
+            fingerprint=sha256[:32],
+        )
+        db.add(dataset)
+        await db.flush()
+        dataset_id = str(dataset.id)
+
+        version = DatasetVersion(
+            dataset_id=dataset.id,
+            version_number=1,
+            storage_url=result["local_csv_path"],
+            schema_hash=sha256[:32],
+            row_count=result["row_count"],
+            feature_count=len(result["column_names"]),
+            created_by=auth.user_id,
+        )
+        db.add(version)
+        await db.commit()
+
+        await log_action(db, auth, "huggingface.pull_dataset", "dataset", dataset_id, {
+            "repo_id": req.repo_id, "split": req.split
+        })
+
+    return {
+        **result,
+        "dataset_id": dataset_id,
+        "status": "registered" if dataset_id else "pulled_only"
+    }
 
 
 # ═════════════════════════════════════════════════
@@ -283,7 +342,41 @@ async def audit_from_hub(
     db.add(model)
     await db.flush()
 
-    # 4. Create a job for tracking
+    # 4. Register dataset in DB
+    import hashlib
+    h = hashlib.sha256()
+    with open(data_result["local_csv_path"], "rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            h.update(chunk)
+    sha256 = h.hexdigest()
+
+    dataset = Dataset(
+        model_id=model.id,
+        type="validation", # Typically test split used for audit
+        metadata_json={
+            "name": f"HF Audit: {req.dataset_repo_id}",
+            "source": "huggingface_hub",
+            "repo_id": req.dataset_repo_id,
+            "split": req.split,
+        },
+        row_count=data_result["row_count"],
+        fingerprint=sha256[:32],
+    )
+    db.add(dataset)
+    await db.flush()
+
+    version = DatasetVersion(
+        dataset_id=dataset.id,
+        version_number=1,
+        storage_url=data_result["local_csv_path"],
+        schema_hash=sha256[:32],
+        row_count=data_result["row_count"],
+        feature_count=len(data_result["column_names"]),
+        created_by=auth.user_id,
+    )
+    db.add(version)
+
+    # 5. Create a job for tracking
     submission_token = str(uuid.uuid4())
     job = Job(model_id=model.id, status="PENDING", submission_token=submission_token)
     db.add(job)

@@ -27,13 +27,13 @@ const Badge = ({ label, color }: { label: string; color: "green" | "red" | "ambe
 const MetricRow = ({ label, value, sub, status }: any) => {
     const color = status === "PASSED" ? "text-emerald-400" : status === "WARNING" ? "text-amber-400" : status === "FAILED" ? "text-red-400" : "text-white";
     return (
-        <div className="flex items-center justify-between py-2 border-b border-white/[0.03]">
+        <div className="flex items-center justify-between py-2 border-b border-white/[0.03] print:border-gray-100">
             <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{label}</p>
-                {sub && <p className="text-[9px] text-slate-600 italic">{sub}</p>}
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 print:text-gray-500">{label}</p>
+                {sub && <p className="text-[9px] text-slate-600 italic print:text-gray-400">{sub}</p>}
             </div>
             <div className="text-right">
-                <p className={`text-sm font-black ${color}`}>{typeof value === "number" ? value.toFixed(4) : value}</p>
+                <p className={`text-sm font-black ${color} print:text-black`}>{typeof value === "number" ? value.toFixed(4) : value}</p>
             </div>
         </div>
     );
@@ -251,15 +251,15 @@ export default function ModelReportCard({ state, setState, onAction }: any) {
                         {/* Footer Sign-off */}
                         <div className="mt-20 pt-10 border-t border-white/10 flex items-end justify-between print:border-black/20">
                             <div>
-                                <p className="text-[9px] font-black text-slate-700 uppercase mb-8">Digital Governance Verification Pulse</p>
+                                <p className="text-[9px] font-black text-slate-700 uppercase mb-8 print:text-gray-400">Digital Governance Verification Pulse</p>
                                 <div className="flex gap-4">
                                     <div className="text-center">
-                                        <div className="w-32 h-[1px] bg-slate-800 mb-2" />
-                                        <p className="text-[8px] font-black text-slate-600 uppercase uppercase">Chief AI Risk Officer</p>
+                                        <div className="w-32 h-[1px] bg-slate-800 mb-2 print:bg-gray-300" />
+                                        <p className="text-[8px] font-black text-slate-600 uppercase print:text-gray-500">Chief AI Risk Officer</p>
                                     </div>
                                     <div className="text-center">
-                                        <div className="w-32 h-[1px] bg-slate-800 mb-2" />
-                                        <p className="text-[8px] font-black text-slate-600 uppercase">Automated Governance Engine</p>
+                                        <div className="w-32 h-[1px] bg-slate-800 mb-2 print:bg-gray-300" />
+                                        <p className="text-[8px] font-black text-slate-600 uppercase print:text-gray-500">Automated Governance Engine</p>
                                     </div>
                                 </div>
                             </div>

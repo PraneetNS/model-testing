@@ -231,6 +231,45 @@ async def run_audit(
         db.add(model)
         await db.flush()
 
+    async def _ensure_dataset_registered(ds_bytes: bytes, ds_filename: str, ds_type: str, model_id: str, row_count: int = 0):
+        if not ds_bytes: return None
+        ds_fingerprint = hashlib.sha256(ds_bytes).hexdigest()[:32]
+        
+        # Check if already exists for this model
+        existing = (await db.execute(select(Dataset).filter(
+            Dataset.model_id == model_id,
+            Dataset.fingerprint == ds_fingerprint
+        ))).scalars().first()
+        
+        if existing:
+            return existing.id
+
+        # Register new
+        new_ds = Dataset(
+            model_id=model_id,
+            type=ds_type,
+            metadata_json={"name": ds_filename, "source": "audit_upload"},
+            row_count=row_count,
+            fingerprint=ds_fingerprint
+        )
+        db.add(new_ds)
+        await db.flush()
+
+        # Save to permanent storage (optional, for now just DB entry)
+        # In a real system, we'd move the bytes to minio/S3 here
+        
+        version = DatasetVersion(
+            dataset_id=new_ds.id,
+            version_number=1,
+            storage_url=f"audit://{ds_filename}",
+            schema_hash=ds_fingerprint,
+            row_count=row_count,
+            created_by=auth.user_id
+        )
+        db.add(version)
+        await db.flush()
+        return new_ds.id
+
     # Record usage for the audit
     record_usage(auth.org_id, getattr(auth, "key_id", None), "model_audited")
 
@@ -339,6 +378,10 @@ async def run_audit(
 
         df_train = _read_df(train_path)
         df_val = _read_df(val_path)
+
+        # --- Register datasets in lineage store (now with row counts) ---
+        await _ensure_dataset_registered(t_bytes, t_name, "training", str(model.id), row_count=len(df_train))
+        await _ensure_dataset_registered(v_bytes, v_name, "validation", str(model.id), row_count=len(df_val))
 
         feature_names = [c for c in df_train.columns if c != label_col]
         X_train_df = pd.get_dummies(df_train[feature_names])

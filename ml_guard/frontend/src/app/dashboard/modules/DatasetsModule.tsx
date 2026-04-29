@@ -28,9 +28,8 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
         model_id: "", name: "", type: "training", source: "local",
         config: {} 
     });
-    const [openmlQuery, setOpenmlQuery] = useState("");
-    const [openmlResults, setOpenmlResults] = useState<any[]>([]);
     const [searchingOpenml, setSearchingOpenml] = useState(false);
+    const [uploadFile, setUploadFile] = useState<File | null>(null);
 
     const fetchDatasets = async () => {
         setLoading(true);
@@ -82,27 +81,33 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
         try {
             let res;
             if (newDataset.source === "local") {
-                // Legacy registration
-                res = await apiFetch(`/api/v1/datasets/register`, {
+                if (!uploadFile) {
+                    alert("Please select a file to upload.");
+                    setRegistering(false);
+                    return;
+                }
+                const fd = new FormData();
+                fd.append("file", uploadFile);
+                fd.append("model_id", newDataset.model_id);
+                fd.append("dataset_name", newDataset.name);
+                fd.append("dataset_type", newDataset.type);
+
+                res = await apiFetch(`/api/v1/datasets/upload`, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        model_id: newDataset.model_id,
-                        dataset_type: newDataset.type,
-                        dataset_name: newDataset.name,
-                    })
+                    body: fd
                 });
             } else {
                 // Plugin-based fetch
                 const endpoint = newDataset.source === "huggingface" 
-                    ? `/api/plugins/huggingface/fetch`
+                    ? `/api/plugins/huggingface/pull-dataset` // Corrected path
                     : `/api/plugins/${newDataset.source}/fetch`;
                 
                 res = await apiFetch(endpoint, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        source_uri: newDataset.source === "openml" ? `openml://${newDataset.config.dataset_id}` : newDataset.name,
+                        source_uri: newDataset.source === "openml" ? `openml://${newDataset.config.dataset_id}` : (newDataset.config.repo_id || newDataset.name),
+                        repo_id: newDataset.config.repo_id,
                         config: newDataset.config,
                         model_id: newDataset.model_id,
                         dataset_type: newDataset.type,
@@ -114,6 +119,7 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
             if (res.ok) {
                 setShowRegister(false);
                 setNewDataset({ model_id: "", name: "", type: "training", source: "local", config: {} });
+                setUploadFile(null);
                 fetchDatasets();
             } else {
                 const err = await safeJson(res);
@@ -252,7 +258,17 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
                                     </div>
                                 )}
                                 {newDataset.source === "local" && (
-                                    <div className="text-xs text-slate-500 italic p-2">Upload a file directly from your computer (Coming Soon).</div>
+                                    <div className="space-y-2">
+                                        <p className="text-[9px] font-black uppercase text-slate-500 mb-1">Select File (.csv, .parquet)</p>
+                                        <div className="flex items-center gap-3">
+                                            <label className={`flex-1 flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${uploadFile ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-white/5 bg-black/20 hover:border-emerald-500/20'}`}>
+                                                <Database className={`w-4 h-4 ${uploadFile ? 'text-emerald-400' : 'text-slate-600'}`} />
+                                                <span className={`text-xs font-bold truncate ${uploadFile ? 'text-emerald-300' : 'text-slate-500'}`}>{uploadFile ? uploadFile.name : "Click to select file"}</span>
+                                                <input type="file" accept=".csv,.parquet" className="hidden" onChange={e => e.target.files?.[0] && setUploadFile(e.target.files[0])} />
+                                            </label>
+                                            {uploadFile && <button type="button" onClick={() => setUploadFile(null)} className="text-[10px] text-red-500 font-black uppercase hover:text-red-400">Clear</button>}
+                                        </div>
+                                    </div>
                                 )}
                             </div>
                             

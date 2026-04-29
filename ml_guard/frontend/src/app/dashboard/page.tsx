@@ -2180,7 +2180,7 @@ export default function DashboardPage() {
     return (
         <div className="flex h-screen bg-[#050608] text-slate-200 overflow-hidden font-inter selection:bg-orange-500/30">
             {/* ════ Sidebar Navigation ════ */}
-            <aside className="w-72 flex-shrink-0 border-r border-white/5 bg-[#08090B] flex flex-col h-full shadow-[20px_0_40px_rgba(0,0,0,0.5)] z-[60]">
+            <aside className="w-72 flex-shrink-0 border-r border-white/5 bg-[#08090B] flex flex-col h-full shadow-[20px_0_40px_rgba(0,0,0,0.5)] z-[60] print:hidden">
                 {/* Brand */}
                 <div className="p-8 pb-4 flex items-center gap-4">
                     <div className="w-10 h-10 rounded-2xl bg-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/20 group cursor-pointer hover:rotate-12 transition-transform">
@@ -2257,10 +2257,10 @@ export default function DashboardPage() {
             {/* ════ Content Area ════ */}
             <main className="flex-1 flex flex-col h-full overflow-hidden relative">
                 {/* Header Shadow Overlay */}
-                <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-[#050608] to-transparent pointer-events-none z-10 opactiy-50" />
+                <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-[#050608] to-transparent pointer-events-none z-10 opactiy-50 print:hidden" />
 
                 {/* Top Toolbar */}
-                <header className="px-10 h-24 flex items-center justify-between z-20 shrink-0">
+                <header className="px-10 h-24 flex items-center justify-between z-20 shrink-0 print:hidden">
                     <div className="flex items-center gap-6">
                         <div className="flex items-center gap-2">
                             <div className="p-2.5 rounded-xl bg-orange-600/10 border border-orange-500/10">
@@ -2323,8 +2323,8 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Ambient Glows */}
-                <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-orange-500/5 blur-[120px] pointer-events-none rounded-full" />
-                <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/5 blur-[120px] pointer-events-none rounded-full" />
+                <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-orange-500/5 blur-[120px] pointer-events-none rounded-full print:hidden" />
+                <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/5 blur-[120px] pointer-events-none rounded-full print:hidden" />
             </main>
 
             <HuggingFacePluginModal 

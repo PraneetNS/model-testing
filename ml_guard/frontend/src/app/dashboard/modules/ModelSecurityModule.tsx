@@ -10,6 +10,7 @@ const Card = ({ children, className = "" }: any) => (
 
 export default function ModelSecurityModule({ state, setState, onAction }: any) {
     const [modelId, setModelId] = useState("");
+    const [availableModels, setAvailableModels] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [results, setResults] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
@@ -18,24 +19,32 @@ export default function ModelSecurityModule({ state, setState, onAction }: any) 
     const [fetchingHistory, setFetchingHistory] = useState(false);
 
     const runSecurityScan = async () => {
+        if (!modelId) {
+            setError("Please select a model first.");
+            return;
+        }
         setLoading(true); setError(null);
         try {
-            // Note: In ML Guard, security checks are part of the full model audit.
-            // Explain to user how to run a full audit.
-            const res = await apiFetch(`/api/v1/audit/run`, {
+            const res = await apiFetch(`/api/v1/security/run-scan`, {
                 method: "POST",
-                // This requires files, so in the UI we should redirect to Audit tab 
-                // or provide a simpler 'test scan' for security.
+                body: JSON.stringify({ model_id: modelId })
             });
-            // ... (rest of logic)
-        } catch (e: any) { setError("To run a security scan, upload a model in the Audit tab with 'Security Audit' enabled. Showing latest results below."); }
-        finally { setLoading(false); fetchHistory(); }
+            if (!res.ok) throw new Error("Scan initiation failed");
+            const data = await safeJson(res);
+            setResults({ results: data.results });
+        } catch (e: any) { 
+            setError("Security scan failed. Ensure the model is active."); 
+        } finally { 
+            setLoading(false); 
+            fetchHistory(); 
+        }
     };
 
     const fetchHistory = async () => {
         setFetchingHistory(true);
         try {
-            const res = await apiFetch(`/api/v1/security/scans`);
+            const url = modelId ? `/api/v1/security/scans?model_id=${modelId}` : `/api/v1/security/scans`;
+            const res = await apiFetch(url);
             if (!res.ok) throw new Error("Failed to fetch history");
             const d = await safeJson(res);
             const scans = Array.isArray(d) ? d : [];
@@ -50,13 +59,43 @@ export default function ModelSecurityModule({ state, setState, onAction }: any) 
     };
 
     useEffect(() => {
+        apiFetch("/api/inventory")
+            .then(res => safeJson<any[]>(res))
+            .then(data => {
+                if (Array.isArray(data)) setAvailableModels(data);
+            })
+            .catch(console.error);
+    }, []);
+
+    useEffect(() => {
         fetchHistory();
         const interval = setInterval(fetchHistory, 10000); // Auto refresh every 10s
         return () => clearInterval(interval);
-    }, []);
+    }, [modelId]);
 
     return (
-        <div className="grid grid-cols-1 xl:grid-cols-[400px_1fr] gap-8">
+        <div className="space-y-6">
+            <div className="bg-[#0E1014] border border-white/5 p-4 rounded-2xl flex items-center gap-4">
+                <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-2">Target Model</p>
+                <select 
+                    value={modelId} 
+                    onChange={(e) => setModelId(e.target.value)}
+                    className="bg-black border border-white/10 rounded-lg px-4 py-2 text-xs font-black text-white focus:outline-none focus:border-red-500/50 transition-colors"
+                >
+                    <option value="">Select a model...</option>
+                    {availableModels.map(m => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                    ))}
+                </select>
+                {modelId && (
+                    <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Active Monitoring</span>
+                    </div>
+                )}
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-[400px_1fr] gap-8">
             <div className="space-y-4">
                 <Card className="p-8 border-red-500/20 bg-red-500/[0.03] text-center space-y-6">
                     <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto shadow-[0_0_20px_rgba(239,68,68,0.1)]"><ShieldAlert className="w-8 h-8 text-red-500" /></div>
@@ -161,6 +200,7 @@ export default function ModelSecurityModule({ state, setState, onAction }: any) 
                         {Array.isArray(historicalScans) && historicalScans.length === 0 && !fetchingHistory && <p className="text-center py-10 text-[9px] font-black text-slate-800 uppercase italic">No security scans found</p>}
                     </div>
                 </div>
+            </div>
             </div>
         </div>
     );

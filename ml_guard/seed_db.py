@@ -18,7 +18,7 @@ from app.db.models import (
     Organization, User, Project, Model, ModelVersion, 
     Deployment, Dataset, DatasetVersion, Experiment, PredictionLog,
     ScanRecord, AuditLog, PolicyVersion, AlertRule, AlertEvent, Environment,
-    CIIntegration
+    CIIntegration, RetrainingPolicy
 )
 
 async def seed():
@@ -191,15 +191,25 @@ async def seed():
                 )
                 db.add(audit_log)
 
-            # 7. CI/CD Integrations
-            ci = CIIntegration(
-                org_id=org.id,
-                provider="github",
-                repo_url="https://github.com/fireflink/credit-risk-model",
-                is_active=True,
-                settings={"gate_policy": "standard"}
-            )
-            db.add(ci)
+            # 8. Retraining Policy
+            m_first = (await db.execute(select(Model).limit(1))).scalars().first()
+            if m_first:
+                rp = RetrainingPolicy(
+                    model_id=str(m_first.id),
+                    enabled=True,
+                    trigger_conditions={
+                        "psi_threshold": 0.2,
+                        "ks_stat_threshold": 0.1,
+                        "performance_degradation_pct": 10.0,
+                        "min_days_since_last_retrain": 3,
+                        "require_all_conditions": False
+                    },
+                    retrain_action={
+                        "action_type": "webhook",
+                        "webhook_url": "https://hooks.slack.com/services/sample-trigger"
+                    }
+                )
+                db.add(rp)
 
             await db.commit()
             print("Success: ML Guard Enterprise Database seeded/updated with full lifecycle data.")

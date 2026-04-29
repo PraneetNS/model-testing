@@ -67,6 +67,101 @@ async def register_dataset(
     }
 
 
+from fastapi import UploadFile, File, Form
+import os
+import tempfile
+
+# ═══════════════════════════════════════════════
+# UPLOAD DATASET
+# ═══════════════════════════════════════════════
+@router.post("/datasets/upload")
+async def upload_dataset(
+    model_id: str = Form(...),
+    dataset_name: str = Form(...),
+    dataset_type: str = Form("training"),
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    auth: AuthContext = Depends(require_role("ml_engineer")),
+):
+    """Upload a file and register it as a dataset."""
+    model = await db.get(Model, model_id)
+    if not model:
+        raise HTTPException(404, "Model not found.")
+
+    # Save file to a temporary location or persistent storage
+    # For now, we'll use a local 'uploads' directory
+    upload_dir = os.path.join(os.getcwd(), "ml_guard", "backend", "uploads", "datasets")
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    file_ext = os.path.splitext(file.filename)[1]
+    safe_name = f"{uuid.uuid4()}{file_ext}"
+    dest_path = os.path.join(upload_dir, safe_name)
+    
+    h = hashlib.sha256()
+    row_count = 0
+    
+    with open(dest_path, "wb") as f:
+        content = await file.read()
+        f.write(content)
+        h.update(content)
+    
+    sha256 = h.hexdigest()
+    
+    # Try to get row count if CSV
+    try:
+        import pandas as pd
+        if file_ext.lower() == ".csv":
+            df = pd.read_csv(dest_path, nrows=100) # Peek
+            # We don't read full file to avoid OOM in API, but let's assume we can for smallish files
+            df_full = pd.read_csv(dest_path)
+            row_count = len(df_full)
+            feature_count = len(df_full.columns)
+        elif file_ext.lower() == ".parquet":
+            df_full = pd.read_parquet(dest_path)
+            row_count = len(df_full)
+            feature_count = len(df_full.columns)
+        else:
+            feature_count = 0
+    except Exception as e:
+        logger.warning(f"Failed to parse uploaded dataset {file.filename}: {e}")
+        feature_count = 0
+
+    dataset = Dataset(
+        model_id=model_id,
+        type=dataset_type,
+        metadata_json={
+            "name": dataset_name,
+            "filename": file.filename,
+            "source": "upload",
+            "sha256": sha256
+        },
+        row_count=row_count,
+        fingerprint=sha256[:32],
+    )
+    db.add(dataset)
+    await db.flush()
+
+    version = DatasetVersion(
+        dataset_id=dataset.id,
+        version_number=1,
+        storage_url=dest_path,
+        schema_hash=sha256[:32],
+        row_count=row_count,
+        feature_count=feature_count,
+        created_by=auth.user_id,
+    )
+    db.add(version)
+    await db.commit()
+    await log_action(db, auth, "dataset.upload", "dataset", str(dataset.id), {"name": dataset_name})
+
+    return {
+        "dataset_id": str(dataset.id),
+        "name": dataset_name,
+        "status": "uploaded",
+        "row_count": row_count
+    }
+
+
 # ═══════════════════════════════════════════════
 # CREATE DATASET VERSION
 # ═══════════════════════════════════════════════

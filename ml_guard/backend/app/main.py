@@ -85,6 +85,7 @@ from app.routers import data_quality
 from app.routers import deployments
 from app.routers import predictions
 from app.routers import contracts
+from app.routers import retraining
 
 # ── API/Tasks Router ───────────────────────────────
 from app.api.routers import tasks
@@ -444,6 +445,7 @@ app.include_router(predictions.router,
     prefix="/api/v1", tags=["predictions"])
 app.include_router(contracts.router,
     prefix="/api/v1", tags=["contracts"])
+app.include_router(retraining.router)
 
 from app.api.routers import lineage
 from app.routers import plugins

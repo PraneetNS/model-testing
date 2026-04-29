@@ -28,7 +28,7 @@ export default function RetrainingModule({ modelId = "" }) {
     const [simulateResult, setSimulateResult] = useState<any>(null);
 
     useEffect(() => {
-        apiFetch("/api/v1/models")
+        apiFetch("/api/inventory")
             .then(res => safeJson<any[]>(res))
             .then(data => {
                 if (Array.isArray(data)) setAvailableModels(data);
@@ -161,7 +161,7 @@ export default function RetrainingModule({ modelId = "" }) {
                             >
                                 <option value="">-- Choose Model --</option>
                                 {availableModels.map(m => (
-                                    <option key={m.id} value={m.id}>{m.name} ({m.version})</option>
+                                    <option key={m.id} value={m.id}>{m.name} (Tier: {m.risk_tier || 'N/A'})</option>
                                 ))}
                             </select>
                         </div>

@@ -64,3 +64,48 @@ body {
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
+
+/* Print Enhancements */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .no-scrollbar {
+    overflow: visible !important;
+  }
+
+  main {
+    overflow: visible !important;
+    height: auto !important;
+    display: block !important;
+  }
+
+  /* Force backgrounds to show up (for colored badges/icons) */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Avoid cutting off cards across pages */
+  .bg-\[#0E1014\] {
+    background: #f8fafc !important; /* Lighter background for print cards */
+    border-color: #e2e8f0 !important;
+    color: black !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  h1, h2, h3, h4, h5, p, span {
+    color: black !important;
+  }
+  
+  /* Ensure report container fills page */
+  .max-w-\[1000px\], .max-w-\[1400px\] {
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}
