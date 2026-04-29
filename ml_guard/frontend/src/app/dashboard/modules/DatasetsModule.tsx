@@ -1,7 +1,7 @@
 "use client";
 import { apiFetch, safeJson } from "@/lib/api";
 import React, { useState, useEffect } from "react";
-import { FileText, Database, ShieldCheck, ChevronRight, HardDrive, Filter, Clock } from "lucide-react";
+import { FileText, Database, ShieldCheck, ChevronRight, HardDrive, Filter, Clock, Globe, Cloud, Zap, Share2, Activity } from "lucide-react";
 
 
 const Card = ({ children, className = "" }: any) => (
@@ -30,6 +30,13 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
     });
     const [searchingOpenml, setSearchingOpenml] = useState(false);
     const [uploadFile, setUploadFile] = useState<File | null>(null);
+    const [openmlQuery, setOpenmlQuery] = useState("");
+    const [openmlResults, setOpenmlResults] = useState<any[]>([]);
+
+    const openRegisterWithSource = (source: string) => {
+        setNewDataset({ ...newDataset, source, config: {} });
+        setShowRegister(true);
+    };
 
     const fetchDatasets = async () => {
         setLoading(true);
@@ -150,8 +157,38 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
     );
 
     return (
-        <div className="grid grid-cols-1 xl:grid-cols-[1fr_400px] gap-8">
-            <div className="space-y-4">
+        <div className="space-y-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                    { id: "huggingface", name: "Hugging Face", icon: <Globe className="w-5 h-5 text-yellow-400" />, desc: "Pull from HF Hub", url: "https://huggingface.co/datasets" },
+                    { id: "kaggle", name: "Kaggle", icon: <Cloud className="w-5 h-5 text-blue-400" />, desc: "Import Kaggle Datasets", url: "https://www.kaggle.com/datasets" },
+                    { id: "mlflow", name: "MLflow", icon: <Activity className="w-5 h-5 text-blue-500" />, desc: "Sync from MLflow Tracking", url: "http://localhost:5000" },
+                    { id: "wandb", name: "WandB", icon: <Zap className="w-5 h-5 text-orange-400" />, desc: "Fetch Weights & Biases", url: "https://wandb.ai/explore/datasets" },
+                ].map((integration) => (
+                    <Card key={integration.id} className="p-5 flex flex-col gap-3 group transition-all hover:border-emerald-500/30 hover:bg-emerald-500/[0.02]">
+                        <div className="flex items-center justify-between">
+                            <div className="p-2 rounded-lg bg-white/5 border border-white/5 group-hover:border-emerald-500/20 group-hover:bg-emerald-500/10 transition-colors">
+                                {integration.icon}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <a href={integration.url} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-md hover:bg-white/5 text-slate-600 hover:text-white transition-colors" title="Visit Platform">
+                                    <Globe className="w-3 h-3" />
+                                </a>
+                                <button type="button" onClick={() => openRegisterWithSource(integration.id)} className="p-1.5 rounded-md hover:bg-emerald-500/20 text-slate-600 hover:text-emerald-400 transition-colors" title="Quick Add">
+                                    <Zap className="w-3 h-3" />
+                                </button>
+                            </div>
+                        </div>
+                        <div onClick={() => openRegisterWithSource(integration.id)} className="cursor-pointer">
+                            <p className="text-xs font-black text-white uppercase tracking-tighter">{integration.name}</p>
+                            <p className="text-[9px] font-black text-slate-700 uppercase tracking-widest mt-0.5">{integration.desc}</p>
+                        </div>
+                    </Card>
+                ))}
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-[1fr_400px] gap-8">
+                <div className="space-y-4">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-sm font-black uppercase tracking-widest text-slate-300">Registered Datasets</h3>
                     <div className="flex items-center gap-4">
@@ -186,6 +223,8 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
                                     <option value="local" className="bg-[#0E1014]">Local upload</option>
                                     <option value="huggingface" className="bg-[#0E1014]">HuggingFace</option>
                                     <option value="kaggle" className="bg-[#0E1014]">Kaggle</option>
+                                    <option value="mlflow" className="bg-[#0E1014]">MLflow</option>
+                                    <option value="wandb" className="bg-[#0E1014]">WandB</option>
                                     <option value="openml" className="bg-[#0E1014]">OpenML</option>
                                     <option value="roboflow" className="bg-[#0E1014]">Roboflow</option>
                                     <option value="s3" className="bg-[#0E1014]">S3/Cloud</option>
@@ -255,6 +294,20 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                         <input value={newDataset.config.repo_id || ""} onChange={e => updateConfig("repo_id", e.target.value)} placeholder="HuggingFace Repo ID" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" required />
                                         <input value={newDataset.config.token || ""} onChange={e => updateConfig("token", e.target.value)} type="password" placeholder="HF Token (Optional)" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" />
+                                    </div>
+                                )}
+                                {newDataset.source === "mlflow" && (
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        <input value={newDataset.config.tracking_uri || ""} onChange={e => updateConfig("tracking_uri", e.target.value)} placeholder="Tracking URI" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" required />
+                                        <input value={newDataset.config.run_id || ""} onChange={e => updateConfig("run_id", e.target.value)} placeholder="Run ID" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" required />
+                                        <input value={newDataset.config.artifact_path || ""} onChange={e => updateConfig("artifact_path", e.target.value)} placeholder="Artifact Path (e.g. data.csv)" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" required />
+                                    </div>
+                                )}
+                                {newDataset.source === "wandb" && (
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        <input value={newDataset.config.entity || ""} onChange={e => updateConfig("entity", e.target.value)} placeholder="Entity/User" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" required />
+                                        <input value={newDataset.config.project || ""} onChange={e => updateConfig("project", e.target.value)} placeholder="Project" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" required />
+                                        <input value={newDataset.config.artifact_name || ""} onChange={e => updateConfig("artifact_name", e.target.value)} placeholder="Artifact Name:v0" className="bg-black/40 border border-white/5 rounded-md px-3 py-2 text-xs text-white outline-none" required />
                                     </div>
                                 )}
                                 {newDataset.source === "local" && (
@@ -375,5 +428,6 @@ export default function DatasetsModule({ state, setState, onAction }: any) {
                 )}
             </div>
         </div>
+    </div>
     );
 }

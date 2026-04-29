@@ -18,11 +18,11 @@ Maintain a transparent and immutable record of your AI supply chain.
 - **Audit Trails**: Full historical record of every model version, evaluation, and certification.
 - **Governance Scores**: Multi-dimensional composite grading (Performance, Fairness, Security, Robustness).
 
-### 2. 📑 Actuarial AI Insurance Scoring (New)
+### 2. 📑 Actuarial AI Insurance Scoring
 The industry's first standardized risk rating system for enterprise AI.
 - **Risk Quantization**: Mathematical assessment of model reliability, deployment risk, and incident history.
 - **Standardized Rating**: Provides an "Insurance Grade" (A++ to F) based on actuarial risk parameters.
-- **Downgrade Alerts**: Automated notification when real-time breaches impact the model's risk tier.
+- **Manual & Automated Auditing**: Direct triggering of deep security scans for adversarial robustness, poisoning, and inference risks.
 
 ### 3. 🧠 SHAP Governance Explainability
 Integrated SHAP (SHapley Additive exPlanations) for deep governance transparency.
@@ -30,11 +30,11 @@ Integrated SHAP (SHapley Additive exPlanations) for deep governance transparency
 - **Global & Local Explanations**: Visualizes feature importance across the entire dataset and for individual high-risk predictions.
 - **Asynchronous Processing**: Background SHAP computation for high-dimensional models without impacting API performance.
 
-### 4. 🔌 Enterprise Data Connector System
-Securely ingest data from any enterprise source via our modular plugin architecture.
-- **Cloud Storage**: Native connectors for **S3, GCS, and Azure Blob Storage**.
-- **Data Warehouses**: Direct ingestion from **Snowflake and BigQuery**.
-- **Secure Credentials**: Fernet-encrypted credential management ensuring data source secrets are never leaked.
+### 4. 🔌 Universal Dataset Integration Hub
+Securely ingest and track data from any platform via our premium marketplace.
+- **Platform Connectors**: Native, one-click integrations for **Hugging Face Hub, Kaggle, MLflow, and WandB**.
+- **Automated Lineage**: Full tracking of dataset provenance, versioning, and consumption across model iterations.
+- **Secure Credentials**: Fernet-encrypted management for API tokens, ensuring external platform secrets remain protected.
 
 ### 5. 🛑 Behavioral Contracts (The Model Sentinel)
 Define behavioral promises that your model must keep. Validated in real-time during every prediction via our Python SDK.
@@ -48,11 +48,11 @@ High-performance sliding-window drift detection and RAG-specific monitoring.
 - **RAG Fidelity**: Grounding assessment, context relevance, and retrieval hit rate tracking.
 - **Embedding Drift**: Multi-dimensional vector drift analysis using Cosine similarity and MMD.
 
-### 7. 🔒 LLM Security & Red Teaming
-A dedicated suite tailored specifically to Large Language Model governance.
-- **Heuristic Toxicity & Hallucination Guardrails**: Systematic analysis of GAI outputs.
-- **Adversarial Resiliency**: Active jailbreak vector detection and prompt-injection mitigations.
-- **PII Leakage Scanning**: Guarantees generative assets do not exfiltrate sensitive data.
+### 7. 🔒 Deep Security Auditing (New)
+A dedicated engine for testing model resilience against sophisticated attacks.
+- **Adversarial Robustness**: Stress tests models using FGSM and other perturbation techniques to measure boundary stability.
+- **Inference Protection**: Detects vulnerabilities to membership inference and model extraction attacks.
+- **Data Poisoning Scans**: Analyzes training data fingerprints for signs of malicious tampering or backdoors.
 
 ---
 
@@ -95,7 +95,7 @@ python -m venv venv
 # Windows: venv\\Scripts\\activate | Mac/Linux: source venv/bin/activate
 
 pip install -r requirements.txt
-pip install celery redis mlflow wandb "shap>=0.40.0" cryptography
+pip install celery redis mlflow wandb huggingface_hub datasets "shap>=0.40.0" cryptography
 ```
 
 **Environment Configuration (`.env`):**

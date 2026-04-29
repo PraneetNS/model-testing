@@ -52,5 +52,9 @@ reportlab
 kaggle
 openml
 roboflow
+huggingface_hub
+datasets
+mlflow
+wandb
 filelock
 stripe
