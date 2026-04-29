@@ -33,7 +33,7 @@ import ml_guard
 # ── 0. Setup ──────────────────────────────────────────────────────────────────
 
 ML_GUARD_HOST = os.getenv("MLGUARD_HOST", "http://localhost:8000")
-ML_GUARD_KEY  = os.getenv("MLGUARD_API_KEY", "mlg_1Ai7zfmfsB_GLaoNuKjOOopFh12xLzGy7SDqh7Kho1U")
+ML_GUARD_KEY  = os.getenv("MLGUARD_API_KEY", "your-api-key-here")
 MODEL_ID      = os.getenv("DEV_MODEL_ID", "f9597635-5c66-4b17-9e4b-38e3fde81a53")
 
 print("=" * 62)

@@ -104,6 +104,26 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.retraining.evaluate_all_retraining_policies",
         "schedule": crontab(minute=0),  # Every hour
     },
+    # Governance: Refresh all model scores every hour
+    "refresh-scores-hourly": {
+        "task": "app.tasks.scoring.refresh_all_scores",
+        "schedule": crontab(minute=30),  # :30 every hour
+    },
+    # Inventory: Check for overdue validations daily
+    "inventory-due-check": {
+        "task": "app.tasks.inventory.check_validation_due_dates",
+        "schedule": crontab(minute=0, hour=1),  # 01:00 AM UTC
+    },
+    # Sandbox: Cleanup expired sandboxes daily
+    "sandbox-cleanup-daily": {
+        "task": "app.tasks.sandbox.cleanup_expired",
+        "schedule": crontab(minute=0, hour=2),  # 02:00 AM UTC
+    },
+    # Billing: Sync usage to Stripe daily
+    "billing-stripe-sync": {
+        "task": "app.tasks.billing.report_monthly_usage",
+        "schedule": crontab(minute=0, hour=3),  # 03:00 AM UTC
+    },
 }
 
 celery_app.conf.timezone = "UTC"
@@ -133,6 +153,10 @@ ALLOWED_TASKS = {
     "app.domain.services.llm_evaluator.tasks.run_llm_evaluation_task",
     "app.tasks.retraining.evaluate_all_retraining_policies",
     "app.tasks.billing.record_usage_task",
+    "app.tasks.scoring.refresh_all_scores",
+    "app.tasks.inventory.check_validation_due_dates",
+    "app.tasks.sandbox.cleanup_expired",
+    "app.tasks.billing.report_monthly_usage",
     "test_task",
 }
 

@@ -260,3 +260,59 @@ async def synchronous_gate_check(
         raise HTTPException(status_code=422, detail=response)
 
     return response
+
+
+@router.get("/governance/trend")
+async def governance_trend(
+    model_id: Optional[str] = Query(None, description="Filter by model ID"),
+    days: int = Query(30, ge=1, le=365, description="Number of days to look back"),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Returns daily governance score time-series from scan_records.
+    Used by the dashboard trend chart.
+    """
+    from datetime import datetime, timedelta, timezone
+    from sqlalchemy import func, cast
+    from sqlalchemy.dialects.postgresql import DATE
+
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
+
+    stmt = (
+        select(ScanRecord)
+        .where(ScanRecord.created_at >= cutoff)
+        .where(ScanRecord.governance_score.isnot(None))
+        .order_by(ScanRecord.created_at.asc())
+    )
+    if model_id:
+        stmt = stmt.where(ScanRecord.model_id == model_id)
+
+    stmt = stmt.limit(500)
+    scans = (await db.execute(stmt)).scalars().all()
+
+    # Group by date and compute avg score per day
+    daily: dict = {}
+    for scan in scans:
+        day = scan.created_at.strftime("%Y-%m-%d")
+        if day not in daily:
+            daily[day] = {"scores": [], "count": 0}
+        daily[day]["scores"].append(scan.governance_score)
+        daily[day]["count"] += 1
+
+    trend = [
+        {
+            "date": day,
+            "avg_score": round(sum(v["scores"]) / len(v["scores"]), 2),
+            "scan_count": v["count"],
+            "min_score": round(min(v["scores"]), 2),
+            "max_score": round(max(v["scores"]), 2),
+        }
+        for day, v in sorted(daily.items())
+    ]
+
+    return {
+        "model_id": model_id,
+        "days": days,
+        "data_points": len(trend),
+        "trend": trend,
+    }

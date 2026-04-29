@@ -259,8 +259,11 @@ class AuditLog(Base):
     __tablename__ = "audit_logs"
     id          = Column(UUID(), primary_key=True, default=uuid.uuid4)
     org_id      = Column(UUID(), ForeignKey("organizations.id", ondelete="CASCADE"), index=True, nullable=True)
+    user_id     = Column(UUID(), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     actor_key_id = Column(UUID(), ForeignKey("api_keys.id", ondelete="SET NULL"), nullable=True)
     actor_ip    = Column(String(45), nullable=True)
+
+    user        = relationship("User")
     action      = Column(String(100), nullable=False, index=True)  # model.upload, scan.run, policy.update, etc.
     resource_type = Column(String(50), nullable=True)  # model, policy, project, etc.
     resource_id = Column(String(64), nullable=True)

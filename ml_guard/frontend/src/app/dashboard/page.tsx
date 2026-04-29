@@ -258,35 +258,88 @@ const DriftFeatureTable = ({ features }: { features: Array<{ feature: string; ps
 // ═══════════════════════════════════════════════
 // POLICY VIEWER
 // ═══════════════════════════════════════════════
-const PolicyViewer = ({ policy }: { policy: any }) => {
+// ═══════════════════════════════════════════════
+const PolicyViewer = ({ policy, onUpdate }: { policy: any; onUpdate?: () => void }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedRules, setEditedRules] = useState<any>({});
+    const [saving, setSaving] = useState(false);
+
     if (!policy) return null;
     const displayConfig = policy.config ?? policy.rules ?? {};
+
+    const handleSave = async () => {
+        setSaving(true);
+        try {
+            const res = await apiFetch(`/api/v1/policies/active`, {
+                method: "POST",
+                body: JSON.stringify({
+                    name: `Tweaked ${policy.name}`,
+                    rules: { ...displayConfig, ...editedRules }
+                })
+            });
+            if (res.ok) {
+                setIsEditing(false);
+                if (onUpdate) onUpdate();
+            }
+        } catch (err) {
+            console.error("Failed to save policy", err);
+        } finally {
+            setSaving(false);
+        }
+    };
+
     return (
-        <div className="rounded-2xl border border-purple-500/20 bg-[#0E1014] overflow-hidden">
+        <div className="rounded-2xl border border-purple-500/20 bg-[#0E1014] overflow-hidden transition-all duration-500">
             <div className="flex items-center justify-between px-5 py-3 border-b border-purple-500/10 bg-purple-500/[0.04]">
                 <div className="flex items-center gap-2">
                     <Shield className="w-3.5 h-3.5 text-purple-400" />
                     <p className="text-[10px] font-black uppercase tracking-[0.15em] text-purple-300">Active Governance Policy</p>
                 </div>
-                <span className="text-[8px] font-black text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded bg-purple-500/5">
-                    {policy.name ?? "Policy"} v{policy.version ?? "default"}
-                </span>
+                <div className="flex items-center gap-3">
+                    <button 
+                        onClick={() => setIsEditing(!isEditing)}
+                        className="text-[9px] font-black uppercase tracking-widest text-purple-400 hover:text-white transition-colors"
+                    >
+                        {isEditing ? "Cancel" : "Tweak Policy"}
+                    </button>
+                    <span className="text-[8px] font-black text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded bg-purple-500/5">
+                        {policy.name ?? "Policy"}
+                    </span>
+                </div>
             </div>
             <div className="p-4 space-y-3">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-600">All Active Thresholds</p>
+                <div className="flex items-center justify-between">
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-slate-600">
+                        {isEditing ? "Adjust Thresholds" : "Active Thresholds"}
+                    </p>
+                    {isEditing && (
+                        <button 
+                            onClick={handleSave}
+                            disabled={saving}
+                            className="bg-purple-500 text-white text-[8px] font-black uppercase tracking-widest px-3 py-1 rounded-full hover:bg-purple-400 transition-all disabled:opacity-50"
+                        >
+                            {saving ? "SAVING..." : "SAVE CHANGES"}
+                        </button>
+                    )}
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                     {Object.entries(displayConfig).map(([k, v]: any) => (
-                        <div key={k} className="bg-white/[0.02] rounded-lg px-3 py-2 border border-white/5">
+                        <div key={k} className={`bg-white/[0.02] rounded-lg px-3 py-2 border transition-all ${isEditing ? 'border-purple-500/30' : 'border-white/5'}`}>
                             <p className="text-[9px] text-slate-500 font-mono">{k}</p>
-                            <p className="text-xs font-black text-purple-300">{typeof v === "number" ? v : String(v)}</p>
+                            {isEditing ? (
+                                <input 
+                                    type={typeof v === "number" ? "number" : "text"}
+                                    step="0.01"
+                                    defaultValue={v}
+                                    onChange={(e) => setEditedRules({ ...editedRules, [k]: typeof v === "number" ? parseFloat(e.target.value) : e.target.value })}
+                                    className="bg-transparent border-none text-xs font-black text-white w-full focus:outline-none focus:ring-0 p-0"
+                                />
+                            ) : (
+                                <p className="text-xs font-black text-purple-300">{typeof v === "number" ? v : String(v)}</p>
+                            )}
                         </div>
                     ))}
                 </div>
-                {policy.rules && Object.keys(policy.rules).length > 0 && Object.keys(policy.rules).length < Object.keys(displayConfig).length && (
-                    <div className="border-t border-purple-500/10 pt-2 mt-2">
-                        <p className="text-[8px] text-slate-600 font-mono">Custom overrides: {JSON.stringify(policy.rules)}</p>
-                    </div>
-                )}
             </div>
         </div>
     );
@@ -323,16 +376,24 @@ function ModelAuditPage({ state, setState, onAction }: any) {
     useEffect(() => {
         if (!activePolicy || activePolicy.error) {
             apiFetch(`/api/v1/policies/active`)
-                .then(r => safeJson<any>(r))
-                .then(d => {
-                    if (d && !d.error) {
+                .then(async r => {
+                    const d = await safeJson<any>(r);
+                    if (r.ok && d && !d.error) {
                         setAuditState({ activePolicy: d });
                     } else {
-                        console.error("Failed to load active policy, using defaults", d);
-                        // Optional: Set a dummy policy or keep waiting
+                        console.error("Failed to load active policy", {
+                            status: r.status,
+                            statusText: r.statusText,
+                            data: d
+                        });
+                        if (r.ok) {
+                            setAuditState({ activePolicy: { rules: {}, config: {}, name: "Empty Policy" } });
+                        }
                     }
                 })
-                .catch(e => console.error("Policy fetch error", e));
+                .catch(err => {
+                    console.error("Critical error fetching policy:", err);
+                });
         }
     }, [activePolicy]);
 
@@ -507,7 +568,7 @@ function ModelAuditPage({ state, setState, onAction }: any) {
                 <Card className="p-4 space-y-2"><p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Label Column</p><input value={labelCol} onChange={e => setLabelCol(e.target.value)} className="w-full bg-black/40 border border-white/5 rounded-lg px-3 py-2 text-sm text-white font-bold" /></Card>
                 <Card className="p-5 space-y-3"><p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">4. Select Governance Checks</p>{AUDIT_CHECKS.map(c => (<label key={c.id} className="flex items-center gap-3 cursor-pointer" onClick={() => toggle(c.id)}><div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${checks[c.id] ? "bg-orange-500 border-orange-500" : "border-white/10"}`}>{checks[c.id] && <CheckCircle2 className="w-2.5 h-2.5 text-black" />}</div><span className={`text-[11px] font-bold ${checks[c.id] ? "text-white" : "text-slate-600"}`}>{c.label}</span></label>))}</Card>
                 {/* Feature 3: Policy Viewer */}
-                {activePolicy && <PolicyViewer policy={activePolicy} />}
+                {activePolicy && <PolicyViewer policy={activePolicy} onUpdate={() => setAuditState({ activePolicy: null })} />}
                 <ErrBanner msg={error} />
                 <div className="flex gap-2">
                     <button onClick={runAudit} disabled={loading} className="flex-1 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-black font-black py-4 rounded-xl text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-lg shadow-orange-500/10">

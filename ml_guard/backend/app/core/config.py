@@ -1,3 +1,4 @@
+import os
 from typing import List, Optional, Any
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import model_validator
@@ -40,7 +41,7 @@ class Settings(BaseSettings):
     # Stripe (Billing)
    
 
-    STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY") # Placeholder test key
+    STRIPE_SECRET_KEY: Optional[str] = None
     STRIPE_WEBHOOK_SECRET: str = "whsec_..."
     
     model_config = SettingsConfigDict(

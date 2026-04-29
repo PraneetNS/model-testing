@@ -199,10 +199,10 @@ async def custom_rate_limit_handler(request: Request, exc: RateLimitExceeded):
 # 2. Security Hardening Middleware (Injection Detection)
 app.add_middleware(SecurityHardeningMiddleware)
 
-# FIX 4: CORS Configuration
+# CORS Configuration — use explicit allowed origins, not wildcard
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -240,8 +240,61 @@ async def root():
 
 @app.get("/health")
 async def health():
-    # FIX 1: Version consistency
     return {"status": "ok", "version": settings.APP_VERSION}
+
+
+@app.get("/api/health")
+async def api_health(db: AsyncSession = Depends(get_db)):
+    """Real system health check — database, Redis, Celery."""
+    import time
+    import redis as redis_lib
+
+    result = {
+        "status": "ok",
+        "timestamp": __import__("datetime").datetime.utcnow().isoformat(),
+        "version": settings.APP_VERSION,
+        "services": {}
+    }
+
+    # Database check
+    try:
+        t0 = time.monotonic()
+        await db.execute(text("SELECT 1"))
+        latency_ms = round((time.monotonic() - t0) * 1000, 2)
+        result["services"]["database"] = {"status": "ok", "latency_ms": latency_ms}
+    except Exception as e:
+        result["services"]["database"] = {"status": "error", "error": str(e)}
+        result["status"] = "down"
+
+    # Redis check
+    try:
+        t0 = time.monotonic()
+        r = redis_lib.Redis.from_url(settings.REDIS_URL, socket_connect_timeout=2)
+        r.ping()
+        latency_ms = round((time.monotonic() - t0) * 1000, 2)
+        result["services"]["redis"] = {"status": "ok", "latency_ms": latency_ms}
+    except Exception as e:
+        result["services"]["redis"] = {"status": "error", "error": str(e)}
+        result["status"] = "down"
+
+    # Celery check
+    try:
+        from app.core.celery_app import celery_app
+        inspect = celery_app.control.inspect(timeout=2.0)
+        active = inspect.active()
+        worker_count = len(active) if active else 0
+        celery_status = "ok" if worker_count > 0 else "no_workers"
+        result["services"]["celery"] = {"status": celery_status, "active_workers": worker_count}
+        if celery_status == "no_workers" and result["status"] == "ok":
+            result["status"] = "degraded"
+    except Exception as e:
+        result["services"]["celery"] = {"status": "error", "error": str(e)}
+        if result["status"] == "ok":
+            result["status"] = "degraded"
+
+    from fastapi.responses import JSONResponse
+    status_code = 200 if result["status"] in ("ok", "degraded") else 503
+    return JSONResponse(content=result, status_code=status_code)
 
 @app.get("/api/health/db")
 async def health_database(db: AsyncSession = Depends(get_db)):
@@ -338,8 +391,6 @@ app.include_router(ingest.router,
     prefix="/api/v1/ingest", tags=["ingest"])
 app.include_router(observe.router,
     prefix="/api/v1/observe", tags=["observe"])
-app.include_router(policies.router,
-    prefix="/api/v1", tags=["policies"])
 
 # ── Infrastructure ─────────────────────────────────
 app.include_router(jobs.router,

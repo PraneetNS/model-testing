@@ -58,7 +58,7 @@ cd ml_guard/backend
 pip install -r requirements.txt
 python -m uvicorn app.main:app --reload
 ```
-API Key for local testing: `mlg_1Ai7zfmfsB_GLaoNuKjOOopFh12xLzGy7SDqh7Kho1U`
+API Key: generated on first startup — see terminal output for your admin key.
 
 ### 2. SDK Usage (Python)
 ```python

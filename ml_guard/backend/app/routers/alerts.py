@@ -211,3 +211,188 @@ async def list_events(limit: int = 50, db: AsyncSession = Depends(get_db)):
         }
         for e, risk_tier, model_name in results
     ]
+
+
+# ─── Summary endpoint (required by dashboard alert badge) ──────────────────
+
+@router.get("/alerts/summary")
+async def get_alerts_summary(db: AsyncSession = Depends(get_db)):
+    """
+    Returns aggregate counts for the dashboard notification bell.
+    Response: {unread_count, critical_count, alerts_last_24h, recent}
+    """
+    from datetime import datetime, timedelta, timezone
+    from sqlalchemy import func
+    from app.db.models import SecurityAlert
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    last_24h = now - timedelta(hours=24)
+
+    # Alert events (rule-based)
+    unread_events = (await db.execute(
+        select(func.count(AlertEvent.id)).where(AlertEvent.delivered == False)
+    )).scalar() or 0
+
+    critical_events = (await db.execute(
+        select(func.count(AlertEvent.id)).where(AlertEvent.severity == "CRITICAL")
+    )).scalar() or 0
+
+    events_24h = (await db.execute(
+        select(func.count(AlertEvent.id))
+        .where(AlertEvent.created_at >= last_24h)
+    )).scalar() or 0
+
+    # Security alerts (middleware-detected)
+    security_24h = 0
+    try:
+        security_24h = (await db.execute(
+            select(func.count(SecurityAlert.id))
+            .where(SecurityAlert.created_at >= last_24h)
+        )).scalar() or 0
+    except Exception:
+        pass
+
+    # Most recent alert events
+    recent_stmt = (
+        select(AlertEvent)
+        .order_by(desc(AlertEvent.created_at))
+        .limit(5)
+    )
+    recent_events = (await db.execute(recent_stmt)).scalars().all()
+
+    return {
+        "unread_count": unread_events,
+        "critical_count": critical_events,
+        "alerts_last_24h": events_24h + security_24h,
+        "security_alerts_24h": security_24h,
+        "recent": [
+            {
+                "id": str(e.id),
+                "severity": e.severity,
+                "message": e.message,
+                "created_at": e.created_at.isoformat() if e.created_at else None,
+            }
+            for e in recent_events
+        ],
+    }
+
+
+@router.get("/alerts")
+async def list_alerts(
+    limit: int = 50,
+    offset: int = 0,
+    severity: Optional[str] = None,
+    unread_only: bool = False,
+    db: AsyncSession = Depends(get_db),
+):
+    """Paginated list of all alert events with optional filters."""
+    from sqlalchemy import func
+    stmt = select(AlertEvent)
+    count_stmt = select(func.count(AlertEvent.id))
+
+    if severity:
+        stmt = stmt.where(AlertEvent.severity == severity.upper())
+        count_stmt = count_stmt.where(AlertEvent.severity == severity.upper())
+    if unread_only:
+        stmt = stmt.where(AlertEvent.delivered == False)
+        count_stmt = count_stmt.where(AlertEvent.delivered == False)
+
+    total = (await db.execute(count_stmt)).scalar() or 0
+    events = (await db.execute(
+        stmt.order_by(desc(AlertEvent.created_at)).offset(offset).limit(limit)
+    )).scalars().all()
+
+    return {
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "results": [
+            {
+                "id": str(e.id),
+                "rule_id": str(e.rule_id),
+                "scan_id": str(e.scan_id) if e.scan_id else None,
+                "severity": e.severity,
+                "message": e.message,
+                "delivered": e.delivered,
+                "created_at": e.created_at.isoformat() if e.created_at else None,
+            }
+            for e in events
+        ],
+    }
+
+
+@router.put("/alerts/{alert_id}/read")
+async def mark_alert_read(alert_id: str, db: AsyncSession = Depends(get_db)):
+    """Mark an alert event as read/delivered."""
+    import uuid
+    try:
+        alert_uuid = uuid.UUID(alert_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid alert ID format.")
+
+    event = await db.get(AlertEvent, alert_uuid)
+    if not event:
+        raise HTTPException(status_code=404, detail="Alert not found.")
+    event.delivered = True
+    await db.commit()
+    return {"id": alert_id, "delivered": True}
+
+
+class InternalAlertCreate(BaseModel):
+    severity: str = "MEDIUM"   # LOW | MEDIUM | HIGH | CRITICAL
+    message: str
+    source: str = "platform"  # drift | performance | contract | platform
+    model_id: Optional[str] = None
+    scan_id: Optional[str] = None
+    rule_id: Optional[str] = None
+
+
+@router.post("/alerts/internal")
+async def create_internal_alert(
+    body: InternalAlertCreate,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Platform-internal alert creation endpoint.
+    Called by Celery tasks, drift scanner, contract engine, etc.
+    Finds the most relevant alert rule or uses a sentinel rule.
+    """
+    # Find or create a sentinel rule for this source
+    sentinel_name = f"[{body.source.upper()}] Internal Alert Rule"
+    rule_stmt = select(AlertRule).where(AlertRule.name == sentinel_name).limit(1)
+    rule = (await db.execute(rule_stmt)).scalars().first()
+
+    if not rule:
+        rule = AlertRule(
+            name=sentinel_name,
+            condition={"metric": body.source, "op": "trigger", "value": 0},
+            channels=["internal"],
+            is_active=True,
+        )
+        db.add(rule)
+        await db.flush()
+
+    # Resolve rule_id override
+    rule_id = rule.id
+    if body.rule_id:
+        try:
+            rule_id = uuid.UUID(body.rule_id)
+        except ValueError:
+            pass
+
+    event = AlertEvent(
+        rule_id=rule_id,
+        scan_id=uuid.UUID(body.scan_id) if body.scan_id else None,
+        severity=body.severity.upper(),
+        message=body.message,
+        delivered=False,
+    )
+    db.add(event)
+    await db.commit()
+
+    return {
+        "id": str(event.id),
+        "severity": event.severity,
+        "message": event.message,
+        "rule_id": str(rule_id),
+    }

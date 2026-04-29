@@ -4,7 +4,7 @@ from typing import Optional, Dict, Any
 import structlog
 
 logger = structlog.get_logger()
-stripe.api_key = settings.STRIPE_API_KEY
+stripe.api_key = settings.STRIPE_SECRET_KEY
 
 class StripeClient:
     """

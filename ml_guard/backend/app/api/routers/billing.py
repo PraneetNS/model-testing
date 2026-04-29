@@ -166,24 +166,28 @@ async def stripe_webhook(request: Request):
         raise HTTPException(status_code=400, detail=str(e))
 
     if event["type"] == "invoice.payment_succeeded":
-        # Activate subscription
         sub_id = event["data"]["object"]["subscription"]
-        async with SessionLocal() as db:
-            org = (await db.execute(select(Organization).filter(Organization.stripe_subscription_id == sub_id))).scalars().first()
-            if org:
-                org.subscription_status = "active"
-                await db.commit()
-                logger.info("Subscription activated", org_id=org.id)
+        from app.db.session import AsyncSessionLocal
+        async def _activate():
+            async with AsyncSessionLocal() as db:
+                org = (await db.execute(select(Organization).filter(Organization.stripe_subscription_id == sub_id))).scalars().first()
+                if org:
+                    org.subscription_status = "active"
+                    await db.commit()
+                    logger.info("Subscription activated", org_id=org.id)
+        import asyncio; asyncio.run(_activate())
 
     elif event["type"] == "invoice.payment_failed":
-        # Handle failure (grace period)
         sub_id = event["data"]["object"]["subscription"]
-        async with SessionLocal() as db:
-            org = (await db.execute(select(Organization).filter(Organization.stripe_subscription_id == sub_id))).scalars().first()
-            if org:
-                org.subscription_status = "past_due"
-                await db.commit()
-                logger.warning("Subscription payment failed", org_id=org.id)
+        from app.db.session import AsyncSessionLocal
+        async def _fail():
+            async with AsyncSessionLocal() as db:
+                org = (await db.execute(select(Organization).filter(Organization.stripe_subscription_id == sub_id))).scalars().first()
+                if org:
+                    org.subscription_status = "past_due"
+                    await db.commit()
+                    logger.warning("Subscription payment failed", org_id=org.id)
+        import asyncio; asyncio.run(_fail())
 
     return {"status": "success"}
 

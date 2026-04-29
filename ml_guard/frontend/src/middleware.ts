@@ -7,10 +7,11 @@ export function middleware(request: NextRequest) {
   // CSP Header with nonce
   const cspHeader = `
     default-src 'self';
-    script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://apis.google.com https://www.gstatic.com;
-    style-src 'self' 'unsafe-inline';
-    img-src 'self' data: https://*.googleusercontent.com https://*.githubusercontent.com;
-    connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 ws://localhost:8000 ws://127.0.0.1:8000 https://*.googleapis.com https://*.firebaseapp.com https://*.firebaseio.com;
+    script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://apis.google.com https://www.gstatic.com https://*.firebaseapp.com;
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+    font-src 'self' https://fonts.gstatic.com;
+    img-src 'self' data: https://*.googleusercontent.com https://*.githubusercontent.com https://firebasestorage.googleapis.com;
+    connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 ws://localhost:8000 ws://127.0.0.1:8000 https://*.googleapis.com https://*.firebaseapp.com https://*.firebaseio.com https://*.firebase.io;
     frame-src 'self' https://*.firebaseapp.com;
     frame-ancestors 'none';
     base-uri 'self';

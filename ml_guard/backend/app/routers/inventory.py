@@ -87,8 +87,27 @@ async def inventory_dashboard(
     res = await db.execute(select(func.count(Model.id)).where(Model.business_owner == None))
     no_owner_count = res.scalar() or 0
     
-    # Avg Gov Score by Tier
-    # This is a bit more complex, let's just return placeholders for now or do a joined query
+    # Average Governance Score from most recent scan per model
+    avg_score = None
+    try:
+        subq = (
+            select(
+                ScanRecord.model_id,
+                func.max(ScanRecord.created_at).label("latest")
+            )
+            .where(ScanRecord.governance_score.isnot(None))
+            .group_by(ScanRecord.model_id)
+            .subquery()
+        )
+        score_stmt = select(func.avg(ScanRecord.governance_score)).join(
+            subq,
+            (ScanRecord.model_id == subq.c.model_id) &
+            (ScanRecord.created_at == subq.c.latest)
+        )
+        raw = (await db.execute(score_stmt)).scalar()
+        avg_score = round(float(raw), 2) if raw is not None else None
+    except Exception:
+        pass
     
     return {
         "total_models": total_models,
@@ -96,6 +115,7 @@ async def inventory_dashboard(
         "by_environment": by_environment,
         "overdue_validations_count": overdue_count,
         "models_without_owner": no_owner_count,
+        "avg_governance_score": avg_score,
     }
 
 @router.put("/{model_id}/metadata")

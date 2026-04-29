@@ -18,7 +18,7 @@ import json
 import time
 
 BASE     = "http://127.0.0.1:8000"
-API_KEY  = "mlg_1Ai7zfmfsB_GLaoNuKjOOopFh12xLzGy7SDqh7Kho1U"
+API_KEY  = "your-api-key-here"
 MODEL_ID = "f9597635-5c66-4b17-9e4b-38e3fde81a53"
 HEADERS  = {"X-API-Key": API_KEY, "Content-Type": "application/json"}
 
