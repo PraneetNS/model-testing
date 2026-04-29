@@ -374,6 +374,7 @@ function ModelAuditPage({ state, setState, onAction }: any) {
     });
 
     useEffect(() => {
+        // Only fetch if we don't have a policy and we ARE NOT loading auth
         if (!activePolicy || activePolicy.error) {
             apiFetch(`/api/v1/policies/active`)
                 .then(async r => {
@@ -381,13 +382,9 @@ function ModelAuditPage({ state, setState, onAction }: any) {
                     if (r.ok && d && !d.error) {
                         setAuditState({ activePolicy: d });
                     } else {
-                        console.error("Failed to load active policy", {
-                            status: r.status,
-                            statusText: r.statusText,
-                            data: d
-                        });
+                        console.error(`FAILED POLICY LOAD [${r.status}]:`, d);
                         if (r.ok) {
-                            setAuditState({ activePolicy: { rules: {}, config: {}, name: "Empty Policy" } });
+                            setAuditState({ activePolicy: { rules: {}, config: {}, name: "Fallback Policy" } });
                         }
                     }
                 })
@@ -2082,7 +2079,8 @@ const ALL_NAV_ITEMS = NAV_CATEGORIES.flatMap(c => c.items);
 
 export default function DashboardPage() {
     const [active, setActive] = useState("overview");
-    const { user, logout } = useAuth();
+    const { user, logout, loading } = useAuth();
+
 
     // Lifted States
     const [auditState, setAuditState] = useState({
@@ -2136,6 +2134,7 @@ export default function DashboardPage() {
     const [inventoryState, setInventoryState] = useState({});
     const [billingState, setBillingState] = useState({});
 
+
     const refreshEnterprise = async () => {
         try {
             const [ro, rp, rh, rar, rae, ral, rm] = await Promise.all([
@@ -2165,6 +2164,16 @@ export default function DashboardPage() {
     useEffect(() => {
         refreshEnterprise();
     }, []);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-[#090A0C] flex flex-col items-center justify-center p-6 text-center">
+                <Loader2 className="w-12 h-12 text-orange-500 animate-spin mb-4" />
+                <h2 className="text-xl font-black text-white uppercase tracking-tighter">Initializing Secure Terminal...</h2>
+                <p className="text-slate-600 text-[10px] font-bold uppercase tracking-widest mt-2">Authenticating Node & Verifying Governance Protocols</p>
+            </div>
+        );
+    }
 
     const nav = ALL_NAV_ITEMS.find(n => n.id === active)!;
 
@@ -2303,6 +2312,7 @@ export default function DashboardPage() {
                             {active === "history" && <ScanHistoryPage state={historyState} setState={setHistoryState} onAction={refreshEnterprise} />}
                             {active === "report" && <ModelReportCardModule state={reportCardState} setState={setReportCardState} onAction={refreshEnterprise} />}
                             {active === "observe" && <ObservabilityModule state={observabilityState} setState={setObservabilityState} onAction={refreshEnterprise} />}
+                            {active === "compliance" && <ComplianceModule state={complianceState} setState={setComplianceState} onAction={refreshEnterprise} />}
                             {active === "governance-score" && <GovernanceModule state={governanceState} setState={setGovernanceState} onAction={refreshEnterprise} />}
                             { active === "retraining" && <RetrainingModule modelId={""} /> }
                             { active === "guardrail" && <GuardrailModule state={guardrailState} setState={setGuardrailState} onAction={refreshEnterprise} /> }

@@ -234,6 +234,44 @@ async def list_models(
 
 
 # ═══════════════════════════════════════════════
+# GET MODEL DETAILS
+# ═══════════════════════════════════════════════
+@router.get("/models/{model_id}")
+async def get_model(
+    model_id: str,
+    db: AsyncSession = Depends(get_db),
+    auth: AuthContext = Depends(require_role("viewer")),
+):
+    """Get details for a specific model."""
+    model = await db.get(Model, model_id)
+    if not model:
+        raise HTTPException(404, "Model not found.")
+    
+    # Get version count
+    v_count_stmt = select(func.count(ModelVersion.id)).filter(ModelVersion.model_id == model_id)
+    version_count = (await db.execute(v_count_stmt)).scalar() or 0
+    
+    # Get latest version details
+    latest_v_stmt = select(ModelVersion).filter(ModelVersion.model_id == model_id).order_by(ModelVersion.version_number.desc()).limit(1)
+    latest_version = (await db.execute(latest_v_stmt)).scalars().first()
+    
+    return {
+        "id": str(model.id),
+        "name": model.name,
+        "provider": model.provider,
+        "risk_tier": model.risk_tier,
+        "governance_score": latest_version.governance_score if latest_version else None,
+        "deployment_environment": model.deployment_environment,
+        "business_owner": model.business_owner,
+        "technical_owner": model.technical_owner,
+        "version_count": version_count,
+        "latest_version": latest_version.version_number if latest_version else 0,
+        "created_at": str(model.created_at),
+        "metadata": model.metadata_json
+    }
+
+
+# ═══════════════════════════════════════════════
 # LIST MODEL VERSIONS
 # ═══════════════════════════════════════════════
 @router.get("/models/{model_id}/versions")

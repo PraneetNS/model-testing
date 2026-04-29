@@ -21,9 +21,9 @@ $exampleEnv = Join-Path $backendPath ".env.example"
 if (-not (Test-Path $envPath)) {
     if (Test-Path $exampleEnv) {
         Copy-Item $exampleEnv $envPath
-        Write-Host "⚠️  Created .env from .env.example" -ForegroundColor Yellow
-        Write-Host "⚠️  Please set DATABASE_URL, REDIS_URL, and SECRET_KEY in $envPath" -ForegroundColor Yellow
-        Write-Host "⚠️  Then run .\run.ps1 again." -ForegroundColor Yellow
+        Write-Host "Created .env from .env.example" -ForegroundColor Yellow
+        Write-Host "Please set DATABASE_URL, REDIS_URL, and SECRET_KEY in $envPath" -ForegroundColor Yellow
+        Write-Host "Then run .\run.ps1 again." -ForegroundColor Yellow
         exit
     } else {
         Write-Error ".env and .env.example missing in $backendPath"
@@ -33,7 +33,7 @@ if (-not (Test-Path $envPath)) {
 # 3. Setup Python environment
 Push-Location $backendPath
 if (-not (Test-Path "venv")) {
-    Write-Host "📦 Creating Python virtual environment..." -ForegroundColor Green
+    Write-Host "Creating Python virtual environment..." -ForegroundColor Green
     python -m venv venv
 }
 
@@ -46,7 +46,7 @@ Write-Host "Running database migrations..." -ForegroundColor Green
 
 # 5. Seed initial data
 Write-Host "Seeding database..." -ForegroundColor Green
-& ".\venv\Scripts\python.exe" -c 'import asyncio; import sys; import os; sys.path.insert(0, os.getcwd()); from app.db.seed import seed_if_empty; asyncio.run(seed_if_empty())'
+& ".\venv\Scripts\python.exe" -c "import asyncio; import sys; import os; sys.path.insert(0, os.getcwd()); from app.db.seed import seed_if_empty; asyncio.run(seed_if_empty())"
 
 # 6. Start backend services
 Write-Host "Starting FastAPI backend..." -ForegroundColor Green
@@ -70,23 +70,21 @@ if (-not (Test-Path "node_modules")) {
 Write-Host "Starting Next.js frontend..." -ForegroundColor Green
 $frontendProcess = Start-Process -FilePath "npm.cmd" -ArgumentList "run", "dev" -PassThru
 
-Write-Host "`n----------------------------------------" -ForegroundColor Cyan
-Write-Host '  Niyantrana is running' -ForegroundColor Green
-Write-Host '----------------------------------------' -ForegroundColor Cyan
-Write-Host '  Dashboard:  http://localhost:3000'
-Write-Host '  API:        http://localhost:8000'
-Write-Host '  API Docs:   http://localhost:8000/docs'
-Write-Host '----------------------------------------' -ForegroundColor Cyan
-Write-Host '  Default login: admin@niyantrana.ai'
-Write-Host '  Default pass:  change-me-immediately'
-Write-Host '----------------------------------------' -ForegroundColor Cyan
-Write-Host '  Close this window to stop all services' -ForegroundColor Yellow
-Write-Host ''
+Write-Host "----------------------------------------" -ForegroundColor Cyan
+Write-Host "  Niyantrana is running" -ForegroundColor Green
+Write-Host "----------------------------------------" -ForegroundColor Cyan
+Write-Host "  Dashboard:  http://localhost:3000"
+Write-Host "  API:        http://localhost:8000"
+Write-Host "  API Docs:   http://localhost:8000/docs"
+Write-Host "----------------------------------------" -ForegroundColor Cyan
+Write-Host "  Default login: admin@niyantrana.ai"
+Write-Host "  Default pass:  change-me-immediately"
+Write-Host "----------------------------------------" -ForegroundColor Cyan
+Write-Host "  Processes started in background." -ForegroundColor Yellow
+Write-Host ""
+
 Pop-Location
 Pop-Location
 
-# Wait for processes
-$processes = @($backendProcess, $workerProcess, $beatProcess, $frontendProcess) | Where-Object { $_ -ne $null -and $_.Id -ne $null }
-if ($processes) {
-    Wait-Process -Id ($processes.Id)
-}
+# We don't wait here if we want the script to finish and keep processes running in background
+# But in this environment, we might want to wait a bit or return process IDs

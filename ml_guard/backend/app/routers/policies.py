@@ -10,10 +10,12 @@ from sqlalchemy.future import select
 from sqlalchemy import desc
 from pydantic import BaseModel
 from typing import Optional
+import structlog
 from app.db.session import get_db
 from app.db.models import PolicyVersion, PolicyRule, AuditLog, utcnow
 from app.core.auth import AuthContext, get_auth_context, require_role
 
+logger = structlog.get_logger()
 router = APIRouter()
 
 DEFAULT_POLICY_CONFIG = {
@@ -113,52 +115,54 @@ async def create_policy(body: PolicyCreate, db: AsyncSession = Depends(get_db)):
 
 @router.get("/policies/active")
 async def get_active_policy(db: AsyncSession = Depends(get_db), auth: AuthContext = Depends(get_auth_context)):
-    org_id = auth.org_id
-    logger.info("fetch_active_policy", org_id=str(org_id))
-    
-    # 1. First try the new PolicyRule model
     try:
-        stmt_rule = select(PolicyRule).filter(PolicyRule.is_active == True)
-        if org_id:
-            stmt_rule = stmt_rule.filter(PolicyRule.org_id == org_id)
+        org_id = auth.org_id
+        logger.info("fetch_active_policy", org_id=str(org_id))
         
-        active_rule = (await db.execute(stmt_rule.order_by(desc(PolicyRule.created_at)).limit(1))).scalar_one_or_none()
-        
-        if active_rule:
-            merged_config = {**DEFAULT_POLICY_CONFIG, **active_rule.rules_json}
-            return {
-                "id": str(active_rule.id), 
-                "name": active_rule.name,
-                "rules": active_rule.rules_json,
-                "config": merged_config,
-                "version": "active_rule",
-                "is_active": True,
-            }
-    except Exception as e:
-        logger.error("policy_rule_fetch_error", error=str(e))
+        # 1. First try the new PolicyRule model
+        try:
+            stmt_rule = select(PolicyRule).filter(PolicyRule.is_active == True)
+            if org_id:
+                stmt_rule = stmt_rule.filter(PolicyRule.org_id == org_id)
+            
+            active_rule = (await db.execute(stmt_rule.order_by(desc(PolicyRule.created_at)).limit(1))).scalar_one_or_none()
+            
+            if active_rule:
+                merged_config = {**DEFAULT_POLICY_CONFIG, **active_rule.rules_json}
+                return {
+                    "id": str(active_rule.id), 
+                    "name": active_rule.name,
+                    "rules": active_rule.rules_json,
+                    "config": merged_config,
+                    "version": "active_rule",
+                    "is_active": True,
+                }
+        except Exception as e:
+            logger.error("policy_rule_fetch_error", error=str(e))
 
-    # 2. Fallback to older PolicyVersion
-    try:
-        stmt_ver = select(PolicyVersion).filter(PolicyVersion.is_active == True)
-        if org_id:
-            stmt_ver = stmt_ver.filter(PolicyVersion.org_id == org_id)
-        
-        policy = (await db.execute(stmt_ver.order_by(desc(PolicyVersion.created_at)).limit(1))).scalar_one_or_none()
-        
-        if policy:
-            return {
-                "id": str(policy.id), 
-                "name": policy.name, 
-                "version": policy.version,
-                "rules": policy.config, 
-                "config": policy.config, 
-                "is_active": True,
-            }
+        # 2. Fallback to older PolicyVersion
+        try:
+            stmt_ver = select(PolicyVersion).filter(PolicyVersion.is_active == True)
+            if org_id:
+                stmt_ver = stmt_ver.filter(PolicyVersion.org_id == org_id)
+            
+            policy = (await db.execute(stmt_ver.order_by(desc(PolicyVersion.created_at)).limit(1))).scalar_one_or_none()
+            
+            if policy:
+                return {
+                    "id": str(policy.id), 
+                    "name": policy.name, 
+                    "version": policy.version,
+                    "rules": policy.config, 
+                    "config": policy.config, 
+                    "is_active": True,
+                }
+        except Exception as e:
+            logger.error("policy_version_fetch_error", error=str(e))
     except Exception as e:
-        logger.error("policy_version_fetch_error", error=str(e))
+        logger.error("critical_policy_fetch_failure", error=str(e))
     
     # 3. Final safety fallback
-    logger.warning("using_hardcoded_default_policy")
     return {
         "id": "default",
         "name": "Global Default Policy",

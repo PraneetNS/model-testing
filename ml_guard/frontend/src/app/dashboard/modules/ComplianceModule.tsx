@@ -12,12 +12,18 @@ export default function ComplianceModule({ modelId = "" }) {
     const [availableModels, setAvailableModels] = useState<any[]>([]);
 
     useEffect(() => {
-        apiFetch("/api/v1/models")
-            .then(res => safeJson<any[]>(res))
-            .then(data => {
-                if (Array.isArray(data)) setAvailableModels(data);
-            })
-            .catch(console.error);
+        const fetchModels = async () => {
+            try {
+                const res = await apiFetch("/api/inventory");
+                const data = await safeJson<any>(res);
+                const list = Array.isArray(data) ? data : (data?.items || []);
+                setAvailableModels(list);
+            } catch (err) {
+                console.error("Compliance fetch error:", err);
+                setError("Failed to load models list. Please try refreshing.");
+            }
+        };
+        fetchModels();
     }, []);
 
     const runPack = async () => {
@@ -30,11 +36,17 @@ export default function ComplianceModule({ modelId = "" }) {
         setResults(null);
         try {
             const res = await apiFetch(`/api/compliance/${selectedModel}/pack/${pack}`);
-            const data = await safeJson(res);
-            if (!res.ok) throw new Error(data.detail || "Failed to run compliance pack");
+            const data = await safeJson<any>(res);
+            if (!res.ok) {
+                if (data.detail?.error === "usage_limit_reached") {
+                    throw new Error(`Usage limit reached for ${data.detail.event_type}. Please upgrade your plan.`);
+                }
+                const msg = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail || data);
+                throw new Error(msg);
+            }
             setResults(data);
         } catch (e: any) {
-            setError(e.message);
+            setError(e.message || String(e));
         } finally {
             setLoading(false);
         }
@@ -71,7 +83,7 @@ export default function ComplianceModule({ modelId = "" }) {
                             >
                                 <option value="">-- Choose Model --</option>
                                 {availableModels.map(m => (
-                                    <option key={m.id} value={m.id}>{m.name} ({m.version})</option>
+                                    <option key={m.model_id || m.id} value={m.model_id || m.id}>{m.name} (v{m.latest_version ?? '1.0'})</option>
                                 ))}
                             </select>
                         </div>
@@ -166,12 +178,16 @@ export default function ComplianceModule({ modelId = "" }) {
                                         <div className="space-y-2 text-xs">
                                             <div className="flex gap-2">
                                                 <span className="text-slate-500 w-24 shrink-0 font-medium">Evidence:</span>
-                                                <span className="text-slate-300 font-mono bg-black/20 px-2 py-0.5 rounded break-all">{c.evidence}</span>
+                                                <span className="text-slate-300 font-mono bg-black/20 px-2 py-0.5 rounded break-all">
+                                                    {typeof c.evidence === 'string' ? c.evidence : JSON.stringify(c.evidence)}
+                                                </span>
                                             </div>
                                             {c.status !== "pass" && c.remediation && (
                                                 <div className="flex gap-2">
                                                     <span className="text-slate-500 w-24 shrink-0 font-medium">Remediation:</span>
-                                                    <span className="text-amber-400">{c.remediation}</span>
+                                                    <span className="text-amber-400">
+                                                        {typeof c.remediation === 'string' ? c.remediation : JSON.stringify(c.remediation)}
+                                                    </span>
                                                 </div>
                                             )}
                                         </div>
