@@ -85,7 +85,35 @@ celery_app.autodiscover_tasks([
     "app.domain.services",
     "app.services.forecasting",
     "app.tasks",  # covers ingest, red_team, reports, observability
+    "app.tasks.observability",
+    "app.tasks.retraining",
+    "app.tasks.scoring",
+    "app.tasks.inventory",
+    "app.tasks.sandbox",
+    "app.tasks.billing",
+    "app.tasks.reports",
+    "app.tasks.red_team",
+    "app.tasks.ingest",
+    "app.tasks.notifications",
+    "app.tasks.explainability",
 ])
+
+# Ensure all task modules are imported so decorators run
+try:
+    import app.tasks.observability
+    import app.tasks.retraining
+    import app.tasks.scoring
+    import app.tasks.inventory
+    import app.tasks.sandbox
+    import app.tasks.billing
+    import app.tasks.reports
+    import app.tasks.red_team
+    import app.tasks.ingest
+    import app.tasks.notifications
+    import app.tasks.explainability
+    import app.workers.tasks
+except Exception as e:
+    structlog.get_logger().error("task_import_failed", error=str(e))
 
 # â”€â”€â”€ Celery Beat Schedule â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 celery_app.conf.beat_schedule = {

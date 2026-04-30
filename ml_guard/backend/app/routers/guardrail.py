@@ -16,7 +16,29 @@ from app.billing.enforcement import check_billing_limits
 
 router = APIRouter()
 
+@router.get("/guardrail")
+async def list_guardrail_configs(
+    auth: AuthContext = Depends(get_auth_context),
+    db: AsyncSession = Depends(get_db)
+):
+    """List all guardrail configurations."""
+    res = await db.execute(select(GuardrailConfigModel).order_by(GuardrailConfigModel.created_at.desc()))
+    configs = res.scalars().all()
+    return [
+        {
+            "id": str(c.id),
+            "model_id": str(c.model_id),
+            "name": c.name,
+            "enabled_input_checks": c.enabled_input_checks,
+            "enabled_output_checks": c.enabled_output_checks,
+            "action_on_block": c.action_on_block,
+            "created_at": str(c.created_at),
+        }
+        for c in configs
+    ]
+
 @router.post("/guardrail")
+
 async def create_guardrail_config(
     payload: Dict[str, Any],
     auth: AuthContext = Depends(get_auth_context),

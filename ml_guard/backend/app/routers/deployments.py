@@ -166,33 +166,35 @@ async def list_deployments(
     auth: AuthContext = Depends(require_role("viewer")),
 ):
     """List all deployments with optional filtering."""
-    stmt = select(Deployment)
+    stmt = (
+        select(Deployment, ModelVersion, Model)
+        .outerjoin(ModelVersion, Deployment.version_id == ModelVersion.id)
+        .outerjoin(Model, ModelVersion.model_id == Model.id)
+    )
+    
     if environment:
         stmt = stmt.filter(Deployment.environment == environment)
     if status:
         stmt = stmt.filter(Deployment.status == status)
 
-    total_result = await db.execute(
-        select(func.count(Deployment.id)).filter(
-            *([Deployment.environment == environment] if environment else []),
-            *([Deployment.status == status] if status else []),
-        )
-    )
+    # Note: total count should still respect filters
+    count_stmt = select(func.count(Deployment.id))
+    if environment:
+        count_stmt = count_stmt.filter(Deployment.environment == environment)
+    if status:
+        count_stmt = count_stmt.filter(Deployment.status == status)
+        
+    total_result = await db.execute(count_stmt)
     total = total_result.scalar() or 0
+    
     offset = (page - 1) * per_page
     deployments_result = await db.execute(
         stmt.order_by(Deployment.created_at.desc()).offset(offset).limit(per_page)
     )
-    deployments = deployments_result.scalars().all()
+    rows = deployments_result.all()
 
     items = []
-    for d in deployments:
-        version_result = await db.execute(select(ModelVersion).filter(ModelVersion.id == str(d.version_id)))
-        version = version_result.scalar_one_or_none()
-        model = None
-        if version:
-            model_result = await db.execute(select(Model).filter(Model.id == str(version.model_id)))
-            model = model_result.scalar_one_or_none()
+    for d, version, model in rows:
         items.append({
             "deployment_id": str(d.id),
             "model_name": model.name if model else "Unknown",

@@ -113,12 +113,12 @@ async def global_observability_feed(
     # Get all unique model IDs from registry (Primary Source)
     try:
         from app.db.models import Model
-        model_ids = [str(r[0]) for r in (await db.execute(select(Model.id))).scalars().all()]
+        model_ids = [str(r) for r in (await db.execute(select(Model.id))).scalars().all()]
     except Exception:
         model_ids = []
 
     # Supplement with IDs from logs just in case there are orphaned logs (unlikely but safe)
-    log_ids = [str(r[0]) for r in (await db.execute(select(PredictionLog.model_id).distinct())).scalars().all()]
+    log_ids = [str(r) for r in (await db.execute(select(PredictionLog.model_id).distinct())).scalars().all()]
     model_ids = list(set(model_ids + [mid for mid in log_ids if mid]))
 
     cutoff_24h = datetime.utcnow() - timedelta(hours=24)

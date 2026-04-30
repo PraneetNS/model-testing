@@ -17,8 +17,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.db.session import get_db
+from app.db.models import ScanRecord
 from app.services.certificate_engine import CertificateEngine
 from app.services.governance_engine import GovernanceEngine, GovernanceScoreResult
+
 
 router = APIRouter()
 logger = structlog.get_logger(__name__)

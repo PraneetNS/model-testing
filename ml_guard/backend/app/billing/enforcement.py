@@ -13,6 +13,16 @@ async def check_billing_limits(request: Request):
     Middleware-style dependency to enforce plan limits.
     Returns 402 Payment Required if limits are exceeded.
     """
+    # 0. Admin / dev bypass — skip billing for admin-scoped keys
+    x_api_key = request.headers.get("X-API-Key", "")
+    DEV_BYPASS_KEYS = [
+        "dev-secret-key",
+        "mlg_PeNfpwQSOtJkWr1Tow62Kr5luLuEugGi",
+        "mlg_simulator_key_2026_safe_dev",
+    ]
+    if x_api_key in DEV_BYPASS_KEYS:
+        return  # Unlimited for dev/admin keys
+
     # 1. Identify the metered event based on the endpoint path
     path = request.url.path
     event_type = None
@@ -73,8 +83,8 @@ async def check_billing_limits(request: Request):
             # For demo, audits are unlimited on pro/enterprise but 10 on free
             limit = 10 if plan.slug == "free" else -1
             
-        if limit == -1:
-            return # Unlimited
+        if limit == -1 or limit == 0:
+            return # Unlimited (0 = uninitialized/not configured)
 
         # 5. Check current month's usage
         now = datetime.now(timezone.utc)

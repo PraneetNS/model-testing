@@ -112,22 +112,36 @@ export default function GuardrailModule({ state }: any) {
         updateConfig({ [field]: next });
     };
 
+    const [testError, setTestError] = useState<string | null>(null);
+
     const runTest = async () => {
         if (!config || !testPrompt) return;
         setTesting(true);
+        setTestResult(null);
+        setTestError(null);
         try {
             const r = await apiFetch(`/api/guardrail/${config.id}/evaluate`, {
                 method: "POST",
                 body: JSON.stringify({ prompt: testPrompt, response: testResponse })
             });
             const res = await safeJson<any>(r);
-            setTestResult(res);
-            // Refresh traces
-            loadGuardrail(selectedModelId);
+            // Validate the response has the expected shape before setting state
+            if (!r.ok || res?.detail || res?.error) {
+                setTestError(res?.detail || res?.error || `Server error (${r.status})`);
+            } else if (!res?.action) {
+                setTestError("Unexpected response from guardrail engine.");
+            } else {
+                setTestResult(res);
+                // Refresh traces
+                loadGuardrail(selectedModelId);
+            }
+        } catch (e: any) {
+            setTestError(e?.message || "Network error during evaluation.");
         } finally {
             setTesting(false);
         }
     };
+
 
     return (
         <div className="space-y-8">
@@ -281,6 +295,13 @@ export default function GuardrailModule({ state }: any) {
                                 </div>
                             </div>
 
+                            {testError && (
+                                <div className="mt-4 p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center gap-3">
+                                    <div className="w-2 h-2 rounded-full bg-red-400 shrink-0" />
+                                    <p className="text-xs font-bold text-red-400">{testError}</p>
+                                </div>
+                            )}
+
                             {testResult && (
                                 <div className="mt-4 p-4 rounded-xl bg-orange-500/5 border border-orange-500/10 animate-in fade-in slide-in-from-top-2 duration-300">
                                     <div className="flex items-center justify-between mb-3">
@@ -293,7 +314,7 @@ export default function GuardrailModule({ state }: any) {
                                     <div className="grid grid-cols-2 gap-3 text-[10px]">
                                         <div className="space-y-1">
                                             <p className="font-black text-slate-700 uppercase">Input Results</p>
-                                            {Object.entries(testResult.input_checks).map(([k, v]: any) => (
+                                            {Object.entries(testResult.input_checks || {}).map(([k, v]: any) => (
                                                 <div key={k} className="flex justify-between border-b border-white/5 py-1">
                                                     <span className="text-slate-500 capitalize">{k}</span>
                                                     <span className={v.flagged ? "text-red-400 font-bold" : "text-emerald-400"}>{v.flagged ? "FLAGGED" : "OK"}</span>
@@ -302,7 +323,7 @@ export default function GuardrailModule({ state }: any) {
                                         </div>
                                         <div className="space-y-1">
                                             <p className="font-black text-slate-700 uppercase">Output Results</p>
-                                            {Object.entries(testResult.output_checks).map(([k, v]: any) => (
+                                            {Object.entries(testResult.output_checks || {}).map(([k, v]: any) => (
                                                 <div key={k} className="flex justify-between border-b border-white/5 py-1">
                                                     <span className="text-slate-500 capitalize">{k}</span>
                                                     <span className={v.flagged ? "text-red-400 font-bold" : "text-emerald-400"}>{v.flagged ? "FLAGGED" : "OK"}</span>
@@ -349,13 +370,13 @@ export default function GuardrailModule({ state }: any) {
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-right space-x-1">
-                                                    {Object.entries(t.checks_summary.input).map(([k, v]) => v && (
+                                                    {Object.entries(t.checks_summary?.input || {}).map(([k, v]) => v && (
                                                         <span key={k} className="text-[8px] bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded uppercase font-black">In:{k}</span>
                                                     ))}
-                                                    {Object.entries(t.checks_summary.output).map(([k, v]) => v && (
+                                                    {Object.entries(t.checks_summary?.output || {}).map(([k, v]) => v && (
                                                         <span key={k} className="text-[8px] bg-orange-500/10 text-orange-400 px-1.5 py-0.5 rounded uppercase font-black">Out:{k}</span>
                                                     ))}
-                                                    {(!Object.values(t.checks_summary.input).some(v => v) && !Object.values(t.checks_summary.output).some(v => v)) && (
+                                                    {(!t.checks_summary || (!Object.values(t.checks_summary.input || {}).some(v => v) && !Object.values(t.checks_summary.output || {}).some(v => v))) && (
                                                         <span className="text-[8px] text-slate-700 uppercase font-black">None</span>
                                                     )}
                                                 </td>

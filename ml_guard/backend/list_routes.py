@@ -1,8 +1,9 @@
-from app.main import app
+import httpx, asyncio, json
 
-for route in app.routes:
-    # Check for websocket routes
-    if hasattr(route, "endpoint") and "websocket" in str(route.endpoint).lower():
-        print(f"WS ROUTE: {route.path}")
-    elif hasattr(route, "path"):
-        print(f"ROUTE: {route.path}")
+async def main():
+    r = await httpx.AsyncClient().get('http://localhost:8000/openapi.json')
+    paths = sorted(r.json()['paths'].keys())
+    for p in paths:
+        print(p)
+
+asyncio.run(main())

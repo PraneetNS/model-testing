@@ -380,6 +380,8 @@ async def run_audit(
         df_val = _read_df(val_path)
 
         # --- Register datasets in lineage store (now with row counts) ---
+        t_name = train_file.filename if (train_file and train_file.filename) else (train_dataset_url or "train.csv")
+        v_name = val_file.filename if (val_file and val_file.filename) else (val_dataset_url or "val.csv")
         await _ensure_dataset_registered(t_bytes, t_name, "training", str(model.id), row_count=len(df_train))
         await _ensure_dataset_registered(v_bytes, v_name, "validation", str(model.id), row_count=len(df_val))
 

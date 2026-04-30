@@ -379,20 +379,43 @@ function ModelAuditPage({ state, setState, onAction }: any) {
             apiFetch(`/api/v1/policies/active`)
                 .then(async r => {
                     const d = await safeJson<any>(r);
-                    if (r.ok && d && !d.error) {
+                    if (r.ok && d && !d.error && !d.detail) {
                         setAuditState({ activePolicy: d });
                     } else {
-                        console.error(`FAILED POLICY LOAD [${r.status}]:`, d);
-                        if (r.ok) {
-                            setAuditState({ activePolicy: { rules: {}, config: {}, name: "Fallback Policy" } });
-                        }
+                        console.warn(`Policy load returned [${r.status}] — using fallback.`, d);
+                        // Always set a fallback so the audit page remains functional
+                        setAuditState({
+                            activePolicy: {
+                                rules: {
+                                    min_accuracy: 0.80,
+                                    min_f1_score: 0.75,
+                                    max_drift_psi: 0.20,
+                                    min_governance_score: 70.0
+                                },
+                                config: {},
+                                name: "Default Fallback Policy"
+                            }
+                        });
                     }
                 })
                 .catch(err => {
-                    console.error("Critical error fetching policy:", err);
+                    console.warn("Could not fetch active policy, using fallback:", err);
+                    setAuditState({
+                        activePolicy: {
+                            rules: {
+                                min_accuracy: 0.80,
+                                min_f1_score: 0.75,
+                                max_drift_psi: 0.20,
+                                min_governance_score: 70.0
+                            },
+                            config: {},
+                            name: "Default Fallback Policy"
+                        }
+                    });
                 });
         }
     }, [activePolicy]);
+
 
     const onModelUpload = async (f: File) => {
         setAuditState({ modelFile: f, modelMeta: null, error: null });

@@ -89,7 +89,7 @@ body {
   }
 
   /* Avoid cutting off cards across pages */
-  .bg-\[#0E1014\] {
+  .bg-\[\#0E1014\] {
     background: #f8fafc !important; /* Lighter background for print cards */
     border-color: #e2e8f0 !important;
     color: black !important;

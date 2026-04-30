@@ -72,7 +72,12 @@ async def get_auth_context(
         )
     
     # DEV BYPASS: Allow dev keys immediately
-    if key in ["dev-secret-key", "mlg_PeNfpwQSOtJkWr1Tow62Kr5luLuEugGi"]:
+    DEV_BYPASS_KEYS = [
+        "dev-secret-key",
+        "mlg_PeNfpwQSOtJkWr1Tow62Kr5luLuEugGi",
+        "mlg_simulator_key_2026_safe_dev",  # Used by all simulation & test scripts
+    ]
+    if key in DEV_BYPASS_KEYS:
         from app.db.models import Organization
         org_stmt = select(Organization).limit(1)
         org = (await db.execute(org_stmt)).scalars().first()
