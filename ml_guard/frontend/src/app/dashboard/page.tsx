@@ -451,7 +451,7 @@ function ModelAuditPage({ state, setState, onAction }: any) {
 
     const selected = Object.entries(checks).filter(([, v]) => v).map(([k]) => k);
     const runAudit = async () => {
-        const missing = [];
+        const missing: string[] = [];
         if (!modelFile) missing.push("Model Artifact");
         if (trainSrc === "upload" && !trainFile) missing.push("Training Data");
         if (trainSrc === "url" && !trainUrl) missing.push("Training URL");
@@ -2335,7 +2335,7 @@ export default function DashboardPage() {
                             {active === "history" && <ScanHistoryPage state={historyState} setState={setHistoryState} onAction={refreshEnterprise} />}
                             {active === "report" && <ModelReportCardModule state={reportCardState} setState={setReportCardState} onAction={refreshEnterprise} />}
                             {active === "observe" && <ObservabilityModule state={observabilityState} setState={setObservabilityState} onAction={refreshEnterprise} />}
-                            {active === "compliance" && <ComplianceModule state={complianceState} setState={setComplianceState} onAction={refreshEnterprise} />}
+                            {active === "compliance" && <ComplianceModule />}
                             {active === "governance-score" && <GovernanceModule state={governanceState} setState={setGovernanceState} onAction={refreshEnterprise} />}
                             { active === "retraining" && <RetrainingModule modelId={""} /> }
                             { active === "guardrail" && <GuardrailModule state={guardrailState} setState={setGuardrailState} onAction={refreshEnterprise} /> }

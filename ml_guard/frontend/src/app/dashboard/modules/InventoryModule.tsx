@@ -61,8 +61,8 @@ export default function InventoryModule() {
                 apiFetch(`/api/inventory/dashboard`)
             ]);
             
-            setModels(await safeJson(mResp, []));
-            setStats(await safeJson(sResp, null));
+            setModels(await safeJson(mResp));
+            setStats(await safeJson(sResp));
         } catch (e) {
             console.error("Inventory load failed", e);
         } finally {

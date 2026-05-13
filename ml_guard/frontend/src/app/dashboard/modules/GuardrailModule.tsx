@@ -370,10 +370,10 @@ export default function GuardrailModule({ state }: any) {
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-right space-x-1">
-                                                    {Object.entries(t.checks_summary?.input || {}).map(([k, v]) => v && (
+                                                    {Object.entries(t.checks_summary?.input || {}).map(([k, v]) => !!v && (
                                                         <span key={k} className="text-[8px] bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded uppercase font-black">In:{k}</span>
                                                     ))}
-                                                    {Object.entries(t.checks_summary?.output || {}).map(([k, v]) => v && (
+                                                    {Object.entries(t.checks_summary?.output || {}).map(([k, v]) => !!v && (
                                                         <span key={k} className="text-[8px] bg-orange-500/10 text-orange-400 px-1.5 py-0.5 rounded uppercase font-black">Out:{k}</span>
                                                     ))}
                                                     {(!t.checks_summary || (!Object.values(t.checks_summary.input || {}).some(v => v) && !Object.values(t.checks_summary.output || {}).some(v => v))) && (

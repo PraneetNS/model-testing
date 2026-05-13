@@ -80,9 +80,11 @@ export async function apiDelete<T>(path: string): Promise<T> {
   return text ? JSON.parse(text) : ({} as T);
 }
 
-export async function safeJson<T>(res: Response): Promise<T> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function safeJson<T = any>(res: Response): Promise<T> {
     if (res.status === 204) return {} as T;
     const text = await res.text();
-    return text ? JSON.parse(text) : ({} as T);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (text ? JSON.parse(text) : {}) as T;
 }
 
