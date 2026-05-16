@@ -1,111 +1,239 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400&display=swap');
 @import "tailwindcss";
 
+/* ═══════════════════════════════════════
+   NIYANTRANA DESIGN SYSTEM — globals.css
+   Tailwind v4 theme config via @theme
+   ═══════════════════════════════════════ */
+
 @theme {
-  --font-sans: var(--font-outfit), var(--font-geist-sans), ui-sans-serif, system-ui;
-  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  /* ─── Brand Colours ──────────────────── */
+  --color-ivory: #F7F6F2;
+  --color-stone: #E8E5DF;
+  --color-ink: #0F0F0E;
+  --color-ink-soft: #3D3D3A;
+  --color-muted: #888884;
+  --color-forest: #1A5F3A;
+  --color-mint: #4CAF80;
+  --color-mist: #E1F5EE;
+  --color-sage: #E8F0E8;
+  --color-danger: #C0392B;
+  --color-warning: #B35A00;
 
-  --color-orange-500: #f97316;
-  --color-orange-400: #fb923c;
-  --color-orange-600: #ea580c;
+  /* ─── Typography ─────────────────────── */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 
-  /* High-end SaaS Dark Palette */
-  --color-brand-bg: #090A0C;
-  --color-brand-panel: #0F1115;
+  /* ─── Border Radius ──────────────────── */
+  --radius-card: 14px;
+  --radius-badge: 999px;
+  --radius-icon: 10px;
+
+  /* ─── Animation ──────────────────────── */
+  --animate-spin-slow: spin-slow 2s linear infinite;
+  --animate-fade-in: fade-in 0.2s ease-out;
+  --animate-slide-up: slide-up 0.5s ease-out;
+  --animate-progress-fill: progress-fill 0.8s ease-out forwards;
+  --animate-pulse-ring: pulse-ring 3s ease-in-out infinite;
+  --animate-scroll-logos: scroll-logos 30s linear infinite;
 }
 
+/* ─── CSS Custom Properties ─────────────── */
 :root {
-  --background: #090A0C;
-  --foreground: #F8FAFC;
+  --ivory: #F7F6F2;
+  --stone: #E8E5DF;
+  --ink: #0F0F0E;
+  --ink-soft: #3D3D3A;
+  --muted: #888884;
+  --forest: #1A5F3A;
+  --mint: #4CAF80;
+  --mist: #E1F5EE;
+  --sage: #E8F0E8;
+  --danger: #C0392B;
+  --warning: #B35A00;
+}
+
+/* ─── Base Reset ─────────────────────────── */
+
+html {
+  scroll-behavior: smooth;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
+  background-color: #F7F6F2;
+  color: #3D3D3A;
+  font-family: 'Inter', system-ui, sans-serif;
+  line-height: 1.65;
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
+*, *::before, *::after {
+  box-sizing: border-box;
 }
 
-::-webkit-scrollbar-track {
-  background: #090A0C;
+/* ─── Container ─────────────────────────── */
+
+.container-site {
+  max-width: 1120px;
+  margin-inline: auto;
+  padding-inline: 24px;
 }
 
-::-webkit-scrollbar-thumb {
-  background: #1F2937;
-  border-radius: 99px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #f97316;
-}
-
-/* Animations */
-@keyframes pulse-soft {
-
-  0%,
-  100% {
-    opacity: 0.8;
-  }
-
-  50% {
-    opacity: 0.4;
+@media (min-width: 768px) {
+  .container-site {
+    padding-inline: 48px;
   }
 }
 
-.animate-pulse-soft {
-  animation: pulse-soft 3s infinite;
+/* ─── Typography Classes ─────────────────── */
+
+.text-display {
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.0;
+  color: #0F0F0E;
 }
 
-.glass-panel {
-  background: rgba(15, 17, 21, 0.7);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+.text-h1 {
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: #0F0F0E;
 }
 
-/* Print Enhancements */
+.text-h2 {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #0F0F0E;
+}
+
+.text-h3 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #0F0F0E;
+}
+
+.text-body {
+  font-weight: 400;
+  line-height: 1.65;
+  color: #3D3D3A;
+}
+
+.text-caption {
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: #888884;
+}
+
+.text-code {
+  font-family: 'JetBrains Mono', monospace;
+  background-color: #E1F5EE;
+  color: #1A5F3A;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.875em;
+}
+
+/* ─── Utility Classes ───────────────────── */
+
+.wavy-underline {
+  text-decoration: underline wavy #1A5F3A;
+  text-underline-offset: 6px;
+}
+
+.no-select { user-select: none; }
+
+.backdrop-blur-nav {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* ─── Scroll Animations ─────────────────── */
+
+@media (prefers-reduced-motion: no-preference) {
+  .animate-up {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 500ms ease-out, transform 500ms ease-out;
+  }
+
+  .animate-up.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  [data-delay="1"].animate-up { transition-delay: 80ms; }
+  [data-delay="2"].animate-up { transition-delay: 160ms; }
+  [data-delay="3"].animate-up { transition-delay: 240ms; }
+  [data-delay="4"].animate-up { transition-delay: 320ms; }
+  [data-delay="5"].animate-up { transition-delay: 400ms; }
+  [data-delay="6"].animate-up { transition-delay: 480ms; }
+  [data-delay="7"].animate-up { transition-delay: 560ms; }
+  [data-delay="8"].animate-up { transition-delay: 640ms; }
+}
+
+/* ─── Focus Rings ───────────────────────── */
+
+:focus-visible {
+  outline: 2px solid #1A5F3A;
+  outline-offset: 2px;
+}
+
+/* ─── Custom Scrollbar ──────────────────── */
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #F7F6F2; }
+::-webkit-scrollbar-thumb { background: #E8E5DF; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #888884; }
+
+/* ─── Keyframes ─────────────────────────── */
+
+@keyframes spin-slow { to { transform: rotate(360deg); } }
+
+@keyframes pulse-ring {
+  0%, 100% { transform: scale(1.0); }
+  50% { transform: scale(1.03); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes progress-fill {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
+@keyframes scroll-logos {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* ─── Component Specific Overrides ──────── */
+
+/* Ensure card border-radius token works */
+.rounded-card { border-radius: 14px; }
+.rounded-badge { border-radius: 999px; }
+.rounded-icon { border-radius: 10px; }
+
+/* Dashboard sidebar active item shape */
+.sidebar-active {
+  background: #1A5F3A;
+  border-left: 3px solid #4CAF80;
+  color: white;
+}
+
+/* ─── Print ─────────────────────────────── */
+
 @media print {
-  body {
-    background: white !important;
-    color: black !important;
-  }
-
-  .no-scrollbar {
-    overflow: visible !important;
-  }
-
-  main {
-    overflow: visible !important;
-    height: auto !important;
-    display: block !important;
-  }
-
-  /* Force backgrounds to show up (for colored badges/icons) */
-  * {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
-  /* Avoid cutting off cards across pages */
-  .bg-\[\#0E1014\] {
-    background: #f8fafc !important; /* Lighter background for print cards */
-    border-color: #e2e8f0 !important;
-    color: black !important;
-    page-break-inside: avoid;
-    break-inside: avoid;
-  }
-
-  h1, h2, h3, h4, h5, p, span {
-    color: black !important;
-  }
-  
-  /* Ensure report container fills page */
-  .max-w-\[1000px\], .max-w-\[1400px\] {
-    max-width: none !important;
-    width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-}
+  body { background: white !important; color: black !important; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+}

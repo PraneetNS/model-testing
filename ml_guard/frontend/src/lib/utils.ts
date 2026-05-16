@@ -1,12 +1,6 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
-import DOMPurify from "dompurify"
+import { type ClassValue, clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
-}
-
-export function sanitizeHtml(html: string): string {
-  if (typeof window === "undefined") return html;
-  return DOMPurify.sanitize(html);
+  return twMerge(clsx(inputs));
 }

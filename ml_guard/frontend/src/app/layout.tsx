@@ -1,56 +1,73 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono, Outfit } from "next/font/google";
-import "./globals.css";
-import { AuthProvider } from "@/context/AuthContext";
-import { CursorGlow } from "@/components/landing/CursorGlow";
-import Script from "next/script";
+import type { Metadata } from 'next';
+import { Inter, JetBrains_Mono } from 'next/font/google';
+import './globals.css';
+import { CustomCursor } from '@/components/ui/CustomCursor';
+import { RouteLoader } from '@/components/ui/RouteLoader';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+const inter = Inter({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-inter',
+  display: 'swap',
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const outfit = Outfit({
-  variable: "--font-outfit",
-  subsets: ["latin"],
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  weight: ['400'],
+  variable: '--font-jetbrains',
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: "ML Guard | Enterprise ML Quality Governance",
-  description: "Automated quality gates, drift telemetry, and regulatory compliance auditing for production ML models.",
+  title: 'Niyantrana — AI Governance Platform',
+  description:
+    'Behavioral contracts, drift detection, cryptographic audit certificates. The enterprise AI governance platform.',
+  keywords: [
+    'AI governance',
+    'machine learning',
+    'behavioral contracts',
+    'drift detection',
+    'AI compliance',
+    'AIBOM',
+    'governance-as-code',
+  ],
+  openGraph: {
+    title: 'Niyantrana — AI Governance Platform',
+    description: 'Behavioral contracts, drift detection, cryptographic audit certificates.',
+    type: 'website',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Niyantrana AI Governance Platform',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Niyantrana — AI Governance Platform',
+    description: 'Behavioral contracts, drift detection, cryptographic audit certificates.',
+  },
 };
 
-import { headers } from "next/headers";
-
-export default async function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  const nonce = (await headers()).get('x-nonce') || "";
-
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark scroll-smooth">
+    <html
+      lang="en"
+      className="scroll-smooth"
+      style={{ scrollBehavior: 'smooth' }}
+    >
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${outfit.variable} antialiased font-sans bg-[#090A0C]`}
+        className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}
+        style={{
+          fontFamily: 'Inter, system-ui, sans-serif',
+          backgroundColor: '#F7F6F2',
+          color: '#3D3D3A',
+        }}
       >
-        {/* Global safeJson polyfill — used across many components without local imports */}
-        <Script id="safeJson-polyfill" strategy="beforeInteractive">{`
-          window.safeJson = async function safeJson(res) {
-            if (res.status === 204) return {};
-            var text = await res.text();
-            return text ? JSON.parse(text) : {};
-          };
-        `}</Script>
-        <AuthProvider>
-          <CursorGlow />
-          {children}
-        </AuthProvider>
+        <CustomCursor />
+        <RouteLoader>{children}</RouteLoader>
       </body>
     </html>
   );

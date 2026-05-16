@@ -1,90 +1,48 @@
-/**
- * api.ts — ML Guard Centralized API Client
- * All backend requests go through this module.
- * Auth via X-API-Key header is injected automatically.
- */
+// Typed fetch wrapper for the Niyantrana backend
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
-const API_BASE = "/api/proxy";
-
-export { API_BASE };
-
-// Helper to get CSRF token from cookies
-function getCsrfToken(): string {
-  if (typeof document === 'undefined') return "";
-  const match = document.cookie.match(/csrf_token=([^;]+)/);
-  return match ? match[1] : "";
+export class ApiError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+    this.name = 'ApiError';
+  }
 }
 
-export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
-  const isFormData = init.body instanceof FormData;
-  const csrfToken = getCsrfToken();
+async function safeJson<T>(res: Response): Promise<T> {
+  if (res.status === 204) return {} as T;
+  const text = await res.text();
+  return text ? JSON.parse(text) : ({} as T);
+}
 
-  const headers: Record<string, string> = {
-    ...(isFormData ? {} : { "Content-Type": "application/json" }),
-    ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
-    "X-API-Key": process.env.NEXT_PUBLIC_API_KEY || "",
-    ...(init.headers as Record<string, string> | undefined ?? {}),
-  };
+async function request<T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const token =
+    typeof window !== 'undefined' ? localStorage.getItem('niyantrana_token') : null;
 
-  // Ensure path starts with / if not present
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  
-  // Strip version if calling proxy, or handle it in proxy. 
-  // Let's assume the proxy handles /api/... and targets the backend.
-  const res = await fetch(`${API_BASE}${normalizedPath}`, {
-    ...init,
-    headers,
+  const res = await fetch(`${BASE_URL}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers ?? {}),
+    },
   });
 
-  if (res.status === 401) {
-    if (typeof window !== 'undefined') {
-       window.location.href = '/login?expired=true';
-    }
-  }
-
-  return res;
-}
-
-export async function apiGet<T>(path: string): Promise<T> {
-  const res = await apiFetch(path);
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`GET ${path} failed ${res.status}: ${err}`);
+    const body = await safeJson<{ detail?: string }>(res);
+    throw new ApiError(res.status, body.detail ?? `HTTP ${res.status}`);
   }
-  if (res.status === 204) return {} as T;
-  const text = await res.text();
-  return text ? JSON.parse(text) : ({} as T);
+
+  return safeJson<T>(res);
 }
 
-export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
-  const res = await apiFetch(path, {
-    method: "POST",
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`POST ${path} failed ${res.status}: ${err}`);
-  }
-  if (res.status === 204) return {} as T;
-  const text = await res.text();
-  return text ? JSON.parse(text) : ({} as T);
-}
-
-export async function apiDelete<T>(path: string): Promise<T> {
-  const res = await apiFetch(path, {
-    method: "DELETE",
-  });
-  if (!res.ok) throw new Error(`DELETE ${path} failed ${res.status}`);
-  if (res.status === 204) return {} as T;
-  const text = await res.text();
-  return text ? JSON.parse(text) : ({} as T);
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function safeJson<T = any>(res: Response): Promise<T> {
-    if (res.status === 204) return {} as T;
-    const text = await res.text();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (text ? JSON.parse(text) : {}) as T;
-}
-
+export const api = {
+  get: <T>(path: string) => request<T>(path),
+  post: <T>(path: string, body: unknown) =>
+    request<T>(path, { method: 'POST', body: JSON.stringify(body) }),
+  put: <T>(path: string, body: unknown) =>
+    request<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
+  delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
+};

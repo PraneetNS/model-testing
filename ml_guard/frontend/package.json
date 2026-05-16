@@ -10,6 +10,7 @@
     "postinstall": "npm audit --audit-level=high"
   },
   "dependencies": {
+    "@next/mdx": "^16.2.6",
     "axios": "^1.13.5",
     "clsx": "^2.1.1",
     "dompurify": "^3.4.0",
@@ -20,6 +21,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "recharts": "^3.8.1",
+    "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {

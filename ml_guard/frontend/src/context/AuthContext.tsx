@@ -8,6 +8,7 @@ interface AuthContextType {
     token: string | null;
     loading: boolean;
     logout: () => Promise<void>;
+    signInWithGoogle: () => Promise<void>;
     isDev: boolean;
 }
 
@@ -16,6 +17,7 @@ const AuthContext = createContext<AuthContextType>({
     token: null,
     loading: true,
     logout: async () => { },
+    signInWithGoogle: async () => { },
     isDev: false,
 });
 
@@ -167,8 +169,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         router.push('/');
     };
 
+    const signInWithGoogle = async () => {
+        try {
+            const { GoogleAuthProvider, signInWithPopup } = await import('firebase/auth');
+            const { auth } = await import('@/lib/firebase');
+            const provider = new GoogleAuthProvider();
+            await signInWithPopup(auth, provider);
+            router.push('/dashboard');
+        } catch (error) {
+            console.error('Google Sign-In Error:', error);
+        }
+    };
+
     return (
-        <AuthContext.Provider value={{ user, token, loading, logout, isDev }}>
+        <AuthContext.Provider value={{ user, token, loading, logout, signInWithGoogle, isDev }}>
             {children}
         </AuthContext.Provider>
     );
