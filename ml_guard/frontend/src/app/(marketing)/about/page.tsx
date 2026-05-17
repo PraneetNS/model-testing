@@ -72,10 +72,7 @@ export default function AboutPage() {
             Niyantrana is the flagship product of FireFlink ML Research, an applied AI safety lab focused on making production AI systems measurably safer and more accountable.
           </p>
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 rounded-badge border border-stone text-[13px] font-medium text-ink-soft flex-shrink-0">
-          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#FF6600' }} />
-          Backed by YC W26
-        </div>
+
       </div>
     </div>
   );

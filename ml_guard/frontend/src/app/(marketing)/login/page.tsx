@@ -28,10 +28,7 @@ export default function LoginPage() {
             Every deployment, certified.
           </p>
         </div>
-        <div className="flex items-center gap-2 text-[12px]" style={{ color: '#555552' }}>
-          <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#FF6600' }} />
-          Backed by YC W26
-        </div>
+
       </div>
 
       {/* Right: Form */}

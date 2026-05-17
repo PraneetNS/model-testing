@@ -11,7 +11,7 @@ interface TooltipProps {
 
 export function Tooltip({ content, children, className }: TooltipProps) {
   const [visible, setVisible] = useState(false);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const show = () => {
     timeoutRef.current = setTimeout(() => setVisible(true), 100);

@@ -51,6 +51,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { AuthProvider } from '@/context/AuthContext';
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
@@ -66,8 +68,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           color: '#3D3D3A',
         }}
       >
-        <CustomCursor />
-        <RouteLoader>{children}</RouteLoader>
+        <AuthProvider>
+          <CustomCursor />
+          <RouteLoader>{children}</RouteLoader>
+        </AuthProvider>
       </body>
     </html>
   );

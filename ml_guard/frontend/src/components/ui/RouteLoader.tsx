@@ -9,7 +9,7 @@ export function RouteLoader({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [visible, setVisible] = useState(false);
   const prevPath = useRef(pathname);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     if (prevPath.current !== pathname) {

@@ -168,24 +168,7 @@ async def compare_scans(
 # ══════════════════════════
 # MODEL REGISTRY
 # ══════════════════════════
-@router.get("/models")
-async def list_models(project_id: str = "", limit: int = 50, db: AsyncSession = Depends(get_db)):
-    stmt = select(Model).order_by(desc(Model.created_at))
-    if project_id:
-        stmt = stmt.filter(Model.project_id == project_id)
-    
-    models = (await db.execute(stmt.limit(limit))).scalars().all()
-    
-    return {
-        "items": [
-            {
-                "id": str(m.id), "name": m.name, "provider": m.provider,
-                "fingerprint": m.fingerprint, "version": m.version,
-                "metadata": m.metadata_json, "created_at": str(m.created_at),
-            }
-            for m in models
-        ]
-    }
+
 
 
 @router.get("/models/by-fingerprint/{fingerprint}")

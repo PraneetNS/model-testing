@@ -57,11 +57,7 @@ export function Footer() {
             <p className="mt-4 text-[13px] text-[#888884] leading-relaxed max-w-[200px]">
               AI governance, made measurable.
             </p>
-            {/* YC badge */}
-            <div className="mt-4 inline-flex items-center gap-1.5 text-[11px] font-medium text-[#888884] px-2.5 py-1 rounded-badge border border-[#1a1a18]">
-              <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#FF6600' }} />
-              Backed by YC W26
-            </div>
+
           </div>
 
           {/* Product */}

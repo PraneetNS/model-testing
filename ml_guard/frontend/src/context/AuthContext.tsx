@@ -170,14 +170,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     const signInWithGoogle = async () => {
+        console.log('Google Sign-In started...');
         try {
+            if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+                console.error('Firebase API Key is missing! Check your .env file.');
+                alert('Authentication configuration is missing. Please contact support.');
+                return;
+            }
+
             const { GoogleAuthProvider, signInWithPopup } = await import('firebase/auth');
             const { auth } = await import('@/lib/firebase');
             const provider = new GoogleAuthProvider();
-            await signInWithPopup(auth, provider);
+            
+            console.log('Opening Google Sign-In popup...');
+            const result = await signInWithPopup(auth, provider);
+            console.log('Google Sign-In successful:', result.user.email);
+            
             router.push('/dashboard');
-        } catch (error) {
+        } catch (error: any) {
             console.error('Google Sign-In Error:', error);
+            if (error.code === 'auth/popup-blocked') {
+                alert('Sign-in popup was blocked by your browser. Please allow popups for this site.');
+            } else {
+                alert(`Sign-in failed: ${error.message}`);
+            }
         }
     };
 

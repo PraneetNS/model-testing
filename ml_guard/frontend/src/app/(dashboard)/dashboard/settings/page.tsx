@@ -1,121 +1,160 @@
 'use client';
 
 import { useState } from 'react';
-import { Tabs } from '@/components/ui/Tabs';
+import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
-import { DataTable } from '@/components/ui/DataTable';
-import { Badge } from '@/components/ui/Badge';
-import { CodeBlock } from '@/components/ui/CodeBlock';
-import { Plus, Eye, EyeOff, Copy, Check } from 'lucide-react';
+import { Key, User, Bell, Shield, Database, RefreshCw, Check } from 'lucide-react';
 
-const SETTINGS_TABS = [
-  { id: 'api-keys', label: 'API Keys' },
-  { id: 'notifications', label: 'Notifications' },
-  { id: 'integrations', label: 'Integrations' },
-  { id: 'team', label: 'Team' },
-];
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
-const API_KEYS = [
-  { label: 'Production key', scopes: 'read, write, audit', lastUsed: '1h ago', expires: 'Never' },
-  { label: 'CI/CD key', scopes: 'audit, gate', lastUsed: '3h ago', expires: '2026-12-31' },
-  { label: 'Read-only key', scopes: 'read', lastUsed: '2d ago', expires: 'Never' },
-];
-
-function ApiKeysTab() {
-  const [showNew, setShowNew] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const newKey = 'niy_live_a3f8c2b1d4e7f9c2b1d4e7f9c2b1d4e7';
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(newKey);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
-
+function Section({ title, icon: Icon, children }: { title: string; icon: any; children: React.ReactNode }) {
   return (
-    <div>
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h3 className="text-[15px] font-semibold text-ink">API Keys</h3>
-          <p className="text-[13px] text-muted mt-0.5">Manage keys for SDK and CI/CD access.</p>
-        </div>
-        <Button variant="primary" size="sm" className="gap-1.5" onClick={() => setShowNew(true)}>
-          <Plus size={14} strokeWidth={2} />
-          Create new key
-        </Button>
+    <div className="bg-white border border-stone rounded-card overflow-hidden">
+      <div className="flex items-center gap-3 px-6 py-4 border-b border-stone bg-[#F7F6F2]">
+        <Icon size={15} strokeWidth={1.5} className="text-forest" />
+        <h2 className="text-[14px] font-semibold text-ink">{title}</h2>
       </div>
-
-      {/* New key modal */}
-      {showNew && (
-        <div className="bg-mist border border-forest/20 rounded-card p-5 mb-6">
-          <p className="text-[13px] font-semibold text-ink mb-2">⚠️ Copy this now — it will never be shown again.</p>
-          <div className="flex items-center gap-2">
-            <code className="flex-1 text-[13px] font-mono bg-white border border-stone rounded-[6px] px-3 py-2 text-ink overflow-x-auto">
-              {newKey}
-            </code>
-            <button onClick={handleCopy} className="flex items-center gap-1.5 text-[12px] text-forest hover:text-ink-soft transition-colors duration-150">
-              {copied ? <Check size={14} strokeWidth={2} /> : <Copy size={14} strokeWidth={1.5} />}
-              {copied ? 'Copied' : 'Copy'}
-            </button>
-          </div>
-          <button onClick={() => setShowNew(false)} className="mt-3 text-[12px] text-muted underline underline-offset-4">
-            I've saved it, dismiss
-          </button>
-        </div>
-      )}
-
-      <div className="bg-white border border-stone rounded-card p-0 overflow-hidden">
-        <DataTable
-          data={API_KEYS as unknown as Record<string, unknown>[]}
-          columns={[
-            { key: 'label', header: 'Label', render: (v) => <span className="font-medium text-ink">{String(v)}</span> },
-            { key: 'scopes', header: 'Scopes', render: (v) => <span className="font-mono text-[12px] text-muted">{String(v)}</span> },
-            { key: 'lastUsed', header: 'Last used' },
-            { key: 'expires', header: 'Expires' },
-            {
-              key: 'label',
-              header: '',
-              render: () => (
-                <button className="text-[12px] text-danger hover:underline underline-offset-4">Revoke</button>
-              ),
-            },
-          ]}
-        />
-      </div>
+      <div className="p-6">{children}</div>
     </div>
   );
 }
 
-function PlaceholderSettings({ label }: { label: string }) {
+function Field({ label, value, type = 'text', readOnly = false, onChange }: {
+  label: string; value: string; type?: string; readOnly?: boolean; onChange?: (v: string) => void;
+}) {
   return (
-    <div className="py-10 text-center">
-      <p className="text-[14px] text-muted">{label} settings — coming soon.</p>
+    <div className="mb-4">
+      <label className="block text-[12px] font-medium text-ink-soft mb-1.5">{label}</label>
+      <input type={type} value={value} readOnly={readOnly} onChange={e => onChange?.(e.target.value)}
+        className={`w-full h-10 px-3 text-[13px] border border-stone rounded-[8px] outline-none transition-colors ${
+          readOnly ? 'bg-[#F7F6F2] text-muted cursor-default' : 'bg-white text-ink focus:border-forest'
+        }`} />
     </div>
   );
 }
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState('api-keys');
+  const { user, logout } = useAuth();
+  const [apiUrl, setApiUrl] = useState(BASE_URL);
+  const [apiKey, setApiKey] = useState('');
+  const [saved, setSaved] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [backendStatus, setBackendStatus] = useState<'unknown' | 'online' | 'offline'>('unknown');
+
+  const saveSettings = () => {
+    if (apiKey) localStorage.setItem('niyantrana_token', apiKey);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  const testConnection = async () => {
+    setTesting(true);
+    try {
+      const res = await fetch(`${apiUrl}/drift/health`, { signal: AbortSignal.timeout(5000) });
+      setBackendStatus(res.ok ? 'online' : 'offline');
+    } catch {
+      setBackendStatus('offline');
+    } finally {
+      setTesting(false);
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-screen">
-      <div className="flex items-center px-8 h-16 border-b border-stone bg-white">
+      <div className="px-8 h-16 border-b border-stone bg-white flex items-center justify-between">
         <div>
           <h1 className="text-[17px] font-semibold text-ink">Settings</h1>
-          <p className="text-[11px] text-muted">Dashboard / Settings</p>
+          <p className="text-[11px] text-muted">Platform configuration and account settings</p>
         </div>
+        <Button variant="primary" size="sm" className="gap-2" onClick={saveSettings}>
+          {saved ? <><Check size={13} />Saved!</> : 'Save changes'}
+        </Button>
       </div>
 
-      <div className="px-8 bg-white border-b border-stone">
-        <Tabs tabs={SETTINGS_TABS} activeTab={activeTab} onTabChange={setActiveTab} />
-      </div>
+      <div className="flex-1 p-8 space-y-5 max-w-[760px]">
+        {/* Account */}
+        <Section title="Account" icon={User}>
+          <Field label="Display name" value={user?.displayName ?? ''} readOnly />
+          <Field label="Email" value={user?.email ?? ''} readOnly />
+          <Field label="User ID" value={user?.uid ?? ''} readOnly />
+          <div className="mt-4 pt-4 border-t border-stone">
+            <Button variant="ghost" size="sm" onClick={() => logout()} className="text-danger hover:text-danger hover:bg-red-50">
+              Sign out
+            </Button>
+          </div>
+        </Section>
 
-      <div className="flex-1 p-8">
-        <div className="max-w-[800px]">
-          {activeTab === 'api-keys' && <ApiKeysTab />}
-          {activeTab === 'notifications' && <PlaceholderSettings label="Notification" />}
-          {activeTab === 'integrations' && <PlaceholderSettings label="Integration" />}
-          {activeTab === 'team' && <PlaceholderSettings label="Team" />}
+        {/* Backend connection */}
+        <Section title="Backend Connection" icon={Database}>
+          <Field label="API Base URL" value={apiUrl} onChange={setApiUrl} />
+          <div className="flex items-center gap-3 mt-2">
+            <Button variant="ghost" size="sm" className="gap-2" onClick={testConnection} disabled={testing}>
+              {testing ? <><RefreshCw size={12} className="animate-spin" />Testing…</> : 'Test connection'}
+            </Button>
+            {backendStatus !== 'unknown' && (
+              <span className={`flex items-center gap-1.5 text-[12px] font-medium ${backendStatus === 'online' ? 'text-forest' : 'text-danger'}`}>
+                <span className={`w-2 h-2 rounded-full ${backendStatus === 'online' ? 'bg-forest' : 'bg-danger'}`} />
+                {backendStatus === 'online' ? 'Backend online' : 'Backend offline'}
+              </span>
+            )}
+          </div>
+        </Section>
+
+        {/* API Key */}
+        <Section title="Authentication" icon={Key}>
+          <p className="text-[12px] text-muted mb-4">
+            Set a backend API token to authenticate requests. This is stored in localStorage.
+          </p>
+          <Field label="Backend API token" value={apiKey} type="password" onChange={setApiKey}
+          />
+          <p className="text-[11px] text-muted mt-1">Leave blank to use unauthenticated mode (dev only).</p>
+        </Section>
+
+        {/* Notifications */}
+        <Section title="Notifications" icon={Bell}>
+          <div className="space-y-3">
+            {[
+              { label: 'Drift alerts', desc: 'Notify when drift score exceeds threshold', key: 'drift_alerts' },
+              { label: 'Contract breaches', desc: 'Notify on behavioral contract violations', key: 'contract_alerts' },
+              { label: 'Audit completions', desc: 'Notify when a governance audit finishes', key: 'audit_alerts' },
+              { label: 'Security events', desc: 'Notify on red team findings or security flags', key: 'security_alerts' },
+            ].map(n => (
+              <label key={n.key} className="flex items-start gap-3 cursor-pointer group">
+                <input type="checkbox" defaultChecked className="mt-0.5 accent-forest" />
+                <div>
+                  <p className="text-[13px] font-medium text-ink group-hover:text-forest transition-colors">{n.label}</p>
+                  <p className="text-[11px] text-muted">{n.desc}</p>
+                </div>
+              </label>
+            ))}
+          </div>
+        </Section>
+
+        {/* Governance thresholds */}
+        <Section title="Governance Thresholds" icon={Shield}>
+          <p className="text-[12px] text-muted mb-4">Configure default pass/fail thresholds for audits.</p>
+          <div className="grid md:grid-cols-2 gap-4">
+            {[
+              { label: 'Min. governance score (PASS)', key: 'gov_pass', defaultVal: '75' },
+              { label: 'Max. drift PSI (WARNING)', key: 'drift_warn', defaultVal: '0.15' },
+              { label: 'Max. drift PSI (CRITICAL)', key: 'drift_crit', defaultVal: '0.25' },
+              { label: 'Max. overfitting gap', key: 'overfit', defaultVal: '0.10' },
+            ].map(t => (
+              <div key={t.key}>
+                <label className="block text-[12px] font-medium text-ink-soft mb-1.5">{t.label}</label>
+                <input type="number" step="0.01" defaultValue={t.defaultVal}
+                  className="w-full h-9 px-3 text-[13px] border border-stone rounded-[8px] outline-none focus:border-forest" />
+              </div>
+            ))}
+          </div>
+          <p className="text-[11px] text-muted mt-3">Note: Threshold changes apply to future audits only.</p>
+        </Section>
+
+        {/* About */}
+        <div className="bg-[#F7F6F2] border border-stone rounded-card px-6 py-4">
+          <p className="text-[12px] font-medium text-ink mb-1">Niyantrana Platform</p>
+          <p className="text-[11px] text-muted">AI Governance · Model Auditing · Drift Detection</p>
+          <p className="text-[11px] text-muted mt-1">API: <span className="font-mono">{BASE_URL}</span></p>
         </div>
       </div>
     </div>

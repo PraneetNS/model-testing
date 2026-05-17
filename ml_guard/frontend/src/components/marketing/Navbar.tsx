@@ -7,6 +7,7 @@ import { Menu, X } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 
 const NAV_LINKS = [
   { label: 'Platform', href: '/#features' },
@@ -20,6 +21,7 @@ export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
+  const { user } = useAuth();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -67,25 +69,21 @@ export function Navbar() {
 
           {/* Right: CTAs + YC badge */}
           <div className="hidden md:flex items-center gap-3">
-            {/* YC badge — ONLY place orange appears */}
-            <a
-              href="https://ycombinator.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-[11px] font-medium text-ink-soft px-2.5 py-1 rounded-badge border border-stone hover:border-ink/20 transition-colors duration-150"
-            >
-              <span
-                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                style={{ background: '#FF6600' }}
-              />
-              Backed by YC W26
-            </a>
-            <Link href="/login">
-              <Button variant="ghost" size="sm">Log in</Button>
-            </Link>
-            <Link href="/signup">
-              <Button variant="primary" size="sm" data-cursor="cta">Get started</Button>
-            </Link>
+
+            {user ? (
+              <Link href="/dashboard">
+                <Button variant="primary" size="sm" data-cursor="cta">Dashboard</Button>
+              </Link>
+            ) : (
+              <>
+                <Link href="/login">
+                  <Button variant="ghost" size="sm">Log in</Button>
+                </Link>
+                <Link href="/signup">
+                  <Button variant="primary" size="sm" data-cursor="cta">Get started</Button>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile: hamburger */}
@@ -118,12 +116,20 @@ export function Navbar() {
               </Link>
             ))}
             <div className="flex flex-col gap-2 mt-4">
-              <Link href="/login" onClick={() => setMenuOpen(false)}>
-                <Button variant="ghost" size="md" className="w-full justify-center">Log in</Button>
-              </Link>
-              <Link href="/signup" onClick={() => setMenuOpen(false)}>
-                <Button variant="primary" size="md" className="w-full justify-center">Get started</Button>
-              </Link>
+              {user ? (
+                <Link href="/dashboard" onClick={() => setMenuOpen(false)}>
+                  <Button variant="primary" size="md" className="w-full justify-center">Dashboard</Button>
+                </Link>
+              ) : (
+                <>
+                  <Link href="/login" onClick={() => setMenuOpen(false)}>
+                    <Button variant="ghost" size="md" className="w-full justify-center">Log in</Button>
+                  </Link>
+                  <Link href="/signup" onClick={() => setMenuOpen(false)}>
+                    <Button variant="primary" size="md" className="w-full justify-center">Get started</Button>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>

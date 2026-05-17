@@ -58,6 +58,153 @@ const DOC_CONTENT: Record<string, { title: string; body: React.ReactNode }> = {
       </div>
     ),
   },
+  'installation': {
+    title: 'Installation',
+    body: (
+      <div className="prose-doc">
+        <p>Install the Niyantrana SDK to start auditing your ML models.</p>
+        <h2>Using Pip</h2>
+        <CodeBlock code="pip install niyantrana" language="bash" />
+        <h2>Using Poetry</h2>
+        <CodeBlock code="poetry add niyantrana" language="bash" />
+        <h2>Requirements</h2>
+        <ul>
+          <li>Python 3.8+</li>
+          <li>scikit-learn, PyTorch, or TensorFlow</li>
+          <li>pandas and numpy</li>
+        </ul>
+      </div>
+    ),
+  },
+  'authentication': {
+    title: 'Authentication',
+    body: (
+      <div className="prose-doc">
+        <p>To use the Niyantrana API and SDK, you need an API key.</p>
+        <h2>Generating an API Key</h2>
+        <ol className="list-decimal ml-4 mb-4">
+          <li>Log in to your Niyantrana dashboard.</li>
+          <li>Navigate to <b>Settings &gt; API Keys</b>.</li>
+          <li>Click <b>Generate New Key</b> and copy the token.</li>
+        </ol>
+        <h2>Setting Environment Variables</h2>
+        <CodeBlock code={`export NIYANTRANA_API_KEY="niy_your_key_here"`} language="bash" />
+        <p>The SDK will automatically pick up this environment variable.</p>
+      </div>
+    ),
+  },
+  'governance-scoring': {
+    title: 'Governance Scoring',
+    body: (
+      <div className="prose-doc">
+        <p>The Governance Score is a 0–100 metric reflecting a model's compliance, fairness, robustness, and explainability.</p>
+        <h2>How it works</h2>
+        <ul>
+          <li><b>Security & Vulnerability (30%)</b>: Based on CVE scans and adversarial testing.</li>
+          <li><b>Fairness & Bias (30%)</b>: Demographic parity and equalized odds.</li>
+          <li><b>Explainability (20%)</b>: SHAP values concentration and interpretability.</li>
+          <li><b>Behavioral Compliance (20%)</b>: Adherence to behavioral contracts.</li>
+        </ul>
+        <h2>Passing Threshold</h2>
+        <p>By default, models require a score of <b>80 or higher</b> to pass the CI/CD deployment gate.</p>
+      </div>
+    ),
+  },
+  'drift-detection': {
+    title: 'Drift Detection',
+    body: (
+      <div className="prose-doc">
+        <p>Monitor your deployed models for data and concept drift to prevent silent failures.</p>
+        <h2>Supported Metrics</h2>
+        <ul>
+          <li><b>Population Stability Index (PSI)</b>: Measures distributional shifts in numerical features.</li>
+          <li><b>Kolmogorov-Smirnov (KS) Test</b>: Checks if two samples are drawn from the same distribution.</li>
+          <li><b>Jensen-Shannon Divergence</b>: Measures the similarity between two probability distributions.</li>
+        </ul>
+        <h2>Setting up a Drift Monitor</h2>
+        <CodeBlock
+          code={`from niyantrana.monitoring import DriftMonitor\n\nmonitor = DriftMonitor(model_id="customer_churn_v1")\nmonitor.log_prediction(features=data, prediction=pred)\n\nstatus = monitor.check_drift()\nprint(status.is_drifting) # True`}
+          language="python"
+        />
+      </div>
+    ),
+  },
+  'api-reference': {
+    title: 'API Reference',
+    body: (
+      <div className="prose-doc">
+        <p>Integrate Niyantrana directly into your custom tools via our REST API.</p>
+        <h2>Base URL</h2>
+        <CodeBlock code="https://api.niyantrana.ai/v1" language="bash" />
+        <h2>Authentication</h2>
+        <p>Pass your API key in the <code className="text-code">X-API-Key</code> header.</p>
+        <h2>Common Endpoints</h2>
+        <ul>
+          <li><code className="text-code">GET /models</code> - List registered models</li>
+          <li><code className="text-code">POST /scans/audit</code> - Trigger a model audit</li>
+          <li><code className="text-code">GET /contracts/&#123;model_id&#125;</code> - Fetch behavioral contracts</li>
+        </ul>
+        <p>For full OpenAPI documentation, visit <Link href="/docs/swagger" className="text-forest underline">api.niyantrana.ai/docs</Link>.</p>
+      </div>
+    ),
+  },
+  'cicd-setup': {
+    title: 'CI/CD Setup',
+    body: (
+      <div className="prose-doc">
+        <p>Block non-compliant models from being deployed by integrating Niyantrana into your CI/CD pipelines.</p>
+        <h2>GitHub Actions Example</h2>
+        <CodeBlock
+          code={`name: ML Governance Gate\non: [push]\n\njobs:\n  audit:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n      - name: Install Niyantrana\n        run: pip install niyantrana\n      - name: Run Audit\n        env:\n          NIYANTRANA_API_KEY: \${{ secrets.NIYANTRANA_API_KEY }}\n        run: niyantrana ci audit ./model.pkl`}
+          language="yaml"
+        />
+        <p>If the governance score falls below the required threshold, the build will fail.</p>
+      </div>
+    ),
+  },
+  'huggingface': {
+    title: 'HuggingFace Integration',
+    body: (
+      <div className="prose-doc">
+        <p>Audit and scan models directly from the HuggingFace Hub.</p>
+        <h2>Auditing a Hub Model</h2>
+        <CodeBlock
+          code={`from niyantrana.integrations import HuggingFace\n\n# Scans weights, AIBOM, and license compliance\nreport = HuggingFace.audit("distilbert-base-uncased")\nprint(report.verdict)`}
+          language="python"
+        />
+        <p>This automatically downloads the model, runs static analysis, and generates an AIBOM mapping the transformers library dependencies.</p>
+      </div>
+    ),
+  },
+  'mlflow': {
+    title: 'MLflow / W&B Integration',
+    body: (
+      <div className="prose-doc">
+        <p>Sync your MLflow and Weights & Biases experiment runs with Niyantrana.</p>
+        <h2>MLflow Auto-logging</h2>
+        <CodeBlock
+          code={`import mlflow\nimport niyantrana.integrations.mlflow as n_mlflow\n\nn_mlflow.autolog()\n\nwith mlflow.start_run():\n    # Train your model\n    model.fit(X_train, y_train)\n    # Niyantrana automatically captures the model and generates a governance score`}
+          language="python"
+        />
+        <p>The governance score will be logged as an MLflow metric.</p>
+      </div>
+    ),
+  },
+  'slack-teams': {
+    title: 'Slack / Teams Alerts',
+    body: (
+      <div className="prose-doc">
+        <p>Get instant notifications when a model breaches a behavioral contract or experiences drift.</p>
+        <h2>Configuring Webhooks</h2>
+        <ol className="list-decimal ml-4 mb-4">
+          <li>Go to <b>Settings &gt; Integrations</b> in the dashboard.</li>
+          <li>Paste your Slack Incoming Webhook URL.</li>
+          <li>Select the severity level (e.g., Critical and High).</li>
+        </ol>
+        <p>Alerts will include a direct link to the breach report and the specific metric that failed.</p>
+      </div>
+    ),
+  },
 };
 
 const DEFAULT_DOC = {

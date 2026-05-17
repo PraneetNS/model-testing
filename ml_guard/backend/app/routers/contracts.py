@@ -112,6 +112,32 @@ async def create_contract(
     }
 
 
+@router.get("/contracts", tags=["contracts"])
+async def list_all_contracts(
+    model_id: Optional[str] = Query(None),
+    active_only: bool = Query(default=False),
+    db: AsyncSession = Depends(get_db),
+) -> Dict[str, Any]:
+    q = select(ModelContract)
+    if model_id:
+        q = q.filter(ModelContract.model_id == model_id)
+    if active_only:
+        q = q.filter(ModelContract.is_active.is_(True))
+    contracts = (await db.execute(q.order_by(ModelContract.created_at.desc()))).scalars().all()
+    items = [
+        {
+            "id": str(c.id),
+            "model_id": str(c.model_id),
+            "name": c.name,
+            "contract_type": "behavioral",
+            "status": "active" if c.is_active else "inactive",
+            "definition": c.promises,
+            "created_at": c.created_at.isoformat(),
+        }
+        for c in contracts
+    ]
+    return {"items": items, "total": len(items)}
+
 @router.get("/contracts/{model_id}", tags=["contracts"])
 async def list_contracts(
     model_id: str,
