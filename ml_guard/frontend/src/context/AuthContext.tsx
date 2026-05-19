@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 
 interface AuthContextType {
@@ -28,10 +28,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [isDev, setIsDev] = useState(false);
     const router = useRouter();
     const pathname = usePathname();
+    // Keep a ref so the onAuthStateChanged callback always reads the latest pathname
+    // without needing to be in the effect dependency array.
+    const pathnameRef = useRef(pathname);
+
+    // Sync the ref every render so callbacks always see the latest value.
+    useEffect(() => { pathnameRef.current = pathname; }, [pathname]);
 
     useEffect(() => {
         const session_id = `sess_${Math.random().toString(36).substring(2, 10)}`;
         let unsubscribe: (() => void) | undefined;
+        let isInitialLoad = true;
 
         const initAuth = async () => {
             try {
@@ -104,7 +111,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                             setUser(null);
                             setToken(null);
                             fetch('/api/auth/session', { method: 'DELETE' }).catch(() => {});
-                            if (pathname.startsWith('/dashboard')) router.push('/login');
+                            if (pathnameRef.current.startsWith('/dashboard')) router.push('/login');
                         }
                     } catch (err: any) {
                         const isNetworkError = err?.code === 'auth/network-request-failed';
@@ -153,7 +160,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return () => {
             if (unsubscribe) unsubscribe();
         };
-    }, [pathname, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Run once on mount — pathnameRef keeps the latest pathname in callbacks
 
     const logout = async () => {
         try {

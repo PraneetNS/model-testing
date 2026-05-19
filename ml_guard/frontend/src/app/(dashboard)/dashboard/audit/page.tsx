@@ -5,7 +5,7 @@ import { Upload, Play, RefreshCw, CheckCircle, XCircle, AlertTriangle, ChevronDo
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000') + '/api/v1';
 const token = () => (typeof window !== 'undefined' ? localStorage.getItem('niyantrana_token') : null);
 
 const ALL_CHECKS = ['drift', 'performance', 'fairness', 'security', 'explainability', 'calibration', 'leakage'];

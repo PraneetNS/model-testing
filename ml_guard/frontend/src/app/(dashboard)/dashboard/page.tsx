@@ -92,9 +92,9 @@ export default function DashboardOverviewPage() {
       {/* Top bar */}
       <div className="flex items-center justify-between px-8 h-16 border-b border-stone bg-white">
         <div>
-          <h1 className="text-[17px] font-semibold text-ink">Overview</h1>
+          <h1 className="text-[17px] font-semibold text-ink">Dashboard</h1>
           <p className="text-[11px] text-muted">
-            {user?.displayName ? `Welcome back, ${user.displayName.split(' ')[0]}` : 'Dashboard / Overview'}
+            {user?.displayName ? `Welcome back, ${user.displayName.split(' ')[0]}` : 'Dashboard / Home'}
           </p>
         </div>
         <div className="flex items-center gap-3">

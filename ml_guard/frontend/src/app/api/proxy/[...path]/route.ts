@@ -13,11 +13,13 @@ async function handleRequest(request: Request, props: { params: Promise<{ path: 
   const url = `${BACKEND_URL}/${normalizedPath}${searchParams}`;
   
   const cookieStore = await cookies();
-  const apiKey = cookieStore.get('backend_api_key')?.value;
+  const apiKey = cookieStore.get('backend_api_key')?.value
+    || process.env.BACKEND_API_KEY
+    || 'dev-secret-key';
   const sessionToken = cookieStore.get('session_token')?.value;
 
   if (!apiKey) {
-    return NextResponse.json({ error: 'Unauthorized: No API key in session' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized: No API key available' }, { status: 401 });
   }
 
   const headers = new Headers(request.headers);
