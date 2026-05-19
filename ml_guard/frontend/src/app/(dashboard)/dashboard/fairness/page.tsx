@@ -4,9 +4,7 @@ import { useState, useRef } from 'react';
 import { Upload, Play, RefreshCw, Scale, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
-const token = () => (typeof window !== 'undefined' ? localStorage.getItem('niyantrana_token') : null);
+import { API_BASE, apiUploadHeaders } from '@/lib/api';
 
 function FileDropZone({ label, accept, file, onChange }: {
   label: string; accept: string; file: File | null;
@@ -78,9 +76,9 @@ export default function FairnessPage() {
     fd.append('label_col', labelCol);
 
     try {
-      const res = await fetch(`${BASE_URL}/fairness/analyze`, {
+      const res = await fetch(`${API_BASE}/fairness/analyze`, {
         method: 'POST',
-        headers: token() ? { Authorization: `Bearer ${token()}` } : {},
+        headers: apiUploadHeaders(),
         body: fd,
       });
       if (!res.ok) {

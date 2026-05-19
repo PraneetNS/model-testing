@@ -13,7 +13,7 @@ from datetime import datetime
 
 from app.core.celery_app import celery_app
 from app.domain.services.orchestrator import TestOrchestrator
-from app.db import models as sql_models
+from app.infrastructure.persistence import models as sql_models
 from app.db.session import SessionLocal
 from app.domain.services.nlp_parser import NLPParser
 

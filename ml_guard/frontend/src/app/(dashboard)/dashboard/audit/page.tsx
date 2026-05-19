@@ -4,9 +4,7 @@ import { useState, useRef } from 'react';
 import { Upload, Play, RefreshCw, CheckCircle, XCircle, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-
-const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000') + '/api/v1';
-const token = () => (typeof window !== 'undefined' ? localStorage.getItem('niyantrana_token') : null);
+import { API_BASE, apiUploadHeaders } from '@/lib/api';
 
 const ALL_CHECKS = ['drift', 'performance', 'fairness', 'security', 'explainability', 'calibration', 'leakage'];
 
@@ -112,9 +110,9 @@ export default function ModelAuditPage() {
 
     try {
       setProgress('Running audit (this may take 30–60s)…');
-      const res = await fetch(`${BASE_URL}/audit/run`, {
+      const res = await fetch(`${API_BASE}/audit/run`, {
         method: 'POST',
-        headers: token() ? { Authorization: `Bearer ${token()}` } : {},
+        headers: apiUploadHeaders(),
         body: fd,
       });
       if (!res.ok) {

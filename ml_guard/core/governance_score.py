@@ -16,7 +16,7 @@ import hashlib
 import joblib
 import os
 import tempfile
-from typing import Optional
+from typing import Dict, List, Optional
 
 
 def compute_drift_subscore(drift_report: dict) -> float:

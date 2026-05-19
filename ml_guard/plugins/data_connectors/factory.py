@@ -3,27 +3,28 @@ factory.py — Connector Factory and Encryption Utility for Data Connectors
 """
 import json
 import logging
-from typing import Dict, Any, Type
+from typing import Dict, Any, Type, Optional
 from cryptography.fernet import Fernet
 from app.core.config import settings
 
 from .base import DataConnector
-from .s3 import S3Connector
-from .gcs import GCSConnector
-from .azure_blob import AzureBlobConnector
-from .snowflake import SnowflakeConnector
-from .bigquery import BigQueryConnector
-from .kaggle import KaggleConnector
-from .openml import OpenMLConnector
-from .roboflow import RoboflowConnector
 
 logger = logging.getLogger(__name__)
+
+
+def _optional_connector(module: str, class_name: str) -> Optional[Type[DataConnector]]:
+    try:
+        mod = __import__(f"ml_guard.plugins.data_connectors.{module}", fromlist=[class_name])
+        return getattr(mod, class_name)
+    except ImportError as exc:
+        logger.warning("data_connector_unavailable: %s (%s)", module, exc)
+        return None
+
 
 # ── Encryption setup ──────────────────────────────────────────────────────────
 
 def get_fernet() -> Fernet:
     """Initialize Fernet with the app's secret key."""
-    # Ensure key is 32 base64-encoded bytes
     key = settings.SECRET_KEY
     if len(key) < 32:
         key = key.ljust(32, "0")
@@ -45,16 +46,22 @@ def decrypt_config(token: str) -> Dict[str, Any]:
 
 # ── Connector Registry ────────────────────────────────────────────────────────
 
-CONNECTOR_MAP: Dict[str, Type[DataConnector]] = {
-    "s3": S3Connector,
-    "gcs": GCSConnector,
-    "azure": AzureBlobConnector,
-    "snowflake": SnowflakeConnector,
-    "bigquery": BigQueryConnector,
-    "kaggle": KaggleConnector,
-    "openml": OpenMLConnector,
-    "roboflow": RoboflowConnector,
+_CONNECTOR_SPECS = {
+    "s3": ("s3", "S3Connector"),
+    "gcs": ("gcs", "GCSConnector"),
+    "azure": ("azure_blob", "AzureBlobConnector"),
+    "snowflake": ("snowflake", "SnowflakeConnector"),
+    "bigquery": ("bigquery", "BigQueryConnector"),
+    "kaggle": ("kaggle", "KaggleConnector"),
+    "openml": ("openml", "OpenMLConnector"),
+    "roboflow": ("roboflow", "RoboflowConnector"),
 }
+
+CONNECTOR_MAP: Dict[str, Type[DataConnector]] = {}
+for _key, (_module, _class_name) in _CONNECTOR_SPECS.items():
+    _cls = _optional_connector(_module, _class_name)
+    if _cls is not None:
+        CONNECTOR_MAP[_key] = _cls
 
 def get_connector(connector_type: str) -> DataConnector:
     """Get an instance of the requested connector."""

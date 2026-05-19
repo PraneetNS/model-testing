@@ -3,7 +3,24 @@
  * Typed fetch wrapper for every backend endpoint used by the dashboard.
  */
 
-const BASE_URL = (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000') + '/api/v1';
+export const API_BASE =
+  (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000') +
+  '/api/v1';
+
+export const API_KEY =
+  process.env.NEXT_PUBLIC_API_KEY || 'mlg_PeNfpwQSOtJkWr1Tow62Kr5luLuEugGi';
+
+const BASE_URL = API_BASE;
+
+/** Headers for multipart uploads (do not set Content-Type — browser sets boundary). */
+export function apiUploadHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { 'X-API-Key': API_KEY };
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('niyantrana_token');
+    if (token) headers.Authorization = `Bearer ${token}`;
+  }
+  return headers;
+}
 
 // ─── Error ────────────────────────────────────────────────────────────────────
 
@@ -30,7 +47,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || 'mlg_PeNfpwQSOtJkWr1Tow62Kr5luLuEugGi',
+      'X-API-Key': API_KEY,
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers ?? {}),
     },

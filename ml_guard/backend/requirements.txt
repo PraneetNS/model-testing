@@ -9,6 +9,7 @@ httpx
 
 # Database
 sqlalchemy
+aiosqlite
 psycopg2-binary
 alembic
 
@@ -27,6 +28,10 @@ onnxruntime
 python-jose[cryptography]
 passlib[bcrypt]
 cryptography
+slowapi
+firebase-admin
+email-validator
+networkx
 
 # Storage
 boto3

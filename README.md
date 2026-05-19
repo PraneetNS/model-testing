@@ -1,164 +1,93 @@
-# 🛡️ ML Guard v8.2 — The Enterprise AI Governance Platform
+# ML Guard — AI Governance & Observability
 
-[![Version](https://img.shields.io/badge/Version-8.2.0%20(Agentic)-blueviolet)](https://github.com/FireFlink/ml_guard)
-[![Stack](https://img.shields.io/badge/Stack-FastAPI%20%7C%20PostgreSQL%20%7C%20Next.js-blue)](https://github.com/FireFlink/ml_guard)
-[![License](https://img.shields.io/badge/License-Proprietary-red)](https://github.com/FireFlink/ml_guard)
+This repository contains ML Guard: an enterprise-focused AI governance platform combining a Python backend, a Next.js dashboard, a Python SDK, and asynchronous workers for heavy ML analysis (explainability, drift, robustness, and governance policy enforcement).
 
-**ML Guard** is a state-of-the-art AI governance and observability platform designed to bring accountability, security, and behavioral compliance to machine learning models. Beyond simple monitoring, ML Guard implements a **Governance-as-Code** philosophy through its novel Behavioral Contract system, integrating directly into enterprise CI/CD workflows and production runtimes.
+Highlights
+- Modern FastAPI backend with async SQLAlchemy and OpenAPI docs
+- Next.js dashboard for operations and visualization
+- Celery + Redis workers for long-running explainability and audit tasks
+- S3-compatible storage using MinIO for artifacts
+- Designed for local development and production (Postgres/Neon, Redis, MinIO)
 
----
+Repository layout (top-level)
+- [ml_guard/backend](ml_guard/backend) — FastAPI backend and core governance engine
+- [ml_guard/frontend](ml_guard/frontend) — Next.js dashboard (App Router)
+- [ml_guard/sdk](ml_guard/sdk) and [sdk](sdk) — Python SDK(s) for in-app enforcement and programmatic usage
+- [ml_guard/docker](ml_guard/docker) — Docker compose and deployment helpers
+- docs/ — architecture diagrams and assets
 
-## 🚀 The Feature Universe (v8.2)
+What I found (detected tech and where it lives)
+- Backend: FastAPI (see [ml_guard/backend/pyproject.toml](ml_guard/backend/pyproject.toml)) with `uvicorn` and async SQL tooling.
+- Workers: Celery with Redis (see [ml_guard/backend/.env.example](ml_guard/backend/.env.example) and `.env` templates).
+- Frontend: Next.js app with a Dockerfile in [ml_guard/frontend/Dockerfile](ml_guard/frontend/Dockerfile) — Node.js 20+ recommended.
+- Storage: MinIO (Dockerfile: `Dockerfile.minio`) for S3-compatible artifacts.
+- Persistence: SQLite for local dev and PostgreSQL/Neon for production (see [\.env.example](.env.example) and [ml_guard/.env.production.template](ml_guard/.env.production.template)).
+- Explainability / ML libs: SHAP, fairlearn, scikit-learn, XGBoost (declared in `pyproject.toml` files).
 
-ML Guard is designed to evaluate, monitor, and enforce policy across the entire ML lifecycle. From local development to production pipelines, ML Guard protects your enterprise.
+Architecture (short)
+- The Next.js dashboard talks to the FastAPI backend (REST + WebSockets for telemetry). The backend persists metadata to SQL, enqueues heavy tasks to Celery (Redis broker), and stores artifacts in MinIO/S3. Celery workers run explainability (SHAP), fairness scans, drift calculations (PSI/KS/MMD), and security audits.
 
-### 1. 📂 AI Bill of Materials (SBOM) & Governance
-Maintain a transparent and immutable record of your AI supply chain.
-- **Supply Chain Tracking**: Track model lineage, base-model origin, and dataset provenance.
-- **Audit Trails**: Full historical record of every model version, evaluation, and certification.
-- **Governance Scores**: Multi-dimensional composite grading (Performance, Fairness, Security, Robustness).
-
-### 2. 📑 Actuarial AI Insurance Scoring
-The industry's first standardized risk rating system for enterprise AI.
-- **Risk Quantization**: Mathematical assessment of model reliability, deployment risk, and incident history.
-- **Standardized Rating**: Provides an "Insurance Grade" (A++ to F) based on actuarial risk parameters.
-- **Manual & Automated Auditing**: Direct triggering of deep security scans for adversarial robustness, poisoning, and inference risks.
-
-### 3. 🧠 SHAP Governance Explainability
-Integrated SHAP (SHapley Additive exPlanations) for deep governance transparency.
-- **Fairness Alerts**: Automatically flags when sensitive features (Race, Gender, Age) contribute significantly to model outcomes.
-- **Global & Local Explanations**: Visualizes feature importance across the entire dataset and for individual high-risk predictions.
-- **Asynchronous Processing**: Background SHAP computation for high-dimensional models without impacting API performance.
-
-### 4. 🔌 Universal Dataset Integration Hub
-Securely ingest and track data from any platform via our premium marketplace.
-- **Platform Connectors**: Native, one-click integrations for **Hugging Face Hub, Kaggle, MLflow, and WandB**.
-- **Automated Lineage**: Full tracking of dataset provenance, versioning, and consumption across model iterations.
-- **Secure Credentials**: Fernet-encrypted management for API tokens, ensuring external platform secrets remain protected.
-
-### 5. 🛑 Behavioral Contracts (The Model Sentinel)
-Define behavioral promises that your model must keep. Validated in real-time during every prediction via our Python SDK.
-- **Promise Types**: Output confidence ranges, latency SLAs, probabilistic thresholds, and fairness parity bounds.
-- **Breach Management**: Automated recording of violations classified by severity (CRITICAL, HIGH, LOW).
-- **Live Decay**: Real-world contract breaches directly and automatically penalize the model's live governance score.
-
-### 6. 📊 Real-Time Drift & RAG Observability
-High-performance sliding-window drift detection and RAG-specific monitoring.
-- **Statistical Distance**: PSI, Kolmogorov-Smirnov (KS-Test), and Jensen-Shannon Divergence.
-- **RAG Fidelity**: Grounding assessment, context relevance, and retrieval hit rate tracking.
-- **Embedding Drift**: Multi-dimensional vector drift analysis using Cosine similarity and MMD.
-
-### 7. 🔒 Deep Security Auditing (New)
-A dedicated engine for testing model resilience against sophisticated attacks.
-- **Adversarial Robustness**: Stress tests models using FGSM and other perturbation techniques to measure boundary stability.
-- **Inference Protection**: Detects vulnerabilities to membership inference and model extraction attacks.
-- **Data Poisoning Scans**: Analyzes training data fingerprints for signs of malicious tampering or backdoors.
-
----
-
-## 🏗️ System Architecture
-
-ML Guard operates on an asynchronous microservices architecture designed to run at enterprise scale:
-
-```mermaid
-graph TD
-    A[Python SDK / CLI] -->|Log/Scan| B(FastAPI Backend)
-    B -->|Persist| C[(PostgreSQL)]
-    B -->|Task Queue| D[Redis]
-    D -->|Execute| E[Celery Workers]
-    E -->|Core Logic| F[ML Guard Core]
-    F -->|Analyze| G[Explainability / Drift / Insurance]
-    B -->|Notify| H[Slack / MS Teams]
-    I[Next.js Dashboard] -->|Manage| B
-    J[Data Connectors] -->|Fetch| B
-```
-
-- **Backend API**: Optimized FastAPI service with SQLAlchemy async support.
-- **Dashboard**: High-performance Next.js 14 application with Tailwind CSS and Shadcn UI.
-- **Core Engine**: Pure Python libraries housing risk algorithms and statistical heuristics.
-- **Workers**: Redis-backed Celery cluster for heavy-lift computations (SHAP, Fairness).
-
----
-
-## 🛠️ Complete Setup Guide
-
-### 1. Requirements
+Quick start — local development
+1) Requirements
+- Python 3.10+ (3.11 recommended)
 - Node.js 20+
-- Python 3.11+
-- Redis (For Celery Task Queues)
-- PostgreSQL (Recommended for production)
+- Redis, PostgreSQL (or SQLite for local), MinIO (or S3)
 
-### 2. Backend & Core Setup
-```bash
+2) Backend (local)
+```powershell
 cd ml_guard/backend
-python -m venv venv
-# Windows: venv\\Scripts\\activate | Mac/Linux: source venv/bin/activate
-
+python -m venv .venv
+.\.venv\Scripts\activate
 pip install -r requirements.txt
-pip install celery redis mlflow wandb huggingface_hub datasets "shap>=0.40.0" cryptography
+# run the API
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-**Environment Configuration (`.env`):**
-```ini
-SECRET_KEY=your_secure_hash
-DATABASE_URL=sqlite:///./ml_guard.db # Or PostgreSQL
-REDIS_URL=redis://localhost:6379/0
-ENCRYPTION_KEY=your_fernet_key # For Data Connectors
+Environment files and examples live in [ml_guard](ml_guard) — copy `.env.example` or use [ml_guard/.env.production.template](ml_guard/.env.production.template) for production values.
+
+3) Celery worker (in a new terminal)
+```powershell
+cd ml_guard/backend
+.\.venv\Scripts\activate
+celery -A app.core.celery_app worker --loglevel=info
 ```
 
-**Start Services:**
-```bash
-# Start API
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-
-# Start Celery Worker (New terminal)
-celery -A app.core.celery_app worker --loglevel=info -P solo
-```
-
-### 3. Frontend Dashboard
-```bash
+4) Frontend (dev)
+```powershell
 cd ml_guard/frontend
 npm install
 npm run dev
-```
-Dashboard available at `http://localhost:3000`.
-
----
-
-## 🛡️ CI/CD Integration (The Quality Gate)
-
-Ensure zero "bad models" reach production by integrating the governance gate into your CI pipeline.
-
-**Deterministic Polling with Submission Tokens:**
-The latest CI gate uses a UUID-based submission system to ensure stable, parallel-safe evaluation tracking.
-
-```bash
-python .github/scripts/ml_guard_ci.py \
-  --api-url http://127.0.0.1:8000 \
-  --api-key your_api_key \
-  --model-name Production-Churn-V2 \
-  --model-path ./artifacts/model.pkl \
-  --data-path ./data/test_samples.csv \
-  --min-score 75
+# visit http://localhost:3000
 ```
 
+Docker / Local compose
+- `ml_guard/docker-compose.yml` defines frontend, backend, worker, database, Redis, and MinIO for a single-command local environment. Use Docker Compose in that folder for quick reproducible dev clusters.
+
+CI and tests
+- GitHub Actions workflows lint and run backend/frontend tests. See `.github/workflows` for CI jobs (FastAPI tests, frontend lint, and governance gate runs).
+
+Where to look next (useful entry points)
+- Backend main app: [ml_guard/backend/app/main.py](ml_guard/backend/app/main.py)
+- Celery setup: [ml_guard/backend/app/core/celery_app.py](ml_guard/backend/app/core/celery_app.py)
+- Frontend Dockerfile: [ml_guard/frontend/Dockerfile](ml_guard/frontend/Dockerfile)
+- SDK packaging: [sdk/pyproject.toml](sdk/pyproject.toml)
+
+Notes & recommendations
+- Local dev commonly uses SQLite; switch to a Postgres-compatible DB (Neon/RDS) in production (templates provided).
+- Celery can be run in `solo` mode for local debugging but should use prefork/uvloop worker pools in production where appropriate.
+- The project contains several architecture docs and explainers in `docs/` and `ml_guard/ARCHITECTURE.md` that detail design decisions.
+
+Contributing
+- See `CONTRIBUTING.md` if present, otherwise open issues or pull requests. For gated changes, add tests to `ml_guard/backend/app/tests` and frontend checks under `ml_guard/frontend`.
+
+License
+- The repository contains mixed licensing info across modules; check individual package manifests (for example, [ml_guard/backend/pyproject.toml](ml_guard/backend/pyproject.toml) and [sdk/pyproject.toml](sdk/pyproject.toml)) for licensing details.
+
+Questions or next steps
+- I updated this README to reflect detected structure, tech stack, and a concise quickstart. Do you want me to:
+  - Add a short troubleshooting section (common errors and fixes)?
+  - Add a `docker-compose` quick command example in this README?
+  - Open a PR and run the CI checks locally?
+
 ---
-
-## 🔌 Ecosystem Integrations
-
-### Outbound Notifications
-Real-time breach alerts delivered where your team works:
-- **Slack**: Rich Block Kit alerts with performance snapshots.
-- **Microsoft Teams**: Adaptive cards for production monitoring.
-
-### Enterprise Connectors
-- **S3 / GCS**: Direct ingestion of validation datasets.
-- **Snowflake / BigQuery**: Pull production data directly for drift analysis.
-
----
-
-## 💡 Governance Philosophy
-ML Guard transforms subjective "AI Ethics" into objective, measurable, and enforceable technical contracts. By bridging the gap between data science and compliance, we ensure that AI remains a secure, predictable, and fair asset for the enterprise.
-
----
-© 2026 FireFlink ML Research. Proprietary & Confidential.
+Updated: automatic analysis and README consolidation.

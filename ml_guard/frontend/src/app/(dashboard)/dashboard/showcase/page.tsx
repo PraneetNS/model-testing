@@ -32,7 +32,7 @@ const FEATURES = [
   {
     icon: Lightbulb, href: '/dashboard/explainability', color: '#B35A00',
     title: 'Explainability', sub: 'SHAP & importance',
-    desc: 'SHAP-based feature importance. Understand which features drive your model's decisions globally and per-prediction.',
+    desc: "SHAP-based feature importance. Understand which features drive your model's decisions globally and per-prediction.",
   },
   {
     icon: TestTube, href: '/dashboard/behavior', color: '#7C3AED',

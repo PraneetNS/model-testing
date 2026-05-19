@@ -3,9 +3,7 @@
 import { useState, useRef } from 'react';
 import { Upload, Play, RefreshCw, BarChart2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
-const token = () => typeof window !== 'undefined' ? localStorage.getItem('niyantrana_token') : null;
+import { API_BASE, apiUploadHeaders } from '@/lib/api';
 
 function FileDropZone({ label, accept, file, onChange }: {
   label: string; accept: string; file: File | null; onChange: (f: File | null) => void;
@@ -41,9 +39,9 @@ export default function ExplainabilityPage() {
     fd.append('dataset_file', datasetFile);
     fd.append('max_samples', String(maxSamples));
     try {
-      const res = await fetch(`${BASE_URL}/explainability/compute`, {
+      const res = await fetch(`${API_BASE}/explainability/compute`, {
         method: 'POST',
-        headers: token() ? { Authorization: `Bearer ${token()}` } : {},
+        headers: apiUploadHeaders(),
         body: fd,
       });
       if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.detail ?? `HTTP ${res.status}`); }

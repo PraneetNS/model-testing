@@ -28,3 +28,6 @@ ml_guard.db*
 *.log
 artifacts/
 
+# --- Local dev binaries (e.g. downloaded MinIO) ---
+ml_guard/tools/
+
