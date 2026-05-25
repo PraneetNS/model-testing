@@ -111,7 +111,7 @@ The CLI is built with `Typer` for a robust developer experience.
 
 ## 🚀 Roadmap
 
-1.  **Phase 1 (MVP):** Core validation engine, basic CLI, and Streamlit-based prototype (Completed).
+1.  **Phase 1 (MVP):** Core validation engine and basic CLI (Completed).
 2.  **Phase 2 (Production):** Full React Frontend, FastAPI Backend, Robustness Tests, Risk Scoring (Completed).
 3.  **Phase 3 (Enterprise):** User Auth, RBAC, Persistent Storage (Neon PostgreSQL + Cloudflare R2), MLflow Integration (Current).
 4.  **Phase 4 (Scale):** Distributed execution, K8s Operator, Real-time monitoring.
