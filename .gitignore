@@ -1,4 +1,4 @@
-﻿
+
 # ML Guard: Main Git Ignore
 
 # --- Python ---
@@ -30,4 +30,10 @@ artifacts/
 
 # --- Local dev binaries (e.g. downloaded MinIO) ---
 ml_guard/tools/
-
+.minio_data/
+minio.exe
+redis.zip
+redis/
+ml_guard/backend/celerybeat-schedule*
+ml_guard/backend/scratch/
+ml_guard/frontend/test_playwright.js

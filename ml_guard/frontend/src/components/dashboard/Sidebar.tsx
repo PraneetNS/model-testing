@@ -43,8 +43,6 @@ const NAV_SECTIONS = [
   {
     label: 'Monitoring',
     items: [
-      { href: '/dashboard/drift', label: 'Drift Monitor', icon: Activity, sub: 'Feature & concept drift' },
-      { href: '/dashboard/observability', label: 'Observability', icon: Eye, sub: 'Real-time metrics' },
       { href: '/dashboard/data-quality', label: 'Data Quality', icon: FlaskConical, sub: 'Schema & freshness' },
       { href: '/dashboard/alerts', label: 'Alerts', icon: Bell, sub: 'Rules & events' },
     ],
@@ -62,7 +60,6 @@ const NAV_SECTIONS = [
     items: [
       { href: '/dashboard/llm-eval', label: 'LLM Evaluation', icon: BrainCircuit, sub: 'Prompt safety & quality' },
       { href: '/dashboard/advisor', label: 'AI Advisor', icon: Bot, sub: 'Recommendations' },
-      { href: '/dashboard/red-team', label: 'Red Team', icon: Zap, sub: 'Adversarial testing' },
     ],
   },
   {

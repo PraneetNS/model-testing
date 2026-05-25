@@ -15,7 +15,7 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Backend = Join-Path $Root "ml_guard\backend"
 $Frontend = Join-Path $Root "ml_guard\frontend"
-$Venv = Join-Path $Backend "venv\Scripts\python.exe"
+$Venv = Join-Path $Backend ".venv\Scripts\python.exe"
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
@@ -57,7 +57,7 @@ if (-not $redisRunning) {
 Write-Host "[2/4] Starting FastAPI backend (port 8000)..." -ForegroundColor Yellow
 
 $backendCmd = @"
-cd '$Backend'; .\venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+cd '$Backend'; .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 "@
 
 Start-Process "powershell.exe" -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-Command", $backendCmd `
@@ -72,7 +72,7 @@ Write-Host "      API Docs: http://127.0.0.1:8000/docs" -ForegroundColor DarkGra
 Write-Host "[3/4] Starting Celery worker..." -ForegroundColor Yellow
 
 $celeryCmd = @"
-cd '$Backend'; .\venv\Scripts\celery.exe -A app.core.celery_app worker --loglevel=info --pool=solo
+cd '$Backend'; .\.venv\Scripts\celery.exe -A app.core.celery_app worker --loglevel=info --pool=solo
 "@
 
 Start-Process "powershell.exe" -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-Command", $celeryCmd `

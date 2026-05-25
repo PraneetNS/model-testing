@@ -1,5 +1,5 @@
 from app.core.celery_app import celery_app
-from app.infrastructure.database import SessionLocal
+from app.db.session import SessionLocal
 from app.db.models import RetrainingPolicy
 from ml_guard.core.retraining import evaluate_retrain_trigger, execute_retrain_action
 from sqlalchemy import select

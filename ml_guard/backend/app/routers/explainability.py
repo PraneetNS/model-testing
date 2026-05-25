@@ -97,6 +97,33 @@ async def compute_explainability(
         n_samples = min(max_samples, 50, len(X))
         X_sample = X.sample(n_samples, random_state=42) if len(X) > n_samples else X
 
+        def safe_float(val) -> float:
+            try:
+                if hasattr(val, "item"):
+                    return float(val.item())
+                if hasattr(val, "mean"):
+                    return float(val.mean())
+                return float(val)
+            except Exception:
+                return 0.0
+
+        def process_importance(imp_val, n_features):
+            if imp_val is None:
+                return np.zeros(n_features)
+            try:
+                if isinstance(imp_val, list):
+                    imp_val = np.array(imp_val)
+                while imp_val.ndim > 1:
+                    imp_val = imp_val.mean(axis=0)
+                if len(imp_val) != n_features:
+                    if len(imp_val) < n_features:
+                        imp_val = np.pad(imp_val, (0, n_features - len(imp_val)), 'constant')
+                    else:
+                        imp_val = imp_val[:n_features]
+                return imp_val
+            except Exception:
+                return np.zeros(n_features)
+
         importance = None
         method = "unknown"
 
@@ -104,10 +131,13 @@ async def compute_explainability(
         try:
             explainer = shap.TreeExplainer(clf)
             sv = explainer.shap_values(X_sample)
+            if hasattr(sv, "values"):
+                sv = sv.values
             if isinstance(sv, list):
-                importance = np.abs(sv[1]).mean(0) if len(sv) > 1 else np.abs(sv[0]).mean(0)
+                importance = np.mean([np.abs(c) for c in sv], axis=0).mean(0)
             else:
                 importance = np.abs(sv).mean(0)
+            importance = process_importance(importance, X.shape[1])
             method = "shap_tree"
         except Exception:
             pass
@@ -118,7 +148,13 @@ async def compute_explainability(
                 bg = shap.maskers.Independent(X_sample, max_samples=25)
                 explainer = shap.LinearExplainer(clf, bg)
                 sv = explainer.shap_values(X_sample)
-                importance = np.abs(sv).mean(0)
+                if hasattr(sv, "values"):
+                    sv = sv.values
+                if isinstance(sv, list):
+                    importance = np.mean([np.abs(c) for c in sv], axis=0).mean(0)
+                else:
+                    importance = np.abs(sv).mean(0)
+                importance = process_importance(importance, X.shape[1])
                 method = "shap_linear"
             except Exception:
                 pass
@@ -131,12 +167,18 @@ async def compute_explainability(
                 Xp = X_sample.values.copy()
                 np.random.shuffle(Xp[:, i])
                 pp = clf.predict(Xp)
-                imps.append(float(np.mean(np.abs(pp.astype(float) - baseline.astype(float)))))
+                try:
+                    diff = np.abs(pp.astype(float) - baseline.astype(float))
+                    val = safe_float(np.mean(diff))
+                except Exception:
+                    val = safe_float(np.mean(pp != baseline))
+                imps.append(val)
             importance = np.array(imps)
+            importance = process_importance(importance, X.shape[1])
             method = "permutation"
 
         feat_imp = sorted(
-            [{"feature": name, "importance": float(imp)} for name, imp in zip(X.columns, importance)],
+            [{"feature": name, "importance": safe_float(imp)} for name, imp in zip(X.columns, importance)],
             key=lambda x: x["importance"],
             reverse=True
         )[:10]

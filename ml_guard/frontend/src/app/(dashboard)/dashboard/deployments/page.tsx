@@ -3,17 +3,7 @@
 import { useState, useEffect } from 'react';
 import { RefreshCw, Rocket, CheckCircle, XCircle, RotateCcw, Layers } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-
-const BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000') + '/api/v1';
-const HDR = { 'Content-Type': 'application/json', 'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || 'dev-secret-key' };
-
-async function apiFetch(path: string, opts: RequestInit = {}) {
-  const r = await fetch(`${BASE}${path}`, { ...opts, headers: { ...HDR, ...(opts.headers ?? {}) } });
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(d.detail ?? `HTTP ${r.status}`);
-  return d;
-}
+import { api } from '@/lib/api';
 
 const ENV_COLORS: Record<string, string> = {
   DEV: '#0369A1', STAGING: '#B35A00', PRODUCTION: '#1A5F3A',
@@ -35,8 +25,8 @@ export default function DeploymentsPage() {
     try {
       const qs = envFilter ? `?environment=${envFilter}` : '';
       const [deps, envs] = await Promise.all([
-        apiFetch(`/deployments${qs}`),
-        apiFetch('/deployments/environments'),
+        api.get<any>(`/deployments${qs}`),
+        api.get<any>('/deployments/environments'),
       ]);
       setDeployments(deps.items ?? []);
       setEnvironments(Array.isArray(envs) ? envs : []);
@@ -50,7 +40,7 @@ export default function DeploymentsPage() {
     if (!confirm('Roll back this deployment?')) return;
     setRolling(deploymentId);
     try {
-      await apiFetch(`/deployments/rollback?deployment_id=${deploymentId}`, { method: 'POST', body: '{}' });
+      await api.post(`/deployments/rollback?deployment_id=${deploymentId}`, {});
       await load();
     } catch (e: any) { setError(e.message); }
     finally { setRolling(null); }

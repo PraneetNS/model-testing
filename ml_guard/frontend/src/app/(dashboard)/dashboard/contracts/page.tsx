@@ -109,7 +109,9 @@ export default function ContractsPage() {
                 : contracts.map(c => (
                   <tr key={c.id} className="border-b border-stone/50 hover:bg-[#F0EDE8] transition-colors">
                     <td className="px-5 py-3.5 text-[13px] font-medium text-ink">{c.name}</td>
-                    <td className="px-5 py-3.5 text-[13px] text-muted font-mono text-[12px]">{c.model_id.slice(0, 8)}…</td>
+                    <td className="px-5 py-3.5 text-[13px] text-muted font-mono text-[12px]">
+                      {c.model_name || `${c.model_id.slice(0, 8)}…`}
+                    </td>
                     <td className="px-5 py-3.5">
                       <span className="text-[11px] font-medium px-2 py-0.5 rounded-badge bg-stone text-ink-soft">{c.contract_type}</span>
                     </td>

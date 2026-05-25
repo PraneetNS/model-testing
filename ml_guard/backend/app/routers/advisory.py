@@ -210,6 +210,9 @@ async def explain_governance(
     if not results and body.scan_id:
         scan = await db.get(ScanRecord, body.scan_id)
         if not scan:
+            stmt = select(ScanRecord).where(ScanRecord.job_id == body.scan_id)
+            scan = (await db.execute(stmt)).scalars().first()
+        if not scan:
             raise HTTPException(404, "Scan not found.")
         results = scan.results_json
 
@@ -241,6 +244,9 @@ async def explain_with_llm(
     results = body.results_json
     if not results and body.scan_id:
         scan = await db.get(ScanRecord, body.scan_id)
+        if not scan:
+            stmt = select(ScanRecord).where(ScanRecord.job_id == body.scan_id)
+            scan = (await db.execute(stmt)).scalars().first()
         if not scan:
             raise HTTPException(404, "Scan not found.")
         results = scan.results_json

@@ -18,7 +18,28 @@ router = APIRouter()
 logger = structlog.get_logger()
 # limiter = Limiter(key_func=get_remote_address)
 
-@router.post("/{model_id}/generate")
+@router.get("/reports")
+async def list_reports(model_id: str = None, db: AsyncSession = Depends(get_db)):
+    """List generated report cards."""
+    q = select(ReportCard).order_by(ReportCard.issued_at.desc())
+    if model_id:
+        q = q.filter(ReportCard.model_id == model_id)
+    reports = (await db.execute(q)).scalars().all()
+    
+    return {
+        "items": [
+            {
+                "id": r.cert_hash,
+                "model_id": str(r.model_id),
+                "report_type": "governance",
+                "created_at": r.issued_at.isoformat(),
+                "file_url": r.pdf_path
+            }
+            for r in reports
+        ]
+    }
+
+@router.post("/reports/{model_id}/pdf")
 async def start_report_generation(
     model_id: str, 
     db: AsyncSession = Depends(get_db),
@@ -99,29 +120,48 @@ async def revoke_certificate(cert_hash: str, reason: str = "Model decommissioned
 
 @router.get("/download/{cert_hash}")
 async def download_report_pdf(cert_hash: str, db: AsyncSession = Depends(get_db)):
-    """Serve the stored PDF report, or return the path if using external storage."""
-    from fastapi.responses import FileResponse
-    import os
+    """Serve the stored PDF report — streams directly from MinIO if stored there."""
+    from fastapi.responses import FileResponse, StreamingResponse
+    import os, io
 
     report = (await db.execute(select(ReportCard).filter(ReportCard.cert_hash == cert_hash))).scalars().first()
     if not report:
         raise HTTPException(status_code=404, detail="Certificate not found")
 
-    # If PDF path exists locally, serve it directly
+    filename = f"GovernanceReport_{cert_hash[:12]}.pdf"
+
+    # 1. Serve local file if it exists
     if report.pdf_path and os.path.isfile(report.pdf_path):
         return FileResponse(
             report.pdf_path,
             media_type="application/pdf",
-            filename=f"GovernanceReport_{cert_hash[:12]}.pdf"
+            filename=filename,
         )
 
-    # Otherwise return the object storage reference
-    return {
-        "cert_hash": cert_hash,
-        "pdf_path": report.pdf_path,
-        "message": "PDF stored in object storage. Download via your configured storage provider.",
-        "available": report.pdf_path is not None,
-    }
+    # 2. Stream from MinIO / S3-compatible storage
+    if report.pdf_path:
+        try:
+            import boto3
+            s3 = boto3.client(
+                "s3",
+                endpoint_url=os.getenv("MINIO_ENDPOINT", "http://localhost:9000"),
+                aws_access_key_id=os.getenv("MINIO_ACCESS_KEY", "minioadmin"),
+                aws_secret_access_key=os.getenv("MINIO_SECRET_KEY", "minioadmin"),
+                region_name="us-east-1",
+            )
+            bucket = os.getenv("MINIO_BUCKET", "mlguard")
+            obj = s3.get_object(Bucket=bucket, Key=report.pdf_path)
+            pdf_bytes = obj["Body"].read()
+            return StreamingResponse(
+                io.BytesIO(pdf_bytes),
+                media_type="application/pdf",
+                headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+            )
+        except Exception as exc:
+            logger.warning("MinIO download failed", cert_hash=cert_hash, error=str(exc))
+            raise HTTPException(status_code=503, detail=f"Could not retrieve PDF from storage: {exc}")
+
+    raise HTTPException(status_code=404, detail="No PDF available for this report yet.")
 
 try:
     from ml_guard.core.compliance import evaluate_compliance

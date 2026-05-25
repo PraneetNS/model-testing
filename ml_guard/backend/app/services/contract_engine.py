@@ -315,10 +315,10 @@ class ContractEngine:
                     return self._breach(name, ptype, fval, threshold, operator, promise)
 
             elif ptype == "distribution":
-                return self._check_distribution(db, model_id, promise, prediction)
+                return await self._check_distribution(db, model_id, promise, prediction)
 
             elif ptype == "fairness":
-                return self._check_fairness(db, model_id, promise, features, prediction)
+                return await self._check_fairness(db, model_id, promise, features, prediction)
 
         except Exception as e:
             logger.warning(

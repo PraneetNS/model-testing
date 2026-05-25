@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react';
 import { RefreshCw, ShieldCheck, TrendingDown, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { modelsApi } from '@/lib/api';
+import { modelsApi, API_BASE, API_KEY } from '@/lib/api';
 
-const BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000') + '/api/v1';
-const HDR = { 'Content-Type': 'application/json', 'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || 'dev-secret-key' };
+const BASE = API_BASE;
+const HDR = { 'Content-Type': 'application/json', 'X-API-Key': API_KEY };
 
 async function fetchScore(modelId: string) {
   const r = await fetch(`${BASE}/governance/${modelId}/score`, { headers: HDR });

@@ -73,6 +73,64 @@ async def get_latest_aibom(
     if not aibom:
         raise HTTPException(404, "AIBOM not found for this model")
     
+    # Fetch supply chain CVE alerts for this model
+    from app.db.models import SecurityAlert
+    alerts_result = await db.execute(
+        select(SecurityAlert).filter(
+            SecurityAlert.model_id == model_id,
+            SecurityAlert.alert_type == "supply_chain_cve"
+        )
+    )
+    alerts = alerts_result.scalars().all()
+    cve_counts = {}
+    for alert in alerts:
+        details = alert.details or {}
+        pkg = details.get("package")
+        if pkg:
+            cve_counts[pkg.lower()] = cve_counts.get(pkg.lower(), 0) + 1
+
+    # Map database structure to unified components payload expected by frontend
+    components = []
+    
+    # 1. Base Model
+    if aibom.base_model:
+        bm = aibom.base_model
+        if isinstance(bm, dict):
+            components.append({
+                "name": bm.get("name") or bm.get("repo_id") or "Base Model",
+                "version": bm.get("version") or "1.0",
+                "type": "model",
+                "hash": bm.get("hash") or bm.get("sha256") or aibom.aibom_hash or "",
+                "cves": 0
+            })
+            
+    # 2. Training Datasets
+    if aibom.training_datasets:
+        datasets = aibom.training_datasets if isinstance(aibom.training_datasets, list) else [aibom.training_datasets]
+        for ds in datasets:
+            if isinstance(ds, dict):
+                components.append({
+                    "name": ds.get("name") or ds.get("path") or "Dataset",
+                    "version": ds.get("version") or "1.0",
+                    "type": "dataset",
+                    "hash": ds.get("hash") or ds.get("fingerprint") or ds.get("sha256") or "",
+                    "cves": 0
+                })
+                
+    # 3. Dependencies / Libraries
+    if aibom.dependencies:
+        deps = aibom.dependencies if isinstance(aibom.dependencies, list) else [aibom.dependencies]
+        for dep in deps:
+            if isinstance(dep, dict):
+                name = dep.get("name", "")
+                components.append({
+                    "name": name,
+                    "version": dep.get("version") or "—",
+                    "type": "library",
+                    "hash": dep.get("hash") or "",
+                    "cves": cve_counts.get(name.lower(), 0)
+                })
+
     return {
         "model_id": str(aibom.model_id),
         "generated_at": aibom.generated_at,
@@ -81,7 +139,8 @@ async def get_latest_aibom(
         "training_datasets": aibom.training_datasets,
         "dependencies": aibom.dependencies,
         "training_framework": aibom.training_framework,
-        "aibom_hash": aibom.aibom_hash
+        "aibom_hash": aibom.aibom_hash,
+        "components": components
     }
 
 @router.get("/aibom/{model_id}/verify")

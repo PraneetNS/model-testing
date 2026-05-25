@@ -213,3 +213,11 @@ class LLMEvaluation(Base):
     completed_at = Column(DateTime, nullable=True)
 
 
+class PolicyRule(Base):
+    __tablename__ = "policy_rules"
+    id = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    org_id = Column(UUID(), ForeignKey("organizations.id", ondelete="CASCADE"), index=True, nullable=True)
+    name = Column(String(255), nullable=False)
+    rules_json = Column(JSON, nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=utcnow)

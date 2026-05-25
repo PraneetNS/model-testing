@@ -147,7 +147,7 @@ async def certify_model(
         raise HTTPException(status_code=500, detail=f"Governance computation failed: {str(e)}")
 
     try:
-        report_card = _cert_engine.generate_report_card(
+        report_card = await _cert_engine.generate_report_card(
             model_id=model_id,
             governance_result=result,
             db=db,
@@ -180,7 +180,7 @@ async def verify_certificate(
     """
     PUBLIC endpoint — no authentication required.
     """
-    validity = _cert_engine.check_certificate_validity(cert_hash=cert_hash, db=db)
+    validity = await _cert_engine.check_certificate_validity(cert_hash=cert_hash, db=db)
     return {
         "cert_hash": validity.cert_hash,
         "valid": validity.valid,

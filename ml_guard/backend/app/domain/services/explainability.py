@@ -46,10 +46,15 @@ class ExplainabilityEngine:
             try:
                 explainer = shap.TreeExplainer(model)
                 shap_values = explainer.shap_values(X_sample)
+                if hasattr(shap_values, "values"):
+                    shap_values = shap_values.values
                 if isinstance(shap_values, list):
-                    importance = np.abs(shap_values[1]).mean(0) if len(shap_values) > 1 else np.abs(shap_values[0]).mean(0)
+                    importance = np.mean([np.abs(c) for c in shap_values], axis=0).mean(0)
                 else:
                     importance = np.abs(shap_values).mean(0)
+                if importance is not None:
+                    while importance.ndim > 1:
+                        importance = importance.mean(axis=-1)
                 logger.info("SHAP: used TreeExplainer")
             except Exception:
                 pass
@@ -60,7 +65,15 @@ class ExplainabilityEngine:
                     background = shap.maskers.Independent(X_sample, max_samples=25)
                     explainer = shap.LinearExplainer(model, background)
                     shap_values = explainer.shap_values(X_sample)
-                    importance = np.abs(shap_values).mean(0)
+                    if hasattr(shap_values, "values"):
+                        shap_values = shap_values.values
+                    if isinstance(shap_values, list):
+                        importance = np.mean([np.abs(c) for c in shap_values], axis=0).mean(0)
+                    else:
+                        importance = np.abs(shap_values).mean(0)
+                    if importance is not None:
+                        while importance.ndim > 1:
+                            importance = importance.mean(axis=-1)
                     logger.info("SHAP: used LinearExplainer")
                 except Exception:
                     pass
@@ -75,7 +88,12 @@ class ExplainabilityEngine:
                         X_perm = X_sample.values.copy()
                         np.random.shuffle(X_perm[:, i])
                         perm_preds = model.predict(X_perm)
-                        importances.append(float(np.mean(np.abs(perm_preds - baseline_preds))))
+                        try:
+                            diff = np.abs(perm_preds.astype(float) - baseline_preds.astype(float))
+                            val = float(np.mean(diff))
+                        except Exception:
+                            val = float(np.mean(perm_preds != baseline_preds))
+                        importances.append(val)
                     importance = np.array(importances)
                 else:
                     return []

@@ -14,14 +14,46 @@ import structlog
 
 logger = structlog.get_logger()
 
-# Mock MinIO helper for the task
-async def upload_to_minio(file_path: str, destination: str):
-    logger.info("Uploading report to MinIO", destination=destination)
-    await asyncio.sleep(1) # Simulate upload
-    return f"minio://{destination}"
+# Real MinIO/S3 upload helper
+async def upload_to_minio(file_path: str, destination: str) -> str:
+    """Upload a local file to MinIO object storage and return the object key."""
+    import boto3
+    from botocore.exceptions import ClientError
+    import os
+
+    endpoint = os.getenv("MINIO_ENDPOINT", "http://localhost:9000")
+    access_key = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
+    secret_key = os.getenv("MINIO_SECRET_KEY", "minioadmin")
+    bucket = os.getenv("MINIO_BUCKET", "mlguard")
+
+    logger.info("Uploading report to MinIO", destination=destination, bucket=bucket)
+
+    try:
+        s3 = boto3.client(
+            "s3",
+            endpoint_url=endpoint,
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+            region_name="us-east-1",
+        )
+        # Ensure bucket exists
+        try:
+            s3.head_bucket(Bucket=bucket)
+        except ClientError:
+            s3.create_bucket(Bucket=bucket)
+
+        s3.upload_file(file_path, bucket, destination)
+        logger.info("MinIO upload complete", key=destination)
+        return destination
+    except Exception as exc:
+        logger.warning("MinIO upload failed — storing path only", error=str(exc))
+        return destination
 
 @celery_app.task(name="app.tasks.reports.generate_governance_report", bind=True, max_retries=3, default_retry_delay=10)
-async def generate_governance_report(model_id: str):
+def generate_governance_report(self, model_id: str):
+    return asyncio.run(_generate_governance_report_async(self, model_id))
+
+async def _generate_governance_report_async(self, model_id: str):
     """
     Async task to synthesize audit data, generate LLM summary, 
     render PDF, and persist to storage and database.
@@ -46,9 +78,8 @@ async def generate_governance_report(model_id: str):
             return {"status": "SUCCESS", "cert_hash": cert_hash}
 
         # 3. Generate Executive Summary (Async)
-        loop = asyncio.get_event_loop()
         llm_gen = ExecutiveSummaryGenerator()
-        summary = loop.run_until_complete(llm_gen.generate_summary(audit_data))
+        summary = await llm_gen.generate_summary(audit_data)
 
         # 4. Render PDF
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp_pdf:
@@ -81,7 +112,7 @@ async def generate_governance_report(model_id: str):
 
         # 5. Upload to MinIO
         minio_dest = f"reports/{model_id}/{cert_hash}.pdf"
-        s3_url = loop.run_until_complete(upload_to_minio(tmp_path, minio_dest))
+        s3_url = await upload_to_minio(tmp_path, minio_dest)
 
         new_report = ReportCard(
             model_id=model_id,
@@ -130,7 +161,7 @@ async def generate_governance_report(model_id: str):
 
     except Exception as e:
         logger.error("Governance report generation failed", model_id=model_id, error=str(e))
-        db.rollback()
+        await db.rollback()
         return {"status": "FAILED", "error": str(e)}
     finally:
-        db.close()
+        await db.close()

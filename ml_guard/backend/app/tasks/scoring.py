@@ -14,11 +14,11 @@ async def _refresh_all_scores():
         models = result.scalars().all()
         
         from app.services.governance_engine import GovernanceEngine
+        engine = GovernanceEngine()
         
         for model in models:
             try:
-                engine = GovernanceEngine(db, str(model.id))
-                await engine.compute_score()
+                await engine.compute_score(model_id=str(model.id), db=db)
                 logger.info("governance_score_refreshed", model_id=str(model.id))
             except Exception as e:
                 logger.error("governance_score_refresh_failed", model_id=str(model.id), error=str(e))

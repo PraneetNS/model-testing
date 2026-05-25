@@ -233,7 +233,9 @@ export default function ModelAuditPage() {
                     k !== 'gate_status' && (
                       <div key={k} className="flex justify-between border-b border-stone/50 pb-2">
                         <span className="text-muted capitalize">{k.replace(/_/g, ' ')}</span>
-                        <span className="font-medium text-ink">{String(v)}</span>
+                        <span className="font-medium text-ink max-w-[60%] text-right truncate" title={typeof v === 'object' && v !== null ? JSON.stringify(v) : String(v)}>
+                          {Array.isArray(v) ? `${v.length} items executed` : typeof v === 'object' && v !== null ? JSON.stringify(v) : String(v)}
+                        </span>
                       </div>
                     )
                   ))}
@@ -315,11 +317,21 @@ export default function ModelAuditPage() {
               </CollapsibleSection>
             )}
 
-            {/* Model fingerprint */}
-            {result.fingerprint && (
-              <div className="bg-white border border-stone rounded-card px-6 py-4 flex items-center justify-between">
-                <span className="text-[12px] text-muted">Model fingerprint (SHA-256)</span>
-                <span className="text-[12px] font-mono text-ink-soft">{result.fingerprint}</span>
+            {/* Model fingerprint and Scan ID */}
+            {(result.fingerprint || result.scan_id) && (
+              <div className="bg-white border border-stone rounded-card px-6 py-4 flex flex-col gap-2 mt-4">
+                {result.fingerprint && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-[12px] text-muted">Model fingerprint (SHA-256)</span>
+                    <span className="text-[12px] font-mono text-ink-soft truncate max-w-[60%] text-right">{result.fingerprint}</span>
+                  </div>
+                )}
+                {result.scan_id && (
+                  <div className={`flex items-center justify-between ${result.fingerprint ? 'pt-2 border-t border-stone/50' : ''}`}>
+                    <span className="text-[12px] text-muted">Scan ID (Use in AI Advisor)</span>
+                    <span className="text-[12px] font-mono text-ink-soft select-all">{result.scan_id}</span>
+                  </div>
+                )}
               </div>
             )}
           </>

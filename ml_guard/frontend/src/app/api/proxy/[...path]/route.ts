@@ -8,8 +8,23 @@ async function handleRequest(request: Request, props: { params: Promise<{ path: 
   const fullPath = params.path.join('/');
   const searchParams = new URL(request.url).search;
   
-  // Handle paths that already include 'api' to avoid doubling /api/api
-  const normalizedPath = fullPath.startsWith('api') ? fullPath : `api/${fullPath}`;
+  // Handle paths to map to the correct backend route:
+  // - compliance exception goes to /api/compliance
+  // - everything else should map to /api/v1/...
+  let normalizedPath = '';
+  if (fullPath === 'compliance' || fullPath.startsWith('compliance/') || fullPath.startsWith('api/compliance')) {
+    normalizedPath = fullPath.startsWith('api/') ? fullPath : `api/${fullPath}`;
+  } else {
+    if (fullPath.startsWith('api/v1/')) {
+      normalizedPath = fullPath;
+    } else if (fullPath.startsWith('api/')) {
+      normalizedPath = `api/v1/${fullPath.substring(4)}`;
+    } else if (fullPath.startsWith('v1/')) {
+      normalizedPath = `api/${fullPath}`;
+    } else {
+      normalizedPath = `api/v1/${fullPath}`;
+    }
+  }
   const url = `${BACKEND_URL}/${normalizedPath}${searchParams}`;
   
   const cookieStore = await cookies();

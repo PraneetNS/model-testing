@@ -23,7 +23,7 @@ class ReportCardBuilder:
         "psi_drift": 0.20,
         "performance": 0.25,
         "bias_fairness": 0.25,
-        "ll_m_safety": 0.20,
+        "llm_safety": 0.20,
         "robustness": 0.10
     }
 
@@ -52,12 +52,13 @@ class ReportCardBuilder:
 
         # Synthesize normalized scores (0-100)
         # Mocking/assuming structure from typical ML Guard scans
+        raw = latest_audit.results_json or {}
         return {
-            "psi_drift": self._normalize_score(latest_audit.metrics.get("drift_psi", 0.0), lower_is_better=True),
-            "performance": self._normalize_score(latest_audit.metrics.get("accuracy", 0.0), lower_is_better=False),
-            "bias_fairness": self._normalize_score(latest_audit.metrics.get("bias_score", 0.0), lower_is_better=True),
-            "llm_safety": self._normalize_score(latest_audit.metrics.get("safety_violation_rate", 0.0), lower_is_better=True) if self.model.is_llm else 100.0,
-            "robustness": self._normalize_score(latest_audit.metrics.get("robustness_index", 0.0), lower_is_better=False),
+            "psi_drift": self._normalize_score(float(raw.get("drift_psi") or 0.0), lower_is_better=True),
+            "performance": self._normalize_score(float(raw.get("accuracy") or 0.0), lower_is_better=False),
+            "bias_fairness": self._normalize_score(float(raw.get("bias_score") or 0.0), lower_is_better=True),
+            "llm_safety": self._normalize_score(float(raw.get("safety_violation_rate") or 0.0), lower_is_better=True) if self.model.model_type == 'llm' else 100.0,
+            "robustness": self._normalize_score(float(raw.get("robustness_index") or 0.0), lower_is_better=False),
             "audit_timestamp": latest_audit.created_at.isoformat(),
             "scan_id": str(latest_audit.id)
         }
@@ -83,7 +84,7 @@ class ReportCardBuilder:
         total = 0.0
         # Re-adjust weights if LLM safety is not applicable
         active_weights = self.WEIGHTS.copy()
-        if not self.model.is_llm:
+        if self.model.model_type != 'llm':
             # Rebalance LLM Safety weight into others
             extra = active_weights.pop("llm_safety") / len(active_weights)
             for k in active_weights:

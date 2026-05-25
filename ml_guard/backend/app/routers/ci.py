@@ -43,8 +43,15 @@ async def ci_audit_gate(
     
     score = governance_score_override
     if score is None:
-        if model and model.scans:
-            score = model.scans[0].governance_score
+        if model:
+            from app.db.models import ScanRecord
+            scan_stmt = select(ScanRecord).filter(ScanRecord.model_id == model.id).order_by(ScanRecord.created_at.desc()).limit(1)
+            scan_result = await db.execute(scan_stmt)
+            latest_scan = scan_result.scalars().first()
+            if latest_scan:
+                score = latest_scan.governance_score
+            else:
+                score = 75.0
         else:
             score = 75.0  # Default for demonstration if no scan found
 
@@ -54,7 +61,7 @@ async def ci_audit_gate(
     
     deployment_allowed = score >= 70
     
-    log_action(db, auth, "ci.audit_gate", "model", str(model.id) if model else None, {
+    await log_action(db, auth, "ci.audit_gate", "model", str(model.id) if model else None, {
         "model_name": model_name,
         "governance_score": score,
         "deployment_allowed": deployment_allowed,

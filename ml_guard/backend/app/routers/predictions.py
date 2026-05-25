@@ -211,3 +211,63 @@ async def prediction_stats(
         "latency_drift": lat_drift,
         "throughput": round(h1_count / 3600, 4) if h1_count > 0 else 0,
     }
+
+
+# ═══════════════════════════════════════════════
+# GET MODEL SPECIFIC PREDICTIONS
+# ═══════════════════════════════════════════════
+@router.get("/predictions/{model_id}")
+async def get_model_predictions(
+    model_id: str,
+    limit: int = Query(50, ge=1, le=1000),
+    db: AsyncSession = Depends(get_db),
+    auth: AuthContext = Depends(require_role("viewer")),
+):
+    """Retrieve prediction logs for a specific model by UUID or name."""
+    model = None
+    try:
+        uuid_val = uuid.UUID(model_id)
+        result = await db.execute(select(Model).filter(Model.id == uuid_val))
+        model = result.scalars().first()
+    except ValueError:
+        result = await db.execute(select(Model).filter(Model.name == model_id))
+        model = result.scalars().first()
+
+    stmt = select(PredictionLog)
+    if model:
+        from sqlalchemy import or_
+        from app.db.models import ModelVersion
+        v_result = await db.execute(select(ModelVersion.id).filter(ModelVersion.model_id == model.id))
+        version_ids = v_result.scalars().all()
+        
+        conds = [
+            PredictionLog.model_id == model.name,
+            PredictionLog.model_id == str(model.id)
+        ]
+        if version_ids:
+            conds.append(PredictionLog.model_version_id.in_(version_ids))
+            
+        stmt = stmt.filter(or_(*conds))
+    else:
+        stmt = stmt.filter(PredictionLog.model_id == model_id)
+        
+    stmt = stmt.order_by(PredictionLog.timestamp.desc())
+    
+    count_stmt = select(func.count()).select_from(stmt.subquery())
+    total = (await db.execute(count_stmt)).scalar() or 0
+    
+    logs_result = await db.execute(stmt.limit(limit))
+    logs = logs_result.scalars().all()
+    
+    items = []
+    for l in logs:
+        items.append({
+            "id": str(l.id),
+            "prediction": str(l.prediction),
+            "confidence": l.confidence or l.prediction_proba,
+            "latency_ms": l.latency_ms,
+            "timestamp": l.timestamp.isoformat() if l.timestamp else None,
+        })
+        
+    return {"items": items, "total": total}
+

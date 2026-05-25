@@ -167,6 +167,7 @@ export interface AlertEvent {
 export interface Contract {
   id: string;
   model_id: string;
+  model_name?: string;
   name: string;
   contract_type: string;
   status: string;
@@ -317,7 +318,7 @@ export const redTeamApi = {
 export const inventoryApi = {
   aibom: (modelId: string) =>
     api.get<{ model_id: string; components: { name: string; version: string; type: string; hash: string; cves: number }[] }>(
-      `/inventory/${modelId}/aibom`
+      `/aibom/${modelId}`
     ),
 };
 

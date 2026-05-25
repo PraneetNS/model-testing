@@ -33,7 +33,13 @@ export default function AibomPage() {
     setLoadingAibom(true); setError(null);
     inventoryApi.aibom(selected)
       .then((r: any) => setComponents(r.components ?? []))
-      .catch(e => setError(e.message))
+      .catch(e => {
+        if (e.status === 404) {
+          setComponents([]);
+        } else {
+          setError(e.message);
+        }
+      })
       .finally(() => setLoadingAibom(false));
   }, [selected]);
 

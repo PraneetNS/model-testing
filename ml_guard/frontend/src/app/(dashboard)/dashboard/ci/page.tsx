@@ -4,17 +4,7 @@ import { useState, useEffect } from 'react';
 import { RefreshCw, GitBranch, CheckCircle, XCircle, Plus, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { modelsApi } from '@/lib/api';
-
-const BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000') + '/api/v1';
-const HDR = { 'Content-Type': 'application/json', 'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || 'dev-secret-key' };
-
-async function apiFetch(path: string, opts: RequestInit = {}) {
-  const r = await fetch(`${BASE}${path}`, { ...opts, headers: { ...HDR, ...(opts.headers ?? {}) } });
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(d.detail ?? `HTTP ${r.status}`);
-  return d;
-}
+import { api, modelsApi } from '@/lib/api';
 
 export default function CICDPage() {
   const [integrations, setIntegrations] = useState<any[]>([]);
@@ -32,7 +22,7 @@ export default function CICDPage() {
     setLoading(true);
     try {
       const [ints, mods] = await Promise.all([
-        apiFetch('/ci/integrations'),
+        api.get('/ci/integrations'),
         modelsApi.list(1, 50),
       ]);
       setIntegrations(Array.isArray(ints) ? ints : []);
@@ -48,7 +38,7 @@ export default function CICDPage() {
     if (!gateModel) return;
     setGating(true); setGateResult(null);
     try {
-      const d = await apiFetch(`/ci/audit?model_name=${encodeURIComponent(gateModel)}`, { method: 'POST', body: '{}' });
+      const d = await api.post(`/ci/audit?model_name=${encodeURIComponent(gateModel)}`, {});
       setGateResult(d);
     } catch (e: any) { setError(e.message); }
     finally { setGating(false); }
@@ -58,7 +48,7 @@ export default function CICDPage() {
     if (!newInt.repo_url) return;
     setAdding(true);
     try {
-      await apiFetch(`/ci/integrations?provider=${newInt.provider}&repo_url=${encodeURIComponent(newInt.repo_url)}&webhook_secret=${newInt.webhook_secret}`, { method: 'POST', body: '{}' });
+      await api.post(`/ci/integrations?provider=${newInt.provider}&repo_url=${encodeURIComponent(newInt.repo_url)}&webhook_secret=${newInt.webhook_secret}`, {});
       setShowAdd(false);
       await load();
     } catch (e: any) { setError(e.message); }

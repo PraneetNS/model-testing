@@ -65,6 +65,14 @@ async def analyze_fairness(
         raise HTTPException(status_code=400, detail=f"Failed to load model: {e}")
     finally:
         os.unlink(tmp_model)
+        
+    from app.db.models import Model
+    model_name = getattr(model_file, "filename", "fairness_model").rsplit('.', 1)[0]
+    model_record = (await db.execute(select(Model).filter(Model.name == model_name))).scalars().first()
+    if not model_record:
+        model_record = Model(name=model_name, provider="ML Guard Register", created_by=auth.user_id)
+        db.add(model_record)
+        await db.flush()
 
     import io
     from sklearn.preprocessing import LabelEncoder
